@@ -1,14 +1,16 @@
 name: sync backend to main
+
 on:
   push:
     branches: [backend]
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-      
+
     steps:
       - name: Checkout main con historial completo
         uses: actions/checkout@v4
@@ -19,22 +21,36 @@ jobs:
       - name: Configurar git
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Reconstruir rama puente desde main
-        run: |
-          git checkout -B sync/backend main
-          git subtree pull --prefix=backend origin backend --squash -m "sync: Update backend from branch backend"
-          git push origin sync/backend --force
-
-      - name: Crear PR hacia main (o reutilizar el existente)
+      - name: Sincronizar backend y gestionar PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr create \
-            --base main \
-            --head sync/backend \
-            --title "Sync: update backend" \
-            --body "Automatic update of the content \`backend/\` in \`main\`, generate from branch \`backend\`. Requires approval before merge to main" \
-          || echo "Already exist PR for sync/backend -> main; the content has update."
-    
+          git checkout -B sync/backend main
+          git fetch origin
+
+          # Verificar existencia de la rama remota
+          if git ls-remote --exit-code --heads origin backend; then
+            echo "La rama origin/backend existe. Ejecutando subtree..."
+
+            if [ -d "backend" ]; then
+              git subtree pull --prefix=backend origin backend --squash -m "sync: Update backend from branch backend"
+            else
+              git subtree add --prefix=backend origin backend --squash -m "sync: Add backend subtree from branch backend"
+            fi
+
+            # Subir la rama puente al remoto
+            git push origin sync/backend --force
+
+            # Crea o reutiliza el PR únicamente si el push fue exitoso
+            gh pr create \
+              --base main \
+              --head sync/backend \
+              --title "Sync: update backend" \
+              --body "Automatic update of the content \`backend/\` in \`main\`, generated from branch \`backend\`." \
+            || echo "Already exists PR for sync/backend -> main; branch updated."
+
+          else
+            echo "La rama origin/backend aún no existe en el remoto. Omitiendo sincronización."
+          fi
