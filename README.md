@@ -12,7 +12,7 @@
 ## Estructura
 
 ```text
-backend/    # Spring Boot 4.1.1, Java 21 (Maven)
+.    # Spring Boot 4.1.1, Java 21 (Maven) — rama backend
 ├── pom.xml
 ├── src/
 ├── mvnw
