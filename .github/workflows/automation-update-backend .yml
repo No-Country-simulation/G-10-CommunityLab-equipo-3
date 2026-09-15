@@ -1,0 +1,40 @@
+name: sync backend to main
+on:
+  push:
+    branches: [backend]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      
+    steps:
+      - name: Checkout main con historial completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configurar git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Reconstruir rama puente desde main
+        run: |
+          git checkout -B sync/backend main
+          git subtree pull --prefix=backend origin backend --squash -m "sync: Update backend from branch backend"
+          git push origin sync/backend --force
+
+      - name: Crear PR hacia main (o reutilizar el existente)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head sync/backend \
+            --title "Sync: update backend" \
+            --body "Automatic update of the content \`backend/\` in \`main\`, generate from branch \`backend\`. Requires approval before merge to main" \
+          || echo "Already exist PR for sync/backend -> main; the content has update."
+    
