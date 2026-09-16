@@ -9,7 +9,7 @@
 
 ## ❓ Concepto y Problema
 
-Las comunidades digitales (Discord, Slack, foros, GitHub) generan a diario decenas de dudas valiosas, testimonios, logros y contrataciones. Sin embargo, esta información se pierde en el historial de chat.
+Las comunidades digitales (Discord, Slack, foros) generan a diario decenas de dudas valiosas, testimonios, logros y contrataciones. Sin embargo, esta información se pierde en el historial de chat.
 
 Curar este contenido y redactarlo manualmente para redes sociales toma decenas de horas a los Community Managers.
 
@@ -19,8 +19,8 @@ Curar este contenido y redactarlo manualmente para redes sociales toma decenas d
 |------|------------|--------|
 | Frontend | Angular | Definido |
 | Backend | Java + Spring Boot | Definido |
-| Base de datos | Por definir | ⏳ Pendiente |
-| Autenticación | Por definir | ⏳ Pendiente |
+| Persistencia | OCI Object Storage | Definido |
+| Autenticación | Spring Security | Definido |
 | Deploy | Por definir | ⏳ Pendiente |
 | Testing | Por definir | ⏳ Pendiente |
 
@@ -28,17 +28,42 @@ Versiones exactas (Node, Angular CLI, JDK, Spring Boot) **por definir**.
 
 ### Requisitos previos (estimados)
 
-* Node.js LTS + npm
-* Angular CLI
-* JDK 17+ (por confirmar)
-* Maven o Gradle (por confirmar)
+* Node.js LTS + npm -> *Por definir*
+* Angular CLI -> *Por definir*
+* Java 21
+* Spring Boot 4.1.1
+* Maven 3.9.16 
 * Git
 
 ## 🏗️ Arquitectura
 
-> **Por definir.**
+**CommunityLab** actúa como núcleo de ingesta, análisis y transformación de contenido de la comunidad.
 
-Propuesta inicial a validar por el equipo:
+### C1 — Contexto de Sistema
+
+* Actores:
+  * Miembro de la comunidad: genera actividad orgánica no estructurada (Discord, Telegram).
+  * Community Manager / Marketing: monitorea sentimiento, revisa, edita y aprueba publicaciones.
+* Sistemas externos:
+  * Fuentes de Datos (Discord, Telegram, CSV/JSON): proveen conversaciones y retroalimentación.
+  * Proveedor de AI (API compatible OpenAI): clasifica texto y redacta copys por canal.
+  * OCI Object Storage: persiste paquetes generados y resúmenes semanales en JSON (capa Always Free OCI).
+  * App Web: panel donde se concentran los textos procesados.
+* Contrato de salida (JSON): `Type Sentiment [pregunta, relatos de superación, contratación laboral, quejas, tendencia], description: String, sugerence: String`.
+
+![C1 - Context](docs/images/C1%20-%20Context.png)
+
+### Despliegue (C4 Deploy)
+
+![Deploy Diagram](docs/images/Deploy%20Diagram.png)
+
+CI/CD desde GitHub hacia Vercel y OCI.
+
+### Flujo general
+
+`Apps / Fuentes -> Backend recibe mensajes -> llama al LLM -> procesa y etiqueta -> almacena en Object Storage -> devuelve datos / subscripción persistente por HTTPS -> Dashboard -> Community Manager aprueba -> publicación en medios`.
+
+### Estructura repo
 
 ```text
 G-10-CommunityLab-equipo-3/
@@ -48,7 +73,7 @@ G-10-CommunityLab-equipo-3/
 └── README.md
 ```
 
-Decisiones pendientes: monorepo vs repos separados, diseño API REST, modelo de datos, auth (JWT/OAuth2), estrategia de deploy.
+Pendiente: diseño API REST, modelo de datos, auth (JWT/OAuth2).
 
 ## 🚀 Instalación y uso
 
@@ -71,16 +96,15 @@ Placeholder orientativo:
 
 | Rol | Integrante | GitHub |
 |-----|------------|--------|
-| Por definir | Por definir | — |
-| Por definir | Por definir | — |
-| Por definir | Por definir | — |
-
-> Completa esta tabla con nombre, rol (PM / Frontend / Backend / UX-UI / QA) y usuario de GitHub.
+| Desarrollador Frontend | Jeferson Oyola | [@Jefer1026](https://github.com/Jefer1026) |
+| Desarrollador Backend | Nahuel Perea | [@nahuelDev19](https://github.com/nahuelDev19) |
+| Arquitecto de Software y Desarrollador Backend | Yersson David | [@YerssonDavid](https://github.com/YerssonDavid) |
+| PO y Scrum Master | Yoant Alnor Ochoa Torre | [@yoant8a-system](https://github.com/yoant8a-system) |
 
 ## 🔀 Flujo de trabajo Git
 
 * Rama principal: `main` (protegida)
-* Rama desarrollo: `develop`
+* Rama desarrollo: `Frontend`, `Backend`
 * Ramas de trabajo: `feature/nombre-tarea`, `fix/nombre-fix`, `docs/...`
 * Commits convencionales: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
 * Todo cambio vía Pull Request hacia `develop` con al menos 1 review.
@@ -97,7 +121,7 @@ git push origin feature/mi-tarea
 > **Sin enlaces por el momento.**
 
 * Figma: _por definir_
-* Gestión (Trello / Jira / Notion): _por definir_
+* Gestión (GitHub Projects): [Scrum](https://github.com/No-Country-simulation/G-10-CommunityLab-equipo-3/projects)
 * Deploy Frontend: _por definir_
 * Deploy Backend / API docs (Swagger): _por definir_
 * Discord / Comunicación: _por definir_
@@ -107,10 +131,10 @@ git push origin feature/mi-tarea
 * [x] Primer commit — README inicial
 * [ ] Definir alcance y MVP
 * [ ] Definir arquitectura y modelo de datos
-* [ ] Inicializar `frontend/` (Angular)
-* [ ] Inicializar `backend/` (Spring Boot)
+* [x] Inicializar `frontend/` (Angular)
+* [x] Inicializar `backend/` (Spring Boot)
 * [ ] Definir enlaces y comandos de instalación
 
 ## 📄 Licencia
 
-Por definir.
+Licensed under the Apache License, Version 2.0. Ver [LICENSE](LICENSE).
