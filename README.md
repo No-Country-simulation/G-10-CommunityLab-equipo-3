@@ -20,11 +20,10 @@ Curar este contenido y redactarlo manualmente para redes sociales toma decenas d
 | Frontend | Angular | Definido |
 | Backend | Java + Spring Boot | Definido |
 | Persistencia | OCI Object Storage | Definido |
-| Autenticación | Spring Security | Definido |
 | Deploy | Por definir | ⏳ Pendiente |
 | Testing | Por definir | ⏳ Pendiente |
 
-Versiones exactas (Node, Angular CLI, JDK, Spring Boot) **por definir**.
+Versiones backend definidas: Java 21, Spring Boot 4.1.1, Maven 3.9.16. Versiones frontend (Node, Angular CLI) **por definir**.
 
 ### Requisitos previos (estimados)
 
@@ -73,7 +72,9 @@ G-10-CommunityLab-equipo-3/
 └── README.md
 ```
 
-Pendiente: diseño API REST, modelo de datos, auth (JWT/OAuth2).
+Pendiente: diseño API REST, modelo de datos.
+
+> Autenticación (registro/login): opcional, fuera del MVP. Se evaluará al completar el MVP.
 
 ## 🚀 Instalación y uso
 
