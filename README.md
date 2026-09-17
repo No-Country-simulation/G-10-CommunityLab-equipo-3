@@ -56,7 +56,7 @@ Versiones backend definidas: Java 21, Spring Boot 4.1.1, Maven 3.9.16. Versiones
 
 ![Deploy Diagram](docs/images/Deploy%20Diagram.png)
 
-CI/CD desde GitHub hacia Vercel y OCI.
+CI/CD desde GitHub hacia Netlify y OCI.
 
 ### Flujo general
 

@@ -48,7 +48,7 @@
 
 ### 2.2 Seguridad y Red
 
-- **RNF-03 (Cifrado en Tránsito):** Toda la comunicación entre Cliente, Vercel, Cloudflare, Spring Boot y OCI debe realizarse sobre HTTPS (TLS 1.2+).
+- **RNF-03 (Cifrado en Tránsito):** Toda la comunicación entre Cliente, Netlify, Cloudflare, Spring Boot y OCI debe realizarse sobre HTTPS (TLS 1.2+).
 - **RNF-04 (Protección WAF y Ocultamiento de IP):** La IP pública de la VM en OCI Compute no debe exponerse públicamente; el tráfico entrante debe pasar por el Proxy/WAF de Cloudflare.
 - **RNF-05 (Gestión de Secretos):** Las claves de API (LLM_API_KEY, credenciales OCI) deben inyectarse mediante variables de entorno en la instancia Linux de OCI.
 
@@ -72,4 +72,4 @@
 | RF-03, RF-04, RF-05 | LlmAnalysisService.java (Spring AI) | Análisis de sentimiento y extracción de temas |
 | RF-06, RF-07, RF-08 | AssetGeneratorService.java (Spring AI) | Generación automatizada de 2+ formatos de activos |
 | RF-09, RF-10 | OciStorageService.java (OCI Java SDK) | Persistencia obligatoria en OCI Object Storage |
-| RF-11, RF-12, RF-13 | DashboardComponent.ts (Angular + Vercel) | Interfaz visual de curaduría y métricas |
+| RF-11, RF-12, RF-13 | DashboardComponent.ts (Angular + Netlify) | Interfaz visual de curaduría y métricas |
