@@ -56,7 +56,7 @@ Versiones backend definidas: Java 21, Spring Boot 4.1.1, Maven 3.9.16. Versiones
 
 ![Deploy Diagram](docs/images/Deploy%20Diagram.png)
 
-CI/CD desde GitHub hacia Vercel y OCI.
+CI/CD desde GitHub hacia Netlify y OCI.
 
 ### Flujo general
 
@@ -97,7 +97,8 @@ Placeholder orientativo:
 
 | Rol | Integrante | GitHub |
 |-----|------------|--------|
-| Desarrollador Frontend | Jeferson Oyola | [@Jefer1026](https://github.com/Jefer1026) |
+| Desarrollador Frontend y Diseñador UI | Jeferson Oyola | [@Jefer1026](https://github.com/Jefer1026) |
+| Desarrollador Frontend | Alejandro Moreno | [@alejhomoreno](https://github.com/alejhomoreno) |
 | Desarrollador Backend | Nahuel Perea | [@nahuelDev19](https://github.com/nahuelDev19) |
 | Arquitecto de Software y Desarrollador Backend | Yersson David | [@YerssonDavid](https://github.com/YerssonDavid) |
 | PO y Scrum Master | Yoant Alnor Ochoa Torre | [@yoant8a-system](https://github.com/yoant8a-system) |

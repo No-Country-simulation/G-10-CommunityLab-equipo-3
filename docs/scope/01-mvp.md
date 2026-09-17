@@ -4,7 +4,7 @@
 |---|---|
 | **Proyecto** | CommunityLab – Motor Inteligente de Transformación y Distribución para Comunidades Digitales |
 | **Programa** | ONE (Oracle Next Education) & Alura – Grupo 10 |
-| **Stack principal** | Java (Spring Boot), Angular, Oracle Cloud Infrastructure (OCI), Cloudflare, Vercel |
+| **Stack principal** | Java (Spring Boot), Angular, Oracle Cloud Infrastructure (OCI), Cloudflare, Netlify |
 
 ---
 
@@ -50,7 +50,7 @@ CommunityLab actúa como un motor inteligente que ingiere la actividad orgánica
 - **Persistencia Nube Obligatoria:**
   - Almacenamiento automático del paquete de activos formateado en JSON en OCI Object Storage (Capa Always Free).
 - **Dashboard de Curaduría (Frontend Admin Panel):**
-  - Interfaz web en Angular (alojada en Vercel) para examinar la salud de la comunidad, previsualizar los copys y copiarlos al portapapeles.
+  - Interfaz web en Angular (alojada en Netlify) para examinar la salud de la comunidad, previsualizar los copys y copiarlos al portapapeles.
 - **Perímetro de Red y Seguridad:**
   - Enrutamiento y protección WAF/Proxy con Cloudflare para enmascarar la VM de OCI Compute.
 
