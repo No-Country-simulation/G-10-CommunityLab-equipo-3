@@ -99,9 +99,11 @@ Placeholder orientativo:
 |-----|------------|--------|
 | Desarrollador Frontend y Diseñador UI | Jeferson Oyola | [@Jefer1026](https://github.com/Jefer1026) |
 | Desarrollador Frontend | Alejandro Moreno | [@alejhomoreno](https://github.com/alejhomoreno) |
-| Desarrollador Backend | Nahuel Perea | [@nahuelDev19](https://github.com/nahuelDev19) |
 | Arquitecto de Software y Desarrollador Backend | Yersson David | [@YerssonDavid](https://github.com/YerssonDavid) |
+| Arquitecto de BD y Desarrollador Backend | Bruno Vallejos | [@brunovallejos-itti](https://github.com/brunovallejos-itti)
+| Desarrollador Backend | Nahuel Perea | [@nahuelDev19](https://github.com/nahuelDev19) |
 | PO y Scrum Master | Yoant Alnor Ochoa Torre | [@yoant8a-system](https://github.com/yoant8a-system) |
+
 
 ## 🔀 Flujo de trabajo Git
 
