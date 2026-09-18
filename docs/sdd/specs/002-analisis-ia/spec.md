@@ -16,13 +16,13 @@ El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer
   - *Criterio:* **Dado** un `LOGRO` positivo vs una `DUDA` neutra similar, **Cuando** se comparan, **Entonces** `relevance(LOGRO) > relevance(DUDA)`.
 - **RF-04 — Lote con tolerancia a fallos:** si 1 comentario falla, el resto sigue; la respuesta incluye `analyzed, fallbackCount`.
   - *Criterio:* **Dado** 10 comentarios y caída del LLM en 1, **Cuando** se procesa el lote, **Entonces** responde con 9 enriquecidos + 1 en fallback, sin `500`.
-- **RF-05 — Proveedor configurable:** OpenAI primario, Gemini alternativo, seleccionable por env sin cambiar código de negocio.
-  - *Criterio:* **Dado** `LLM_PROVIDER=gemini` y key válida, **Cuando** se analiza, **Entonces** usa Gemini sin desplegar de nuevo.
+- **RF-05 — Proveedor único OpenAI:** el análisis usa exclusivamente OpenAI vía Spring AI; el modelo se configura por env sin cambiar código de negocio.
+  - *Criterio:* **Dado** `OPENAI_MODEL` válido y key válida, **Cuando** se analiza, **Entonces** usa ese modelo sin desplegar de nuevo.
 
 ## 3. RNF
 
 - **RNF-01:** latencia LLM excluida del `p95 < 300ms` de ingesta; 002 documenta `p50/p95` observados y timeout `15s` por lote con reintento 1 vez.
-- **RNF-02:** keys solo por env (`OPENAI_API_KEY` / `GEMINI_API_KEY`), nunca en logs ni respuestas (R4/Q3).
+- **RNF-02:** key solo por env (`OPENAI_API_KEY`), nunca en logs ni respuestas (R4/Q3).
 - **RNF-03:** coste acotado MVP: max 500 comentarios/lote, prompt versionado, temperatura baja para clasificación.
 
 ## 4. Dominio y Glosario
