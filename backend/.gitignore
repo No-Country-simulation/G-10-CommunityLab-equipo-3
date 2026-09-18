@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secrets & local config — R4 constitution ###
+.env
+*.env
+application-local.yaml
+application-local.yml
+*.pem
+*.key
+token*.json
+.oci/
