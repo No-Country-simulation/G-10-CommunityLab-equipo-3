@@ -14,12 +14,14 @@ Sin persistencia del resultado ni superficie operable, la demo del hackathon no 
   - *Criterio:* **Dado** `batchId` ya guardado, **Cuando** se re-guarda, **Entonces** 1 solo objeto en bucket y `deduped:true`.
 - **RF-03 — Health público:** `GET /actuator/health` responde `{"status":"UP"}` sin auth, `p95 < 100ms`.
   - *Criterio:* **Dado** app arrancada, **Cuando** se llama `/actuator/health`, **Entonces** `200 + UP`.
-- **RF-04 — Docs API:** Swagger UI en `/swagger-ui.html` documenta `POST /api/v1/ingest`, `POST /api/v1/analyze`, `POST /api/v1/generate`, `POST /api/v1/packages`.
-  - *Criterio:* **Dado** app arrancada, **Cuando** se abre Swagger, **Entonces** los 4 endpoints aparecen con ejemplos.
+- **RF-04 — Docs API:** Swagger UI en `/swagger-ui.html` documenta `POST /api/v1/ingest`, `POST /api/v1/analyze`, `POST /api/v1/generate`, `POST /api/v1/packages` y `GET /api/v1/events` (SSE).
+  - *Criterio:* **Dado** app arrancada, **Cuando** se abre Swagger, **Entonces** los 5 endpoints aparecen con ejemplos.
 - **RF-05 — Seguridad básica:** CORS allowlist por env, headers seguros, 413 en >10MB, 400 con formato problema, 429 en rate-limit, sin stacktraces.
   - *Criterio:* **Dado** `Origin` no permitido, **Cuando** se llama a la API, **Entonces** bloqueado por CORS; **Dado** `Origin` permitido, pasa.
 - **RF-06 — Pipeline orquestado MVP:** `POST /api/v1/packages:run` ejecuta ingesta->análisis->generación->OCI mensaje por mensaje (para la demo).
   - *Criterio:* **Dado** JSON Discord válido de 1 mensaje, **Cuando** se llama `/packages:run`, **Entonces** `201` con `{batchId, assetsCount, packageUrl}` o `207` si hubo fallbacks parciales.
+- **RF-07 — Suscripción SSE del dashboard:** `GET /api/v1/events` (`text/event-stream`) emite `asset.created` y `package.completed` al frontend suscrito, con reconexión por `Last-Event-ID`.
+  - *Criterio:* **Dado** un dashboard suscrito, **Cuando** se completa un activo/paquete, **Entonces** recibe el evento `{type, batchId, payload}` en < 5 s; **Dado** reconexión con `Last-Event-ID`, **Entonces** no pierde eventos ya emitidos.
 
 ## 3. RNF
 
