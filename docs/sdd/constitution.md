@@ -22,7 +22,7 @@
 | Lenguaje | Java LTS                             | **21**, sin APIs preview |
 | Framework | Spring Boot                          | **4.1.1**, módulos: `webmvc`, `restclient`, `validation`, `actuator` (a añadir), `springdoc-openapi` (a añadir) |
 | Build | Maven Wrapper                        | 3.9.x — `./mvnw test`, `./mvnw spring-boot:run` |
-| IA | Spring AI                            | OpenAI primario / Gemini alternativo, configurables por env. Solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort` |
+| IA | Spring AI                            | OpenAI como único proveedor, modelo configurable por env. Solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort` |
 | Storage | OCI Object Storage SDK (Always Free) | Único almacenamiento persistente Fase 1, solo vía `ArtifactStorePort` en `infrastructure/` |
 | Docs API | springdoc-openapi                    | Swagger UI obligatorio |
 | Observabilidad mínima | Actuator `health,info`               | `GET /actuator/health -> {"status":"UP"}` público; resto de endpoints cerrados |
@@ -44,7 +44,7 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 - **R2 — Prohibido en `interfaces/`:** lógica de negocio, acceso a storage, llamadas a SDKs. Solo delega a `application`.
 - **R3 — Prohibido en `domain/`:** anotaciones Spring, JPA, Lombok con lógica. Solo POJOs + validación pura.
 - **R4 — Secretos nunca en git:** prohibido commitear `.env`, `*.env`, `application-local.yaml`, `*.pem`, `*.key`, `token*.json`. Lectura vía `${VAR}` en `application.yaml`. Cubierto en `.gitignore`.
-- **R5 — Config por perfiles:** `application.yaml` base sin credenciales (hoy solo `spring.application.name`, mantener). `application-local.yaml` dev, `application-prod.yaml` prod con env: `OPENAI_API_KEY` o `GEMINI_API_KEY`, `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`.
+- **R5 — Config por perfiles:** `application.yaml` base sin credenciales (hoy solo `spring.application.name`, mantener). `application-local.yaml` dev, `application-prod.yaml` prod con env: `OPENAI_API_KEY` (+ `OPENAI_MODEL` opcional), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`.
 - **R6 — Presupuesto Fase 1:** ingesta (sin LLM) `p95 < 300ms` local; pipeline con LLM documenta latencia externa aparte; arranque local `< 15s`; objeto OCI `< 1MB` por paquete.
 - **R7 — Ramas y sync:** trabajo en `backend`. Sync a `main` solo vía workflow `sync backend to main` (`subtree` a `backend/`). Prohibido push directo a `main`.
 - **R8 — Fuentes y canales Fase 1:** fuentes aceptadas `DISCORD`, `TELEGRAM` únicamente. Canales de salida `LINKEDIN`, `X`, `NEWSLETTER`, `FAQ` únicamente. Otra fuente/canal requiere enmienda.
