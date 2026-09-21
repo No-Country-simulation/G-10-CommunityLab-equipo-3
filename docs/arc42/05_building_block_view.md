@@ -28,8 +28,7 @@ stream SSE `GET /api/v1/events` (ver §06, secuencia 5).
 
 ## Nivel 2 (pendiente)
 
-> [!TODO] Descomponer por spec al implementar: 001 (`IngestController`, `IngestUseCase`, adaptadores por
-> fuente `DiscordAdapter`/`TelegramAdapter` que normalizan el JSON de cada app a `Comentario`),
+> [!TODO] Descomponer por spec al implementar: 001 (`DiscordBotListener` JDA + `DiscordMessageMapper` + `IngestUseCaseDiscord`, `TelegramBotListener` long polling + `TelegramMessageMapper` + `IngestUseCaseTelegram`; sin controllers de ingesta),
 > 002 (`AnalyzeUseCase`, `SpringAiAnalyzeAdapter`, `RelevancePolicy`), 003 (`GenerateUseCase`,
 > `ChannelPolicy`, `HallucinationGuard`), 004 (`PackageRunUseCase`, `OciObjectStorageAdapter`).
 > Nivel 3 solo si un componente lo justifica.

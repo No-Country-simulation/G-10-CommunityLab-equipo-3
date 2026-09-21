@@ -15,7 +15,7 @@ Casos de uso principales (trazan a specs):
 
 | Caso | Spec | Descripción |
 |---|---|---|
-| Ingesta normalizada | `001-ingesta-normalizada` | `POST /api/v1/ingest` recibe **un mensaje JSON** (`DISCORD`/`TELEGRAM`), lo valida y normaliza a `Comentario` |
+| Ingesta normalizada | `001-ingesta-normalizada` | Bots JDA (Discord) y TelegramBots long polling (Telegram): el backend es ambos bots; ignoran bots, validan y normalizan a `Comentario` con `type=OTRO` (la IA clasifica) |
 | Análisis con IA | `002-analisis-ia` | Sentimiento, temas y relevancia (0–100) vía Spring AI con salida estructurada |
 | Generación multicanal | `003-generacion-multicanal` | Borradores `LINKEDIN` / `X` / `NEWSLETTER` / `FAQ` desde comentarios con relevancia ≥ 60, sin alucinar datos |
 | Paquete OCI + transversal | `004-paquete-oci-health` | Persiste `PaqueteDeActivos` en OCI Object Storage; expone `/actuator/health`, Swagger y seguridad básica |
