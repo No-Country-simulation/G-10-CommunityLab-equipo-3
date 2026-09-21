@@ -26,20 +26,22 @@ flowchart LR
 
 | Actor / sistema vecino | Interacción | Dirección |
 |---|---|---|
-| Comunidades Discord / Telegram | Origen de la actividad (testimonios, logros, dudas). En Fase 1 la app remite cada mensaje por JSON; sin bots ni polling | Entrada |
+| Comunidades Discord / Telegram | Discord entra vía bot JDA y Telegram vía bot TelegramBots long polling (el backend es ambos bots). Sin polling REST ni endpoints | Entrada |
 | LLM externo (OpenAI) | Análisis (sentimiento, temas, relevancia) y redacción multicanal con salida estructurada | Bidireccional |
 | OCI Object Storage | Persistencia del `PaqueteDeActivos` (`paquete-{batchId}.json`, `< 1MB`) | Salida |
-| Frontend (dashboard público) | Único consumidor de la API en Fase 1. Recibe `202`/`201`, errores tipados (`400/413/429`, fallbacks `207`) y los presenta; seguridad futura en Fase >1 | Bidireccional |
+| Frontend (dashboard público) | Único consumidor REST de la API en Fase 1. Recibe `201`, errores tipados (`400/413`, fallbacks `207`) y los presenta; seguridad futura en Fase >1 | Bidireccional |
 | Community Managers | Consumen borradores y publican manualmente | Salida (humana) |
 | Jurado / plataforma ONE | Verifican `/actuator/health` y Swagger | Lectura |
 
-Fuera de alcance Fase 1: publicación automática en redes, bots directos, auth/usuarios (constitución §5).
+Fuera de alcance Fase 1: publicación automática en redes, webhook Telegram, auth/usuarios (constitución §5). Bots JDA + TelegramBots long polling en alcance (spec 001).
 
 ## 3.2 Contexto técnico
 
 | Interfaz | Protocolo / formato | Notas |
 |---|---|---|
-| Ingesta `POST /api/v1/ingest` | HTTPS + REST, `application/json`, un mensaje por request | Validación Bean Validation; errores `400/413/429` en formato problema |
+| Ingesta Discord (bot JDA) | Gateway Discord, eventos `MessageReceivedEvent`, sin endpoint REST | Se ignora `author.isBot`; `type=OTRO`; canal = nombre; >2000 truncado con flag |
+| Ingesta Telegram (bot TelegramBots long polling) | Telegram API, `Update`, sin endpoint REST ni URL pública | Se ignora `from.isBot`; `type=OTRO`; chat = nombre; >2000 truncado con flag |
+| Análisis `POST /api/v1/analyze` | HTTPS + REST, JSON | Clasifica `OTRO→TESTIMONIO|LOGRO|DUDA|OTRO`; timeout 15 s por lote, 1 reintento, fallback sin `500` |
 | Análisis `POST /api/v1/analyze` | HTTPS + REST, JSON | Timeout 15 s por lote, 1 reintento, fallback sin `500` |
 | Generación `POST /api/v1/generate` | HTTPS + REST, JSON | Prompts versionados (`promptVersion` trazable) |
 | Orquestación `POST /api/v1/packages:run` | HTTPS + REST, JSON | `201` ok / `207` con fallbacks parciales |
