@@ -8,8 +8,8 @@ El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer
 
 ## 2. Requerimientos Funcionales
 
-- **RF-01 — Enriquecimiento por comentario:** para cada `Comentario` válido, calcular `sentiment: POSITIVO|NEUTRAL|NEGATIVO`, `topics: string[1..5]`, `relevance: 0..100`, `language: es|en|pt|other`.
-  - *Criterio:* **Dado** "Conseguí empleo como dev Java, gracias comunidad!" **Cuando** se analiza, **Entonces** `sentiment=POSITIVO`, `relevance >= 70`, `topics` contiene `empleo` o `contratación`.
+- **RF-01 — Enriquecimiento por comentario:** para cada `Comentario` válido, calcular `type: TESTIMONIO|LOGRO|DUDA|OTRO`, `sentiment: POSITIVO|NEUTRAL|NEGATIVO`, `topics: string[1..5]`, `relevance: 0..100`, `language: es|en|pt|other`. La entrada llega siempre `type=OTRO` (Discord JDA o Telegram long polling, 001); la IA la clasifica aquí. Si `truncated:true`, no se penaliza relevancia por el corte.
+  - *Criterio:* **Dado** "Conseguí empleo como dev Java, gracias comunidad!" con `type=OTRO` **Cuando** se analiza, **Entonces** `type=LOGRO`, `sentiment=POSITIVO`, `relevance >= 70`, `topics` contiene `empleo` o `contratación`.
 - **RF-02 — Salida estructurada obligatoria:** el LLM debe devolver JSON validable contra schema, nunca texto libre.
   - *Criterio:* **Dado** cualquier comentario válido, **Cuando** se analiza, **Entonces** la salida parsea sin `repair` manual en ≥99% de casos; si falla, se reintenta 1 vez y luego se marca `relevance=0, topics=[], sentiment=NEUTRAL` con `flag=LLM_FALLBACK`.
 - **RF-03 — Reglas de relevancia (negocio, no prompt libre):** `LOGRO` y `TESTIMONIO` con sentimiento positivo pesan más que `DUDA`; texto <15 chars irrelevante.
