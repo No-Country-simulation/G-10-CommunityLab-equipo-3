@@ -7,20 +7,20 @@
 | # | Restricción                                                                                                                                                        | Origen |
 |---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
 | CT-1 | Java 21 LTS, sin APIs preview                                                                                                                                      | `pom.xml: java.version` |
-| CT-2 | Spring Boot 4.1.1; módulos Fase 1: `webmvc`, `restclient`, `validation`, `actuator`, `springdoc-openapi`                                                           | Constitución §2 |
+| CT-2 | Spring Boot 4.1.1; módulos Fase 1: `webmvc`, `restclient`, `validation`, `actuator`, `springdoc-openapi`; bots con `JDA` (Discord) y `TelegramBots` long polling (Telegram), solo `infrastructure/` | Constitución §2 |
 | CT-3 | Build Maven Wrapper 3.9.x (`./mvnw test`, `./mvnw spring-boot:run`)                                                                                                | `pom.xml`, `.mvn/` |
 | CT-4 | **Sin persistencia relacional en Fase 1**: prohibidos JPA, Flyway/Liquibase, H2/PostgreSQL/Mongo, `@Entity`, `JpaRepository`                                       | Constitución §2/R1 |
 | CT-5 | Único storage: OCI Object Storage (Always Free), solo vía `ArtifactStorePort` en `infrastructure/`                                                                 | Constitución §2/R1 |
 | CT-6 | IA solo con Spring AI (OpenAI primario), solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort`                                                             | Constitución §2 |
 | CT-7 | **Sin auth en Fase 1**: prohibidos JWT, sesiones, roles. Solo seguridad básica (CORS allowlist, headers, CSRF off por API stateless, Bean Validation, límite 10MB) | Constitución §2/Q3 |
-| CT-8 | Fuentes `DISCORD`/`TELEGRAM` y canales `LINKEDIN`/`X`/`NEWSLETTER`/`FAQ` únicamente. Formato de ingesta: JSON único (CSV descartado en spec 001)                   | Constitución R8, spec 001 |
-| CT-9 | Secretos solo por entorno (`OPENAI_API_KEY`, `OCI_*`, `CORS_ALLOWED_ORIGINS`). Nunca en git                                                                         | Constitución R4 |
+| CT-8 | Fuentes `DISCORD` (bot JDA) y `TELEGRAM` (bot TelegramBots long polling), sin endpoint REST; canales `LINKEDIN`/`X`/`NEWSLETTER`/`FAQ` únicamente. Entrada: evento nativo (se ignora `author.isBot`, `type=OTRO`, canal/chat = nombre, >2000 truncado con flag) | Constitución R8, spec 001 |
+| CT-9 | Secretos solo por entorno (`OPENAI_API_KEY`, `OCI_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`, `CORS_ALLOWED_ORIGINS`; custodia/rotación por definir). Nunca en git                                                                         | Constitución R4 |
 
 ## 2.2 Restricciones organizativas y de proceso
 
 | #    | Restricción                                                                                                                                                                                                                                                                                        | Origen          |
 |------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|
-| CO-1 | MVP Hackathon Oracle Next Education ONE — Grupo 10 - Equipo 03. Fase 1 = pipeline IA completo; Fase >1 = auth, usuarios, dashboard, bots directos                                                                                                                                                  | Constitución §5 |
+| CO-1 | MVP Hackathon Oracle Next Education ONE — Grupo 10 - Equipo 03. Fase 1 = bots Discord JDA + Telegram long polling + pipeline IA completo; Fase >1 = auth, usuarios, dashboard, webhook Telegram                                                                                                                                                  | Constitución §5 |
 | CO-2 | Sync a `main` solo vía workflow `sync backend to main` (`subtree` a `backend/`). Prohibido push directo a `main`                                                                                                                                                                                   | Constitución R7 |
 | CO-3 | Proceso SDD obligatorio: `spec → plan → tasks → código`, con trazabilidad explícita                                                                                                                                                                                                                | Constitución P5 |
 | CO-4 | Plazo: 4 semanas de desarrollo. Todo scope fuera de 001–004 queda en Fase >1 por plazo. Semana 4 solo estabilización/demo                                                                                                                                                                         | Equipo          |
@@ -31,7 +31,7 @@
 
 - Arquitectura hexagonal estricta: `interfaces → application → domain`; `infrastructure` implementa puertos
   (`com.nocountry.simulation.communitylab.{domain,application,infrastructure,interfaces}`). Núcleo sin Spring/JPA.
-- API-first: todo endpoint con OpenAPI/Swagger + test `webmvc-test`. Sin Swagger, sin merge.
+- API-first: endpoints REST restantes con OpenAPI/Swagger + test `webmvc-test`. La ingesta Discord (Gateway) no lleva Swagger ni `webmvc-test`. Sin Swagger, sin merge.
 - Commits convencionales en inglés, un cambio lógico por commit; PRs < 400 líneas.
 - Idioma: español en documentación, inglés en código y commits.
 - Prohibido el adjetivo sin métrica (`p95`, `%`, conteos) en requisitos y ADRs.
