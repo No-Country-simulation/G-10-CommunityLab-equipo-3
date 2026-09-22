@@ -11,7 +11,7 @@ export const SOURCE_ICON: Record<InteractionSource, string> = {
 };
 
 export const SOURCE_TINT: Record<InteractionSource, string> = {
-  Discord: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300',
+  Discord: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300',
   Slack: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300',
   GitHub: 'bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200',
   Foro: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
@@ -38,7 +38,7 @@ export const ASSET_TYPE_TINT: Record<AssetType, string> = {
   linkedin_post: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
   x_post: 'bg-slate-100 text-slate-800 dark:bg-slate-700/40 dark:text-slate-100',
   newsletter_highlight: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
-  faq: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300',
+  faq: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
   success_story: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
 };
 
@@ -77,7 +77,7 @@ export const ROUTE_LABEL: Record<ContentRoute, string> = {
 export const ROUTE_TINT: Record<ContentRoute, string> = {
   success_story: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
   testimonial: 'bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300',
-  faq: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300',
+  faq: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300',
   alert: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
   discard: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
 };

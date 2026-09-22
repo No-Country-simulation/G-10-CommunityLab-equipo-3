@@ -105,11 +105,12 @@ export class Ingest {
   ];
   protected readonly mode = signal<InputMode>('samples');
 
+  /** Same steps and colors as "Cómo funciona" in Resumen: navy → blue → cyan → Oracle red. */
   protected readonly steps = [
-    { title: 'Ingesta', detail: 'Normaliza JSON / CSV / webhook', icon: 'pi pi-inbox' },
-    { title: 'Análisis con LLM', detail: 'Sentimiento, temas y relevancia', icon: 'pi pi-sparkles' },
-    { title: 'Orquestación', detail: 'Bifurcación y tono por canal', icon: 'pi pi-sitemap' },
-    { title: 'OCI Object Storage', detail: 'Paquete JSON en el bucket', icon: 'pi pi-cloud-upload' },
+    { title: 'Ingesta', detail: 'Normaliza JSON / CSV / webhook', icon: 'pi pi-inbox', color: '#1e40af', colorTo: '#1e3a8a' },
+    { title: 'Análisis con LLM', detail: 'Sentimiento, temas y relevancia', icon: 'pi pi-sparkles', color: '#2563eb', colorTo: '#1d4ed8' },
+    { title: 'Orquestación', detail: 'Bifurcación y tono por canal', icon: 'pi pi-sitemap', color: '#0891b2', colorTo: '#0e7490' },
+    { title: 'OCI Object Storage', detail: 'Paquete JSON en el bucket', icon: 'pi pi-cloud-upload', color: '#e0654f', colorTo: '#c74634' },
   ];
   /** -1 idle · 0..3 running step · 4 done */
   protected readonly step = signal(this.store.lastResult() ? 4 : -1);

@@ -5,10 +5,10 @@ export function buildBannerSvg(asset: GeneratedAsset): string {
   const route = asset.origin.route;
   const theme =
     route === 'faq'
-      ? { from: '#7c3aed', to: '#4f46e5', label: 'PREGUNTA FRECUENTE', icon: '?' }
+      ? { from: '#0f172a', to: '#1d4ed8', label: 'PREGUNTA FRECUENTE', icon: '?' }
       : route === 'testimonial'
         ? { from: '#0d9488', to: '#0284c7', label: 'VOZ DE LA COMUNIDAD', icon: '♥' }
-        : { from: '#4f46e5', to: '#db2777', label: 'LOGRO DE LA COMUNIDAD', icon: '★' };
+        : { from: '#1e3a8a', to: '#0891b2', label: 'LOGRO DE LA COMUNIDAD', icon: '★' };
 
   const headline = route === 'faq' ? asset.title : asset.origin.author;
   const sub =

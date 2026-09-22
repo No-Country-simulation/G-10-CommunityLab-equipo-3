@@ -1,17 +1,24 @@
-<header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-900/[0.06] bg-white/70 px-4 shadow-[0_1px_12px_-8px_rgb(30_41_99/0.18)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none sm:px-6">
-  <button type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+<header class="sticky top-0 z-20 flex h-20 items-center gap-3 border-b border-slate-900/[0.06] bg-white/70 px-4 shadow-[0_1px_12px_-8px_rgb(30_41_99/0.18)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none sm:px-6">
+  <!-- Accent hairline -->
+  <div class="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-blue-400/60 to-transparent dark:via-blue-500/25"></div>
+
+  <button type="button" class="nav-tile flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
     (click)="toggleSidebar.emit()" aria-label="Abrir menú">
     <i class="pi pi-bars"></i>
   </button>
 
-  <div class="flex items-center gap-2 text-sm">
-    <span class="hidden text-slate-400 dark:text-slate-500 sm:inline">Kora</span>
-    <i class="pi pi-chevron-right hidden text-[10px] text-slate-300 dark:text-slate-600 sm:inline"></i>
-    <span class="font-medium text-slate-800 dark:text-slate-100">{{ page() }}</span>
+  <div class="flex min-w-0 items-center gap-3">
+    <span class="icon-glow flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-900 text-white dark:from-blue-500/20 dark:to-cyan-500/20 dark:text-blue-300">
+      <i [class]="page().icon" class="text-sm"></i>
+    </span>
+    <div class="min-w-0 leading-tight">
+      <p class="hidden text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 sm:block">Kora</p>
+      <p class="truncate font-display text-base font-semibold text-slate-900 dark:text-slate-100">{{ page().title }}</p>
+    </div>
   </div>
 
-  <div class="ml-auto flex items-center gap-1">
-    <button type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+  <div class="ml-auto flex items-center gap-2">
+    <button type="button" class="nav-tile flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-800"
       (click)="theme.toggle()" [pTooltip]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'" tooltipPosition="bottom"
       [attr.aria-label]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
       <i [class]="theme.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
@@ -19,9 +26,11 @@
 
     <div class="mx-2 hidden h-6 w-px bg-slate-200 dark:bg-slate-700 sm:block"></div>
 
-    <button type="button" class="flex items-center gap-2 rounded-lg p-1 pr-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+    <button type="button" class="nav-tile flex h-10 items-center gap-2 rounded-xl py-1 pl-1 pr-2.5 dark:hover:bg-slate-800"
       (click)="userMenuRef.toggle($event)" aria-label="Menú de usuario">
-      <p-avatar label="CM" shape="circle" styleClass="!bg-indigo-600 !text-white !text-xs !font-semibold" />
+      <span class="rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-500 p-[2px]">
+        <p-avatar label="CM" shape="circle" styleClass="!h-7 !w-7 !bg-white !text-[11px] !font-bold !text-blue-700 dark:!bg-slate-900 dark:!text-blue-300" />
+      </span>
       <span class="hidden text-sm font-medium text-slate-800 dark:text-slate-100 md:block">Community Manager</span>
       <i class="pi pi-chevron-down hidden text-[10px] text-slate-400 md:block"></i>
     </button>

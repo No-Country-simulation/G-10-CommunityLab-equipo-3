@@ -14,7 +14,7 @@ export function confetti(origin?: { x: number; y: number }) {
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
 
-  const colors = ['#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#f59e0b', '#0ea5e9'];
+  const colors = ['#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#f59e0b', '#0ea5e9'];
   const x0 = origin?.x ?? innerWidth / 2;
   const y0 = origin?.y ?? innerHeight / 2;
   const parts = Array.from({ length: 90 }, () => {

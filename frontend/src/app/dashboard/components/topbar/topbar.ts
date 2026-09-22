@@ -29,10 +29,13 @@ export class Topbar {
       map(() => {
         let r = this.router.routerState.snapshot.root;
         while (r.firstChild) r = r.firstChild;
-        return (r.data['title'] as string | undefined) ?? 'Resumen';
+        return {
+          title: (r.data['title'] as string | undefined) ?? 'Resumen',
+          icon: (r.data['icon'] as string | undefined) ?? 'pi pi-th-large',
+        };
       }),
     ),
-    { initialValue: 'Resumen' },
+    { initialValue: { title: 'Resumen', icon: 'pi pi-th-large' } },
   );
 
   protected readonly userMenu: MenuItem[] = this.api.useMocks

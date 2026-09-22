@@ -1,13 +1,15 @@
-<div class="card group flex h-full items-center gap-4 p-5">
+<div class="card group relative flex h-full flex-col items-start gap-3 overflow-hidden p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+  <div class="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-[0.14] blur-2xl transition-opacity duration-300 group-hover:opacity-25 dark:opacity-0"
+    [style.background-color]="color()"></div>
   <div class="icon-glow flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110"
     [style.background-image]="'linear-gradient(135deg, ' + color() + '2e, ' + color() + '0f)'" [style.--glow]="color() + '66'" [style.color]="color()">
     <i [class]="stat().icon"></i>
   </div>
   <div class="min-w-0 flex-1">
-    <p class="text-2xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white" [appCountUp]="stat().value"></p>
-    <p class="truncate text-sm text-slate-500 dark:text-slate-400">{{ stat().label }}</p>
+    <p class="font-display text-2xl font-bold tabular-nums tracking-tight text-slate-900 dark:text-white" [appCountUp]="stat().value"></p>
+    <p class="text-sm leading-tight text-slate-500 dark:text-slate-400">{{ stat().label }}</p>
   </div>
   @if (stat().link) {
-    <i class="pi pi-arrow-right text-xs text-slate-300 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-slate-500 group-hover:opacity-100 dark:text-slate-600"></i>
+    <i class="pi pi-arrow-right hidden text-xs text-slate-300 opacity-0 sm:inline-block transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-slate-500 group-hover:opacity-100 dark:text-slate-600"></i>
   }
 </div>

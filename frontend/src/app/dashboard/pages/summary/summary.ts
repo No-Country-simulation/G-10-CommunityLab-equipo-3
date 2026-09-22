@@ -25,13 +25,41 @@ export class Summary {
 
   /** The four steps the challenge asks for, each linked to where it happens in the app. */
   protected readonly steps = [
-    { title: 'Ingesta', text: 'Carga mensajes de la comunidad en JSON, CSV o escríbelos.', icon: 'pi pi-inbox', link: '/ingest' },
-    { title: 'Análisis con LLM', text: 'Sentimiento, temas y relevancia de cada mensaje.', icon: 'pi pi-sparkles', link: '/ingest' },
-    { title: 'Orquestación', text: 'Logro → LinkedIn + Newsletter · Duda → FAQ. Tú apruebas.', icon: 'pi pi-sitemap', link: '/content' },
-    { title: 'OCI Object Storage', text: 'El paquete JSON queda guardado en el bucket.', icon: 'pi pi-cloud-upload', link: '/storage' },
+    {
+      title: 'Ingesta',
+      text: 'Carga mensajes de la comunidad en JSON, CSV o escríbelos.',
+      icon: 'pi pi-inbox',
+      link: '/ingest',
+      color: '#1e40af',
+      colorTo: '#1e3a8a',
+    },
+    {
+      title: 'Análisis con LLM',
+      text: 'Sentimiento, temas y relevancia de cada mensaje.',
+      icon: 'pi pi-sparkles',
+      link: '/ingest',
+      color: '#2563eb',
+      colorTo: '#1d4ed8',
+    },
+    {
+      title: 'Orquestación',
+      text: 'Logro → LinkedIn + Newsletter · Duda → FAQ. Tú apruebas.',
+      icon: 'pi pi-sitemap',
+      link: '/content',
+      color: '#0891b2',
+      colorTo: '#0e7490',
+    },
+    {
+      title: 'OCI Object Storage',
+      text: 'El paquete JSON queda guardado en el bucket.',
+      icon: 'pi pi-cloud-upload',
+      link: '/storage',
+      color: '#e0654f',
+      colorTo: '#c74634',
+    },
   ];
 
-  protected readonly statColors = ['#6366f1', '#14b8a6', '#f59e0b', '#c74634'];
+  protected readonly statColors = ['#3b82f6', '#14b8a6', '#f59e0b', '#c74634'];
 
   protected readonly stats = computed<StatItem[]>(() => {
     const objects = this.store.objects();

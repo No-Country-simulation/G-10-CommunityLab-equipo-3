@@ -47,8 +47,7 @@
       </thead>
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         @for (o of store.objects(); track o.objectName; let i = $index) {
-          <tr class="animate-fade-up group cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
-            [style.animation-delay.ms]="i * 50" (click)="open(o)">
+          <tr class="group cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40" (click)="open(o)">
             <td class="px-5 py-3">
               <div class="flex items-center gap-3">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[#c74634] transition-transform group-hover:scale-110 dark:bg-orange-500/10 dark:text-orange-300">

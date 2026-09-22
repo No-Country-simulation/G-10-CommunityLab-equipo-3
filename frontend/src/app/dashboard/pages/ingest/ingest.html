@@ -5,39 +5,58 @@
   </div>
 </div>
 
-<!-- Pipeline -->
-<section class="card p-4 sm:p-5">
-  <ol class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+<!-- Pipeline: same timeline as "Cómo funciona" in Resumen, driven by the processing state -->
+<section class="card overflow-hidden">
+  <div class="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
+    <div>
+      <h2 class="card-title">Pipeline del motor</h2>
+      <p class="card-subtitle">Mensajes → IA → contenido → OCI</p>
+    </div>
+    @if (processing()) {
+      <span class="chip animate-pop bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+        <i class="pi pi-spin pi-spinner text-[10px]"></i> Procesando · paso {{ step() + 1 }} de {{ steps.length }}
+      </span>
+    } @else if (step() >= steps.length) {
+      <span class="chip animate-pop bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <i class="pi pi-check text-[10px]"></i> Completado
+      </span>
+    } @else {
+      <span class="chip bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">En espera</span>
+    }
+  </div>
+
+  <!-- Stepper: round icons + one progress segment per step (distinct from the Resumen timeline) -->
+  <ol class="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-4">
     @for (s of steps; track s.title; let i = $index) {
       @let done = step() > i;
       @let active = step() === i;
-      <li class="raised relative flex items-center gap-3 rounded-xl border p-3 transition"
-        [class]="active
-          ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-500/40 dark:bg-indigo-500/10'
-          : done
-            ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/5'
-            : 'border-slate-100 dark:border-slate-800'">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300"
-          [class.animate-pulse-ring]="active" [class.animate-pop]="done"
-          [class]="active
-            ? 'bg-indigo-600 text-white'
-            : done
-              ? 'bg-emerald-500 text-white'
-              : 'bg-slate-100 text-slate-400 dark:bg-slate-800'">
-          <i [class]="active ? 'pi pi-spin pi-spinner' : done ? 'pi pi-check' : s.icon"></i>
+      @let pending = processing() && step() < i;
+      <li class="raised relative flex flex-col gap-3 rounded-2xl border p-4 transition-all duration-500"
+        [class.border-slate-100]="!active" [class.dark:border-slate-800]="!active" [class.opacity-60]="pending"
+        [style.border-color]="active ? s.color : null"
+        [style.box-shadow]="active ? '0 0 0 3px ' + s.color + '22, 0 12px 28px -14px ' + s.color : null">
+        <div class="flex items-center gap-3">
+          <span class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-all duration-500"
+            [class.animate-pulse-ring]="active" [class.grayscale-[40%]]="pending"
+            [style.background-image]="'linear-gradient(135deg, ' + s.color + ', ' + s.colorTo + ')'"
+            [style.box-shadow]="pending ? 'none' : '0 6px 14px -6px ' + s.color">
+            <i [class]="active ? 'pi pi-spin pi-spinner' : done ? 'pi pi-check' : s.icon" class="text-sm" [class.animate-pop]="done"></i>
+          </span>
+          <div class="min-w-0">
+            <p class="text-[11px] font-bold uppercase tracking-wider" [style.color]="s.color">Paso {{ i + 1 }}</p>
+            <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ s.title }}</p>
+          </div>
         </div>
-        <div class="min-w-0">
-          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Paso {{ i + 1 }}</p>
-          <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ s.title }}</p>
-          <p class="hidden truncate text-xs text-slate-500 dark:text-slate-400 sm:block">{{ s.detail }}</p>
+        <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ s.detail }}</p>
+        <div class="mt-auto h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <div class="h-full rounded-full transition-[width,opacity] duration-700 ease-out" [class.shimmer]="active"
+            [style.background-image]="'linear-gradient(90deg, ' + s.colorTo + ', ' + s.color + ')'"
+            [style.width.%]="done ? 100 : active ? 60 : processing() ? 0 : 100"
+            [style.opacity]="done || active ? 1 : 0.25"></div>
         </div>
       </li>
     }
   </ol>
-  <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-    <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-500 transition-[width] duration-700 ease-out"
-      [class.shimmer]="processing()" [style.width.%]="step() < 0 ? 0 : (step() / steps.length) * 100 + (processing() ? 100 / steps.length / 2 : 0)"></div>
-  </div>
 </section>
 
 @if (!result() || processing()) {
@@ -68,7 +87,7 @@
                 @let checked = selectedSamples().includes(s.id);
                 <li>
                   <label class="raised flex cursor-pointer gap-3 rounded-xl border p-3 transition hover:-translate-y-0.5 dark:hover:bg-slate-800/40"
-                    [class]="checked ? 'border-indigo-300 bg-indigo-50/40 shadow-sm dark:border-indigo-500/40 dark:bg-indigo-500/5' : 'border-slate-100 dark:border-slate-800'">
+                    [class]="checked ? 'border-blue-300 bg-blue-50/40 shadow-sm dark:border-blue-500/40 dark:bg-blue-500/5' : 'border-slate-100 dark:border-slate-800'">
                     <p-checkbox [binary]="true" [ngModel]="checked" (ngModelChange)="toggleSample(s.id, $event)" />
                     <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" [class]="sourceTint[s.source]">
                       <i [class]="sourceIcon[s.source]" class="text-sm"></i>
@@ -92,7 +111,7 @@
           @case ('data') {
             <label
               class="block rounded-xl border-2 border-dashed transition"
-              [class]="dragOver() ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10' : 'border-transparent'"
+              [class]="dragOver() ? 'border-blue-400 bg-blue-50/60 dark:bg-blue-500/10' : 'border-transparent'"
               (dragover)="$event.preventDefault(); dragOver.set(true)" (dragleave)="dragOver.set(false)" (drop)="onDrop($event)">
               <textarea pTextarea [ngModel]="jsonText()" (ngModelChange)="jsonText.set($event); parseError.set(null)" rows="12"
                 class="w-full font-mono !text-xs" spellcheck="false" aria-label="JSON o CSV de interacciones"></textarea>
@@ -105,7 +124,7 @@
                 <i class="pi pi-upload text-xs"></i> Subir .json / .csv
                 <input type="file" accept=".json,.csv" class="sr-only" (change)="onFile($event)" />
               </label>
-              <button type="button" class="text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400" (click)="downloadTemplate('csv')">
+              <button type="button" class="text-xs font-medium text-slate-500 hover:text-blue-600 dark:text-slate-400" (click)="downloadTemplate('csv')">
                 Plantilla CSV
               </button>
               <span class="flex-1"></span>
@@ -119,7 +138,7 @@
               <label class="text-sm">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Autor</span>
                 <input name="author" [(ngModel)]="manual.author" placeholder="Ej. Mariana López"
-                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900" />
+                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
               </label>
               <label class="text-sm">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Fuente</span>
@@ -128,7 +147,7 @@
               <label class="text-sm">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Canal</span>
                 <input name="channel" [(ngModel)]="manual.channel" placeholder="#general"
-                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900" />
+                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
               </label>
               <label class="text-sm sm:col-span-3">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Mensaje</span>
@@ -183,7 +202,7 @@
       </div>
 
       <div class="border-t border-slate-100 p-4 dark:border-slate-800">
-        <p-button [styleClass]="processing() ? 'w-full shimmer' : 'w-full shadow-lg shadow-indigo-500/25'" [label]="processing() ? 'Procesando con IA…' : 'Procesar ' + queue().length + ' con IA'"
+        <p-button [styleClass]="processing() ? 'w-full shimmer' : 'w-full shadow-lg shadow-blue-500/25'" [label]="processing() ? 'Procesando con IA…' : 'Procesar ' + queue().length + ' con IA'"
           icon="pi pi-sparkles" [loading]="processing()" [disabled]="!queue().length" (onClick)="process()" />
         <p class="mt-2 text-center text-[11px] text-slate-400">
           POST /api/v1/interactions/process · el resultado se guarda en OCI Object Storage
@@ -196,7 +215,7 @@
 <!-- Results -->
 @if (result(); as r) {
   @if (!processing()) {
-    <section id="results" class="mt-6 scroll-mt-20 space-y-6">
+    <section id="results" class="mt-6 scroll-mt-24 space-y-6">
       <!-- Summary + OCI receipt -->
       <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div class="card xl:col-span-2">
@@ -210,19 +229,19 @@
           <div class="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
             <div>
               <p class="text-xs text-slate-500 dark:text-slate-400">Interacciones</p>
-              <p class="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.summary.totalInteractions"></p>
+              <p class="font-display text-2xl font-bold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.summary.totalInteractions"></p>
             </div>
             <div>
               <p class="text-xs text-slate-500 dark:text-slate-400">Relevantes</p>
-              <p class="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.summary.relevantInteractions"></p>
+              <p class="font-display text-2xl font-bold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.summary.relevantInteractions"></p>
             </div>
             <div>
               <p class="text-xs text-slate-500 dark:text-slate-400">Contenidos generados</p>
-              <p class="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.assets.length"></p>
+              <p class="font-display text-2xl font-bold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.assets.length"></p>
             </div>
             <div>
               <p class="text-xs text-slate-500 dark:text-slate-400">Sentimiento general</p>
-              <p class="text-lg font-semibold" [class]="r.summary.averageSentimentScore > 0.15 ? 'text-emerald-600 dark:text-emerald-400' : r.summary.averageSentimentScore < -0.15 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'">
+              <p class="font-display text-lg font-bold" [class]="r.summary.averageSentimentScore > 0.15 ? 'text-emerald-600 dark:text-emerald-400' : r.summary.averageSentimentScore < -0.15 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'">
                 {{ r.summary.overallSentiment }}
               </p>
               <p class="text-xs text-slate-400">score {{ scoreLabel(r.summary.averageSentimentScore) }}</p>
@@ -232,7 +251,7 @@
             <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-4 dark:border-slate-800">
               <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Temas principales:</span>
               @for (t of r.summary.mainTopics; track t) {
-                <span class="chip bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{{ t }}</span>
+                <span class="chip bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">{{ t }}</span>
               }
             </div>
           }
@@ -308,7 +327,7 @@
                     <dt class="text-[11px] text-slate-500 dark:text-slate-400">Relevancia</dt>
                     <dd class="flex items-center gap-2">
                       <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                        <div class="animate-grow-x h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" [style.animation-delay.ms]="300 + idx * 120" [style.width.%]="i.analysis.relevance * 100"></div>
+                        <div class="animate-grow-x h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" [style.animation-delay.ms]="300 + idx * 120" [style.width.%]="i.analysis.relevance * 100"></div>
                       </div>
                       <span class="text-xs font-medium">{{ i.analysis.relevance | percent }}</span>
                     </dd>
@@ -325,7 +344,7 @@
                   </div>
                 </dl>
                 <p class="mt-3 flex gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <i class="pi pi-sparkles mt-0.5 text-indigo-500"></i>{{ i.analysis.reason }}
+                  <i class="pi pi-sparkles mt-0.5 text-blue-500"></i>{{ i.analysis.reason }}
                 </p>
               </div>
 
@@ -340,7 +359,7 @@
                           <span class="font-semibold text-slate-700 dark:text-slate-200">{{ typeLabel[a.type] }}</span>
                           <span class="text-slate-400">· tono {{ a.tone | lowercase }}</span>
                           <p-tag class="ml-auto" [value]="statusLabel[a.status]" [severity]="statusSeverity[a.status]" [rounded]="true" />
-                          <button type="button" class="rounded p-1 text-slate-400 hover:text-indigo-600" pTooltip="Copiar texto" tooltipPosition="top"
+                          <button type="button" class="rounded p-1 text-slate-400 hover:text-blue-600" pTooltip="Copiar texto" tooltipPosition="top"
                             (click)="copy(a.body + (a.hashtags.length ? '\n\n' + a.hashtags.join(' ') : ''))" aria-label="Copiar texto">
                             <i class="pi pi-copy text-xs"></i>
                           </button>
