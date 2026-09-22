@@ -1,1 +1,432 @@
-/* You can add global styles to this file, and also import other style files */
+@import 'primeicons/primeicons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200;
+  }
+
+  /* Light mode: soft tinted canvas instead of flat gray */
+  html:not(.dark) body {
+    background:
+      radial-gradient(1100px 520px at 0% -8%, rgb(99 102 241 / 0.12), transparent 60%),
+      radial-gradient(900px 480px at 100% -4%, rgb(217 70 239 / 0.08), transparent 55%),
+      radial-gradient(700px 400px at 50% 110%, rgb(20 184 166 / 0.06), transparent 60%),
+      radial-gradient(rgb(15 23 42 / 0.045) 1px, transparent 1px) 0 0 / 22px 22px,
+      #f3f4fa;
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-indigo-100 text-indigo-900 dark:bg-indigo-500/30 dark:text-white;
+  }
+
+  html:not(.dark) {
+    scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border bg-white dark:border-slate-800 dark:bg-slate-900;
+    border-color: rgb(15 23 42 / 0.07);
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 0.04),
+      0 1px 3px rgb(16 24 40 / 0.03),
+      0 12px 32px -16px rgb(30 41 99 / 0.12);
+  }
+
+  .dark .card {
+    border-color: rgb(30 41 59);
+    box-shadow: none;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-4 border-b border-slate-100/90 px-5 py-4 dark:border-slate-800;
+  }
+
+  .card-title {
+    @apply text-sm font-semibold text-slate-900 dark:text-white;
+  }
+
+  .card-subtitle {
+    @apply mt-0.5 text-xs text-slate-500 dark:text-slate-400;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-slate-900 dark:text-white;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-slate-500 dark:text-slate-400;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+/* PrimeNG table inside our cards: blend with card surface */
+.card .p-datatable .p-datatable-thead > tr > th {
+  @apply bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-900/60 dark:text-slate-400;
+}
+
+.card .p-datatable .p-datatable-tbody > tr,
+.card .p-datatable .p-paginator {
+  @apply bg-transparent;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes soft-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  80%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+.card {
+  animation: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-pan 14s ease infinite;
+}
+
+.live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: soft-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(99 102 241 / 0.45); }
+  100% { box-shadow: 0 0 0 12px rgb(99 102 241 / 0); }
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes leave {
+  to { opacity: 0; transform: translateX(24px); }
+}
+
+/* Cards that navigate or open something */
+.hover-lift {
+  @apply cursor-pointer transition duration-200 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/10 active:translate-y-0 active:scale-[0.99] dark:hover:shadow-black/40;
+}
+
+/* Tactile press feedback on every button */
+button:not(:disabled),
+.p-button:not(:disabled),
+a.pressable {
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 150ms;
+}
+
+button:not(:disabled):active,
+.p-button:not(:disabled):active,
+a.pressable:active {
+  transform: scale(0.97);
+}
+
+/* Progress-like bars grow from the left when they appear */
+.animate-grow-x {
+  transform-origin: left;
+  animation: grow-x 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-pop {
+  animation: pop 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+.animate-leave {
+  animation: leave 0.28s ease-in forwards;
+  pointer-events: none;
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+/* Route changes cross-fade and slide (View Transitions API, via withViewTransitions) */
+/* Only the page content moves; sidebar and topbar stay put */
+.page-transition {
+  view-transition-name: page;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(page) {
+  animation: 140ms ease-in both vt-out;
+}
+
+::view-transition-new(page) {
+  animation: 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both vt-in;
+}
+
+@keyframes vt-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes vt-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* ── Light mode refinements ─────────────────────────────────────── */
+html:not(.dark) .card-title {
+  color: #0b1324;
+}
+
+/* Inset panels inside cards read as recessed wells, not flat gray boxes */
+html:not(.dark) .card .bg-slate-50 {
+  background-color: rgb(248 250 252 / 0.85);
+  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.04);
+}
+
+/* PrimeNG controls matched to the card surface */
+html:not(.dark) .p-selectbutton {
+  @apply rounded-lg bg-slate-100/80 p-0.5 ring-1 ring-slate-200/70;
+}
+
+html:not(.dark) .p-selectbutton .p-togglebutton {
+  @apply border-transparent bg-transparent;
+}
+
+html:not(.dark) .p-togglebutton.p-togglebutton-checked .p-togglebutton-content {
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.08), 0 0 0 1px rgb(15 23 42 / 0.04);
+}
+
+html:not(.dark) .p-select,
+html:not(.dark) .p-textarea {
+  @apply border-slate-200 shadow-sm;
+}
+
+html:not(.dark) .p-tag {
+  @apply ring-1 ring-inset ring-black/5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .animate-fade-up,
+  .animate-slide-in,
+  .animate-gradient,
+  .animate-grow-x,
+  .animate-pop,
+  .animate-pulse-ring,
+  .shimmer::after,
+  .live-dot::after,
+  ::view-transition-old(page),
+  ::view-transition-new(page) {
+    animation: none;
+  }
+
+  .hover-lift,
+  button:active,
+  .p-button:active {
+    transform: none !important;
+  }
+}
+
+/* ══ Light mode depth ════════════════════════════════════════════════
+   Everything below only applies without .dark: layered elevation,
+   top highlights and colored glows so surfaces don't read as flat. */
+
+html:not(.dark) {
+  --elev-1: 0 0 0 1px rgb(15 23 42 / 0.05), 0 1px 2px rgb(15 23 42 / 0.06);
+  --elev-2: 0 0 0 1px rgb(15 23 42 / 0.05), 0 1px 2px rgb(15 23 42 / 0.05),
+    0 4px 10px -2px rgb(15 23 42 / 0.06), 0 18px 36px -14px rgb(30 41 99 / 0.18);
+  --elev-3: 0 0 0 1px rgb(15 23 42 / 0.05), 0 2px 4px rgb(15 23 42 / 0.05),
+    0 12px 24px -6px rgb(30 41 99 / 0.14), 0 32px 56px -20px rgb(79 70 229 / 0.28);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.95);
+  --glow-primary: 0 1px 2px rgb(49 46 129 / 0.3), 0 6px 16px -4px rgb(99 102 241 / 0.55);
+  --glow-success: 0 1px 2px rgb(6 78 59 / 0.3), 0 6px 16px -4px rgb(16 185 129 / 0.5);
+}
+
+/* Cards: layered elevation + soft top highlight */
+html:not(.dark) .card {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fdfdff 60%, #fafbff 100%);
+  box-shadow: var(--highlight), var(--elev-2);
+}
+
+html:not(.dark) .card-header {
+  background-image: linear-gradient(180deg, rgb(248 250 252 / 0.9), rgb(255 255 255 / 0));
+  border-bottom-color: rgb(15 23 42 / 0.06);
+}
+
+html:not(.dark) .hover-lift:hover,
+html:not(.dark) .hover-lift:hover .card {
+  box-shadow: var(--highlight), var(--elev-3);
+}
+
+/* Primary buttons: gradient + indigo glow */
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast) {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #6d6ff5 0%, #5145e5 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--glow-primary);
+}
+
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast):not(:disabled):hover {
+  background-image: linear-gradient(180deg, #7577f7 0%, #5a4ff0 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 1px 2px rgb(49 46 129 / 0.3), 0 10px 22px -6px rgb(99 102 241 / 0.6);
+}
+
+html:not(.dark) .p-button.p-button-success:not(.p-button-outlined):not(.p-button-text) {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #22c58b 0%, #059669 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--glow-success);
+}
+
+html:not(.dark) .p-button.p-button-danger:not(.p-button-outlined):not(.p-button-text) {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #f75a72 0%, #e11d48 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 16px -4px rgb(244 63 94 / 0.5);
+}
+
+/* Outlined buttons sit on a raised white surface */
+html:not(.dark) .p-button.p-button-outlined {
+  background-color: #fff;
+  box-shadow: var(--highlight), var(--elev-1);
+}
+
+html:not(.dark) .p-button.p-button-outlined:not(:disabled):hover {
+  box-shadow: var(--highlight), 0 0 0 1px rgb(15 23 42 / 0.06), 0 4px 12px -4px rgb(30 41 99 / 0.2);
+}
+
+html:not(.dark) .p-button:disabled {
+  box-shadow: none;
+}
+
+/* Inputs read as recessed; focus gets a soft halo */
+html:not(.dark) input[type='search'],
+html:not(.dark) input:not([type]),
+html:not(.dark) input[type='text'],
+html:not(.dark) .p-textarea,
+html:not(.dark) .p-select {
+  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+html:not(.dark) input:focus,
+html:not(.dark) .p-textarea:focus,
+html:not(.dark) .p-select.p-focus {
+  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.04), 0 0 0 4px rgb(99 102 241 / 0.14);
+}
+
+/* Segmented control: recessed track, raised thumb */
+html:not(.dark) .p-selectbutton {
+  background-color: rgb(241 245 249 / 0.9);
+  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.08);
+}
+
+html:not(.dark) .p-togglebutton.p-togglebutton-checked .p-togglebutton-content {
+  background-color: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.1), 0 2px 6px -1px rgb(30 41 99 / 0.12);
+}
+
+/* Floating layers */
+html:not(.dark) .p-dialog,
+html:not(.dark) .p-menu-overlay,
+html:not(.dark) .p-popover,
+html:not(.dark) .p-select-overlay {
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 24px 48px -12px rgb(30 41 99 / 0.3), 0 8px 16px -8px rgb(15 23 42 / 0.12);
+}
+
+html:not(.dark) .p-toast-message {
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.05), 0 16px 32px -12px rgb(30 41 99 / 0.28);
+}
+
+/* Shell */
+html:not(.dark) aside {
+  box-shadow: 1px 0 0 rgb(15 23 42 / 0.05), 8px 0 32px -16px rgb(30 41 99 / 0.22);
+}
+
+html:not(.dark) header.sticky {
+  box-shadow: 0 1px 0 rgb(15 23 42 / 0.05), 0 8px 24px -16px rgb(30 41 99 / 0.25);
+}
+
+/* Tags and chips get a hairline so they don't dissolve into white */
+html:not(.dark) .p-tag {
+  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.06), 0 1px 1px rgb(15 23 42 / 0.04);
+}
+
+html:not(.dark) .chip {
+  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.05);
+}
+
+/* Channel previews (LinkedIn / X / newsletter / FAQ) look like real floating cards */
+html:not(.dark) app-asset-preview > div {
+  box-shadow: var(--highlight), 0 1px 2px rgb(15 23 42 / 0.05), 0 10px 24px -14px rgb(30 41 99 / 0.25);
+}
+
+/* Colored icon tiles inside cards pick up a soft glow of their own tint */
+html:not(.dark) .icon-glow {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 6px 14px -6px var(--glow, rgb(99 102 241 / 0.5));
+}
+
+/* Nested tiles inside cards (steps, samples, pipeline, origin boxes) */
+/* Shadow only, so state colors (active / done / selected) still show through */
+html:not(.dark) .raised {
+  box-shadow: var(--highlight), 0 1px 2px rgb(15 23 42 / 0.05), 0 4px 10px -6px rgb(30 41 99 / 0.14);
+}

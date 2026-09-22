@@ -1,0 +1,388 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="page-title">Ingesta y análisis</h1>
+    <p class="page-subtitle">Carga mensajes, analízalos con IA y guarda el resultado en OCI.</p>
+  </div>
+</div>
+
+<!-- Pipeline -->
+<section class="card p-4 sm:p-5">
+  <ol class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    @for (s of steps; track s.title; let i = $index) {
+      @let done = step() > i;
+      @let active = step() === i;
+      <li class="raised relative flex items-center gap-3 rounded-xl border p-3 transition"
+        [class]="active
+          ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-500/40 dark:bg-indigo-500/10'
+          : done
+            ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/5'
+            : 'border-slate-100 dark:border-slate-800'">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300"
+          [class.animate-pulse-ring]="active" [class.animate-pop]="done"
+          [class]="active
+            ? 'bg-indigo-600 text-white'
+            : done
+              ? 'bg-emerald-500 text-white'
+              : 'bg-slate-100 text-slate-400 dark:bg-slate-800'">
+          <i [class]="active ? 'pi pi-spin pi-spinner' : done ? 'pi pi-check' : s.icon"></i>
+        </div>
+        <div class="min-w-0">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Paso {{ i + 1 }}</p>
+          <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ s.title }}</p>
+          <p class="hidden truncate text-xs text-slate-500 dark:text-slate-400 sm:block">{{ s.detail }}</p>
+        </div>
+      </li>
+    }
+  </ol>
+  <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+    <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-500 transition-[width] duration-700 ease-out"
+      [class.shimmer]="processing()" [style.width.%]="step() < 0 ? 0 : (step() / steps.length) * 100 + (processing() ? 100 / steps.length / 2 : 0)"></div>
+  </div>
+</section>
+
+@if (!result() || processing()) {
+  <section class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <!-- Input -->
+    <div class="card xl:col-span-3">
+      <div class="card-header flex-wrap">
+        <div>
+          <h2 class="card-title">1 · Interacciones de entrada</h2>
+          <p class="card-subtitle">Elige cómo cargar los mensajes de la comunidad</p>
+        </div>
+        <p-selectbutton [options]="modes" [ngModel]="mode()" (ngModelChange)="mode.set($event)" optionLabel="label"
+          optionValue="value" [allowEmpty]="false" size="small">
+          <ng-template #item let-item>
+            <i [class]="item.icon" class="text-xs"></i><span class="ml-1.5 hidden sm:inline">{{ item.label }}</span>
+          </ng-template>
+        </p-selectbutton>
+      </div>
+
+      <div class="p-5">
+        @switch (mode()) {
+          @case ('samples') {
+            <p class="mb-3 text-sm text-slate-500 dark:text-slate-400">
+              Mariana y Lucas son los casos del enunciado; el resto cubre cada rama de la orquestación.
+            </p>
+            <ul class="space-y-2">
+              @for (s of samples; track s.id) {
+                @let checked = selectedSamples().includes(s.id);
+                <li>
+                  <label class="raised flex cursor-pointer gap-3 rounded-xl border p-3 transition hover:-translate-y-0.5 dark:hover:bg-slate-800/40"
+                    [class]="checked ? 'border-indigo-300 bg-indigo-50/40 shadow-sm dark:border-indigo-500/40 dark:bg-indigo-500/5' : 'border-slate-100 dark:border-slate-800'">
+                    <p-checkbox [binary]="true" [ngModel]="checked" (ngModelChange)="toggleSample(s.id, $event)" />
+                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" [class]="sourceTint[s.source]">
+                      <i [class]="sourceIcon[s.source]" class="text-sm"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-medium text-slate-900 dark:text-white">
+                        {{ s.author }} <span class="font-normal text-slate-400">· {{ s.source }} {{ s.channel }}</span>
+                      </p>
+                      <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">{{ s.content }}</p>
+                    </div>
+                  </label>
+                </li>
+              }
+            </ul>
+            <div class="mt-4 flex justify-end">
+              <p-button label="Agregar {{ selectedSamples().length }} al lote" icon="pi pi-plus" size="small"
+                [disabled]="!selectedSamples().length" (onClick)="addSamples()" />
+            </div>
+          }
+
+          @case ('data') {
+            <label
+              class="block rounded-xl border-2 border-dashed transition"
+              [class]="dragOver() ? 'border-indigo-400 bg-indigo-50/60 dark:bg-indigo-500/10' : 'border-transparent'"
+              (dragover)="$event.preventDefault(); dragOver.set(true)" (dragleave)="dragOver.set(false)" (drop)="onDrop($event)">
+              <textarea pTextarea [ngModel]="jsonText()" (ngModelChange)="jsonText.set($event); parseError.set(null)" rows="12"
+                class="w-full font-mono !text-xs" spellcheck="false" aria-label="JSON o CSV de interacciones"></textarea>
+            </label>
+            @if (parseError()) {
+              <p class="mt-2 text-sm text-rose-600 dark:text-rose-400"><i class="pi pi-times-circle mr-1"></i>{{ parseError() }}</p>
+            }
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                <i class="pi pi-upload text-xs"></i> Subir .json / .csv
+                <input type="file" accept=".json,.csv" class="sr-only" (change)="onFile($event)" />
+              </label>
+              <button type="button" class="text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400" (click)="downloadTemplate('csv')">
+                Plantilla CSV
+              </button>
+              <span class="flex-1"></span>
+              <p-button label="Validar y agregar" icon="pi pi-check" size="small" (onClick)="loadJson()" />
+            </div>
+            <p class="mt-2 text-xs text-slate-400">Pega JSON o CSV, o arrastra un archivo. Campos: author, content, source, channel.</p>
+          }
+
+          @case ('manual') {
+            <form class="grid grid-cols-1 gap-4 sm:grid-cols-3" (ngSubmit)="addManual()">
+              <label class="text-sm">
+                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Autor</span>
+                <input name="author" [(ngModel)]="manual.author" placeholder="Ej. Mariana López"
+                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900" />
+              </label>
+              <label class="text-sm">
+                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Fuente</span>
+                <p-select name="source" [options]="sourceOptions" [(ngModel)]="manual.source" styleClass="w-full" />
+              </label>
+              <label class="text-sm">
+                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Canal</span>
+                <input name="channel" [(ngModel)]="manual.channel" placeholder="#general"
+                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900" />
+              </label>
+              <label class="text-sm sm:col-span-3">
+                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">Mensaje</span>
+                <textarea pTextarea name="content" [(ngModel)]="manual.content" rows="4" class="w-full"
+                  placeholder="Escribe o pega el mensaje tal como aparece en la comunidad…"></textarea>
+              </label>
+              <div class="flex justify-end sm:col-span-3">
+                <p-button type="submit" label="Agregar al lote" icon="pi pi-plus" size="small" [disabled]="!manual.content.trim()" />
+              </div>
+            </form>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Queue -->
+    <div class="card flex flex-col xl:col-span-2">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">2 · Lote a procesar</h2>
+          <p class="card-subtitle">{{ queue().length }} interacción(es) en cola</p>
+        </div>
+        @if (queue().length) {
+          <p-button label="Vaciar" [text]="true" severity="secondary" size="small" (onClick)="clearQueue()" [disabled]="processing()" />
+        }
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-3" style="max-height: 28rem">
+        @for (i of queue(); track i.id) {
+          <div class="animate-slide-in group flex gap-3 rounded-lg p-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40">
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" [class]="sourceTint[i.source]">
+              <i [class]="sourceIcon[i.source]" class="text-xs"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{{ i.author }} · {{ i.channel }}</p>
+              <p class="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">{{ i.content }}</p>
+            </div>
+            <button type="button" class="self-start rounded p-1 text-slate-400 opacity-0 hover:text-rose-500 group-hover:opacity-100 focus:opacity-100"
+              (click)="removeFromQueue(i.id)" [disabled]="processing()" [attr.aria-label]="'Quitar mensaje de ' + i.author">
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          </div>
+        } @empty {
+          <div class="flex h-full flex-col items-center justify-center gap-2 py-12 text-center">
+            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+              <i class="pi pi-inbox text-slate-400"></i>
+            </div>
+            <p class="text-sm font-medium">El lote está vacío</p>
+            <p class="max-w-xs text-sm text-slate-500 dark:text-slate-400">Agrega mensajes con cualquiera de los métodos de la izquierda.</p>
+          </div>
+        }
+      </div>
+
+      <div class="border-t border-slate-100 p-4 dark:border-slate-800">
+        <p-button [styleClass]="processing() ? 'w-full shimmer' : 'w-full shadow-lg shadow-indigo-500/25'" [label]="processing() ? 'Procesando con IA…' : 'Procesar ' + queue().length + ' con IA'"
+          icon="pi pi-sparkles" [loading]="processing()" [disabled]="!queue().length" (onClick)="process()" />
+        <p class="mt-2 text-center text-[11px] text-slate-400">
+          POST /api/v1/interactions/process · el resultado se guarda en OCI Object Storage
+        </p>
+      </div>
+    </div>
+  </section>
+}
+
+<!-- Results -->
+@if (result(); as r) {
+  @if (!processing()) {
+    <section id="results" class="mt-6 scroll-mt-20 space-y-6">
+      <!-- Summary + OCI receipt -->
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div class="card xl:col-span-2">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Resumen del lote</h2>
+              <p class="card-subtitle">{{ r.batchId }} · {{ r.processedAt | date: 'medium' }} · {{ r.model }}</p>
+            </div>
+            <p-button label="Nuevo lote" icon="pi pi-refresh" size="small" [outlined]="true" (onClick)="newBatch()" />
+          </div>
+          <div class="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+            <div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Interacciones</p>
+              <p class="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.summary.totalInteractions"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Relevantes</p>
+              <p class="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.summary.relevantInteractions"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Contenidos generados</p>
+              <p class="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white" [appCountUp]="r.assets.length"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Sentimiento general</p>
+              <p class="text-lg font-semibold" [class]="r.summary.averageSentimentScore > 0.15 ? 'text-emerald-600 dark:text-emerald-400' : r.summary.averageSentimentScore < -0.15 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'">
+                {{ r.summary.overallSentiment }}
+              </p>
+              <p class="text-xs text-slate-400">score {{ scoreLabel(r.summary.averageSentimentScore) }}</p>
+            </div>
+          </div>
+          @if (r.summary.mainTopics.length) {
+            <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-4 dark:border-slate-800">
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Temas principales:</span>
+              @for (t of r.summary.mainTopics; track t) {
+                <span class="chip bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{{ t }}</span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="flex items-center gap-3 bg-gradient-to-r from-[#c74634] to-[#e0654f] px-5 py-4 text-white">
+            <i class="pi pi-cloud text-xl"></i>
+            <div>
+              <p class="text-sm font-semibold">Guardado en OCI Object Storage</p>
+              <p class="text-xs opacity-90">Always Free · {{ r.storage.region }}</p>
+            </div>
+            <i class="pi pi-check-circle animate-pop ml-auto text-xl" style="animation-delay: 300ms"></i>
+          </div>
+          <dl class="space-y-2.5 p-5 text-sm">
+            <div class="flex justify-between gap-4"><dt class="text-slate-500 dark:text-slate-400">Bucket</dt><dd class="font-medium">{{ r.storage.bucket }}</dd></div>
+            <div class="flex justify-between gap-4"><dt class="text-slate-500 dark:text-slate-400">Namespace</dt><dd class="font-mono text-xs">{{ r.storage.namespace }}</dd></div>
+            <div class="flex justify-between gap-4"><dt class="text-slate-500 dark:text-slate-400">Tamaño</dt><dd>{{ r.storage.sizeBytes / 1024 | number: '1.1-1' }} KB</dd></div>
+            <div class="flex justify-between gap-4"><dt class="text-slate-500 dark:text-slate-400">ETag</dt><dd class="font-mono text-xs">{{ r.storage.etag.slice(0, 12) }}…</dd></div>
+            <div>
+              <dt class="text-slate-500 dark:text-slate-400">Objeto</dt>
+              <dd class="mt-1 break-all rounded-lg bg-slate-50 p-2 font-mono text-xs dark:bg-slate-800/60">{{ r.storage.objectName }}</dd>
+            </div>
+          </dl>
+          <div class="flex gap-2 border-t border-slate-100 p-4 dark:border-slate-800">
+            <p-button label="Copiar URL" icon="pi pi-copy" size="small" severity="secondary" [outlined]="true" (onClick)="copy(r.storage.url, 'URL')" />
+            <p-button label="Ver bucket" icon="pi pi-arrow-right" size="small" [text]="true" routerLink="/storage" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Per interaction -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Análisis y contenido por interacción</h2>
+            <p class="card-subtitle">Bifurcación condicional: logro → caso de éxito · duda → FAQ · negativo → alerta</p>
+          </div>
+          <p-button label="Ir a curaduría" icon="pi pi-arrow-right" iconPos="right" size="small" routerLink="/content" />
+        </div>
+
+        <div class="divide-y divide-slate-100 dark:divide-slate-800">
+          @for (i of r.interactions; track i.id; let idx = $index) {
+            @let assets = assetsFor(i);
+            <article class="animate-fade-up grid grid-cols-1 gap-5 p-5 lg:grid-cols-5" [style.animation-delay.ms]="150 + idx * 120">
+              <!-- Message + analysis -->
+              <div class="lg:col-span-2">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" [class]="sourceTint[i.source]">
+                    <i [class]="sourceIcon[i.source]"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-slate-900 dark:text-white">{{ i.author }}</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ i.source }} · {{ i.channel }}</p>
+                  </div>
+                  <span class="chip ml-auto shrink-0" [class]="routeTint[i.analysis.route]">
+                    <i [class]="routeIcon[i.analysis.route]" class="text-[10px]"></i>{{ routeLabel[i.analysis.route] }}
+                  </span>
+                </div>
+                <blockquote class="mt-3 border-l-2 border-slate-200 pl-3 text-sm italic text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                  “{{ i.content }}”
+                </blockquote>
+
+                <dl class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/50">
+                  <div>
+                    <dt class="text-[11px] text-slate-500 dark:text-slate-400">Sentimiento</dt>
+                    <dd class="flex items-center gap-1.5 font-medium capitalize" [class]="sentimentTint[i.analysis.sentiment]">
+                      <i [class]="sentimentIcon[i.analysis.sentiment]" class="text-xs"></i>{{ i.analysis.sentiment }}
+                      <span class="text-xs font-normal text-slate-400">{{ scoreLabel(i.analysis.sentimentScore) }}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-[11px] text-slate-500 dark:text-slate-400">Relevancia</dt>
+                    <dd class="flex items-center gap-2">
+                      <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                        <div class="animate-grow-x h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" [style.animation-delay.ms]="300 + idx * 120" [style.width.%]="i.analysis.relevance * 100"></div>
+                      </div>
+                      <span class="text-xs font-medium">{{ i.analysis.relevance | percent }}</span>
+                    </dd>
+                  </div>
+                  <div class="col-span-2">
+                    <dt class="text-[11px] text-slate-500 dark:text-slate-400">Temas</dt>
+                    <dd class="mt-1 flex flex-wrap gap-1">
+                      @for (t of i.analysis.topics; track t) {
+                        <span class="chip bg-white text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700">{{ t }}</span>
+                      } @empty {
+                        <span class="text-xs text-slate-400">Sin temas detectados</span>
+                      }
+                    </dd>
+                  </div>
+                </dl>
+                <p class="mt-3 flex gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <i class="pi pi-sparkles mt-0.5 text-indigo-500"></i>{{ i.analysis.reason }}
+                </p>
+              </div>
+
+              <!-- Generated assets -->
+              <div class="lg:col-span-3">
+                @if (assets.length) {
+                  <div class="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+                    @for (a of assets; track a.id) {
+                      <div class="flex flex-col">
+                        <div class="mb-2 flex items-center gap-2 text-xs">
+                          <i [class]="typeIcon[a.type]" class="text-slate-500"></i>
+                          <span class="font-semibold text-slate-700 dark:text-slate-200">{{ typeLabel[a.type] }}</span>
+                          <span class="text-slate-400">· tono {{ a.tone | lowercase }}</span>
+                          <p-tag class="ml-auto" [value]="statusLabel[a.status]" [severity]="statusSeverity[a.status]" [rounded]="true" />
+                          <button type="button" class="rounded p-1 text-slate-400 hover:text-indigo-600" pTooltip="Copiar texto" tooltipPosition="top"
+                            (click)="copy(a.body + (a.hashtags.length ? '\n\n' + a.hashtags.join(' ') : ''))" aria-label="Copiar texto">
+                            <i class="pi pi-copy text-xs"></i>
+                          </button>
+                        </div>
+                        <app-asset-preview class="transition duration-200 hover:-translate-y-0.5 hover:drop-shadow-md" [asset]="a" [compact]="true" />
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 p-6 text-center dark:border-slate-700">
+                    <i [class]="routeIcon[i.analysis.route]" class="text-xl text-slate-400"></i>
+                    <p class="text-sm font-medium">{{ i.analysis.route === 'alert' ? 'Derivado al equipo de comunidad' : 'Sin contenido generado' }}</p>
+                    <p class="max-w-sm text-xs text-slate-500 dark:text-slate-400">
+                      {{ i.analysis.route === 'alert'
+                        ? 'Los mensajes negativos no se publican: se notifican al Community Manager para darles seguimiento.'
+                        : 'El mensaje no aporta valor suficiente para convertirse en contenido.' }}
+                    </p>
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </div>
+
+      <!-- Raw JSON -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Respuesta JSON del endpoint</h2>
+            <p class="card-subtitle">Paquete completo almacenado en el bucket</p>
+          </div>
+          <div class="flex gap-2">
+            <p-button [label]="showJson() ? 'Ocultar' : 'Ver JSON'" icon="pi pi-code" size="small" severity="secondary" [outlined]="true" (onClick)="showJson.set(!showJson())" />
+            <p-button icon="pi pi-copy" size="small" severity="secondary" [text]="true" pTooltip="Copiar JSON" (onClick)="copy(resultJson(), 'JSON')" ariaLabel="Copiar JSON" />
+            <p-button icon="pi pi-download" size="small" severity="secondary" [text]="true" pTooltip="Descargar" (onClick)="downloadResult()" ariaLabel="Descargar JSON" />
+          </div>
+        </div>
+        @if (showJson()) {
+          <pre class="max-h-[32rem] overflow-auto bg-slate-950 p-5 text-xs leading-relaxed text-slate-200">{{ resultJson() }}</pre>
+        }
+      </div>
+    </section>
+  }
+}

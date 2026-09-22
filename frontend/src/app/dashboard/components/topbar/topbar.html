@@ -1,0 +1,30 @@
+<header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-900/[0.06] bg-white/70 px-4 shadow-[0_1px_12px_-8px_rgb(30_41_99/0.18)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-none sm:px-6">
+  <button type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+    (click)="toggleSidebar.emit()" aria-label="Abrir menú">
+    <i class="pi pi-bars"></i>
+  </button>
+
+  <div class="flex items-center gap-2 text-sm">
+    <span class="hidden text-slate-400 dark:text-slate-500 sm:inline">Kora</span>
+    <i class="pi pi-chevron-right hidden text-[10px] text-slate-300 dark:text-slate-600 sm:inline"></i>
+    <span class="font-medium text-slate-800 dark:text-slate-100">{{ page() }}</span>
+  </div>
+
+  <div class="ml-auto flex items-center gap-1">
+    <button type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+      (click)="theme.toggle()" [pTooltip]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'" tooltipPosition="bottom"
+      [attr.aria-label]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+      <i [class]="theme.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+    </button>
+
+    <div class="mx-2 hidden h-6 w-px bg-slate-200 dark:bg-slate-700 sm:block"></div>
+
+    <button type="button" class="flex items-center gap-2 rounded-lg p-1 pr-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+      (click)="userMenuRef.toggle($event)" aria-label="Menú de usuario">
+      <p-avatar label="CM" shape="circle" styleClass="!bg-indigo-600 !text-white !text-xs !font-semibold" />
+      <span class="hidden text-sm font-medium text-slate-800 dark:text-slate-100 md:block">Community Manager</span>
+      <i class="pi pi-chevron-down hidden text-[10px] text-slate-400 md:block"></i>
+    </button>
+    <p-menu #userMenuRef [model]="userMenu" [popup]="true" appendTo="body" />
+  </div>
+</header>

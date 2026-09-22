@@ -1,0 +1,100 @@
+<!-- Mobile backdrop -->
+@if (open()) {
+  <div class="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden" (click)="close.emit()"></div>
+}
+
+@let c = collapsed();
+
+<aside
+  class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-900/[0.06] bg-gradient-to-b from-white via-white to-indigo-50/50 shadow-[1px_0_24px_-12px_rgb(30_41_99/0.15)] transition-[transform,width] duration-300 ease-out dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 dark:shadow-none lg:translate-x-0"
+  [class.-translate-x-full]="!open()"
+  [class.lg:w-20]="c"
+  [class.lg:w-64]="!c"
+>
+  <!-- Brand -->
+  <div class="flex h-16 shrink-0 items-center gap-3 px-4" [class.lg:justify-center]="c" [class.lg:px-0]="c">
+    <img src="image/logo/KoraLogo.png" alt="Kora" width="36" height="36"
+      class="h-9 w-9 shrink-0 object-contain drop-shadow-[0_4px_10px_rgb(99_102_241/0.35)] transition-transform duration-300 hover:-rotate-6 hover:scale-105" />
+    <div class="min-w-0 leading-tight" [class.lg:hidden]="c">
+      <p class="text-sm font-bold tracking-tight text-slate-900 dark:text-white">Kora</p>
+      <p class="text-[11px] text-slate-500 dark:text-slate-400">Tu comunidad habla. Kora publica.</p>
+    </div>
+    <button type="button" class="ml-auto rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
+      (click)="close.emit()" aria-label="Cerrar menú">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4" [class.lg:px-2.5]="c" aria-label="Principal">
+    <ul class="space-y-1">
+      @for (item of items; track item.path) {
+        @let count = item.badge ? item.badge() : 0;
+        <li>
+          <a
+            [routerLink]="item.path"
+            routerLinkActive
+            #rla="routerLinkActive"
+            [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+            (click)="close.emit()"
+            [pTooltip]="item.label + (count ? ' (' + count + ')' : '')" tooltipPosition="right" [tooltipDisabled]="!c"
+            class="group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition"
+            [class]="rla.isActive
+              ? 'bg-gradient-to-r from-indigo-50 to-violet-50/60 text-indigo-700 ring-1 ring-inset ring-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/5 dark:text-indigo-300 dark:ring-indigo-500/20'
+              : 'text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-white'"
+            [class.lg:justify-center]="c" [class.lg:px-0]="c"
+          >
+            <span class="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-indigo-600 transition-all duration-300 dark:bg-indigo-400"
+              [class]="rla.isActive ? 'opacity-100' : 'opacity-0 scale-y-50'" [class.lg:-left-2.5]="c"></span>
+
+            <span class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition"
+              [class]="rla.isActive
+                ? 'icon-glow bg-white text-indigo-600 ring-1 ring-indigo-100 dark:bg-slate-900 dark:text-indigo-300 dark:ring-0'
+                : 'bg-slate-100/70 text-slate-500 group-hover:bg-white group-hover:text-slate-700 group-hover:shadow-sm dark:bg-transparent dark:text-slate-400 dark:group-hover:bg-transparent dark:group-hover:text-slate-200'">
+              <i [class]="item.icon" class="text-[15px]"></i>
+              @if (c && count > 0) {
+                <span class="absolute -right-0.5 -top-0.5 hidden h-2.5 w-2.5 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-slate-900 lg:block"></span>
+              }
+            </span>
+
+            <span class="min-w-0 flex-1 leading-tight" [class.lg:hidden]="c">
+              <span class="block truncate">{{ item.label }}</span>
+              <span class="block truncate text-[11px] font-normal text-slate-400 dark:text-slate-500">{{ item.hint }}</span>
+            </span>
+
+            @if (count > 0) {
+              <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300"
+                [class.lg:hidden]="c">{{ count }}</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <!-- Backend mode: explicit so nobody confuses the demo with the real integration -->
+  <div class="mx-3 mb-3 rounded-xl border p-3 text-xs"
+    [class]="api.useMocks
+      ? 'border-amber-200 bg-amber-50/80 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+      : 'border-emerald-200 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'"
+    [class.lg:hidden]="c">
+    <p class="flex items-center gap-2 font-semibold">
+      <span class="live-dot relative h-2 w-2 rounded-full" [class]="api.useMocks ? 'bg-amber-500' : 'bg-emerald-500'"></span>
+      {{ api.useMocks ? 'Modo demo' : 'API conectada' }}
+    </p>
+    <p class="mt-1 leading-snug opacity-80">
+      {{ api.useMocks ? 'Resultados simulados en el navegador.' : api.baseUrl }}
+    </p>
+  </div>
+
+  <!-- Footer / collapse -->
+  <div class="flex items-center gap-2 border-t border-slate-900/[0.06] px-4 py-3 dark:border-slate-800" [class.lg:justify-center]="c" [class.lg:px-0]="c">
+    <p class="flex-1 truncate text-[11px] text-slate-400 dark:text-slate-500" [class.lg:hidden]="c">Reto CommunityLab · G-10 Equipo 3</p>
+    <button type="button" (click)="toggleCollapse.emit()"
+      class="hidden h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:flex"
+      [pTooltip]="c ? 'Expandir menú' : 'Contraer menú'" tooltipPosition="right"
+      [attr.aria-label]="c ? 'Expandir menú' : 'Contraer menú'">
+      <i class="pi text-sm" [class]="c ? 'pi-angle-double-right' : 'pi-angle-double-left'"></i>
+    </button>
+  </div>
+</aside>

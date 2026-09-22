@@ -1,0 +1,98 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="page-title">OCI Object Storage</h1>
+    <p class="page-subtitle">Cada lote procesado se guarda como un paquete JSON con su análisis y contenidos.</p>
+  </div>
+  <p-button label="Actualizar" icon="pi pi-refresh" size="small" severity="secondary" [outlined]="true" (onClick)="store.refreshStorage()" />
+</div>
+
+<!-- Bucket -->
+<section class="card flex flex-col gap-4 overflow-hidden p-5 sm:flex-row sm:items-center">
+  <div class="flex items-center gap-3">
+    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#c74634] to-[#e0654f] text-white">
+      <i class="pi pi-cloud text-lg"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-slate-900 dark:text-white">{{ bucket.name }}</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400">{{ bucket.region }} · Always Free · $0.00</p>
+    </div>
+  </div>
+  <div class="sm:ml-auto sm:w-64">
+    <div class="flex justify-between text-xs">
+      <span class="text-slate-500 dark:text-slate-400">{{ totals().objects }} objetos · {{ totals().bytes / 1024 | number: '1.1-1' }} KB</span>
+      <span class="text-slate-400">de 20 GB</span>
+    </div>
+    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+      <div class="animate-grow-x h-full rounded-full bg-emerald-500" [style.width.%]="totals().usagePct < 1 ? 1 : totals().usagePct"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Object list -->
+<section class="card mt-6 overflow-hidden">
+  <div class="card-header">
+    <h2 class="card-title">Objetos del bucket</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[44rem] text-sm">
+      <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
+        <tr>
+          <th class="px-5 py-3 font-semibold">Nombre</th>
+          <th class="px-5 py-3 text-right font-semibold">Interacciones</th>
+          <th class="px-5 py-3 text-right font-semibold">Contenidos</th>
+          <th class="px-5 py-3 text-right font-semibold">Tamaño</th>
+          <th class="px-5 py-3 font-semibold">Guardado</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        @for (o of store.objects(); track o.objectName; let i = $index) {
+          <tr class="animate-fade-up group cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+            [style.animation-delay.ms]="i * 50" (click)="open(o)">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-3">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-[#c74634] transition-transform group-hover:scale-110 dark:bg-orange-500/10 dark:text-orange-300">
+                  <i class="pi pi-file text-sm"></i>
+                </div>
+                <div class="min-w-0">
+                  <p class="flex items-center gap-2 truncate font-mono text-xs font-medium text-slate-800 dark:text-slate-100">
+                    {{ fileName(o.objectName) }}
+                    @if (isNew(o)) {
+                      <span class="animate-pop rounded-full bg-emerald-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">Nuevo</span>
+                    }
+                  </p>
+                  <p class="truncate font-mono text-[11px] text-slate-400">{{ folder(o.objectName) }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-5 py-3 text-right tabular-nums">{{ o.interactions }}</td>
+            <td class="px-5 py-3 text-right tabular-nums">{{ o.assets }}</td>
+            <td class="px-5 py-3 text-right tabular-nums">{{ o.sizeBytes / 1024 | number: '1.1-1' }} KB</td>
+            <td class="px-5 py-3 text-slate-500 dark:text-slate-400">{{ o.storedAt | date: 'medium' }}</td>
+            <td class="px-5 py-3" (click)="$event.stopPropagation()">
+              <div class="flex justify-end gap-1">
+                <p-button icon="pi pi-eye" [text]="true" [rounded]="true" size="small" pTooltip="Ver contenido" tooltipPosition="top"
+                  [loading]="loadingObject() === o.objectName" (onClick)="open(o)" ariaLabel="Ver contenido del objeto" />
+                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" pTooltip="Copiar URL"
+                  tooltipPosition="top" (onClick)="copy(o.url)" ariaLabel="Copiar URL del objeto" />
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">El bucket está vacío.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<p-dialog [header]="viewing()?.storage?.objectName ?? ''" [modal]="true" [visible]="!!viewing()" (visibleChange)="!$event && viewing.set(null)"
+  [style]="{ width: 'min(900px, 95vw)' }" [dismissableMask]="true">
+  <pre class="max-h-[60vh] overflow-auto rounded-lg bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">{{ viewingJson() }}</pre>
+  <ng-template #footer>
+    <p-button label="Cerrar" [text]="true" severity="secondary" (onClick)="viewing.set(null)" />
+    <p-button label="Descargar" icon="pi pi-download" (onClick)="download()" />
+  </ng-template>
+</p-dialog>

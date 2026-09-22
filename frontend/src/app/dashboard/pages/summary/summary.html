@@ -1,0 +1,101 @@
+<!-- Header -->
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="page-title">Resumen</h1>
+    <p class="page-subtitle">Tu comunidad habla. Kora publica.</p>
+  </div>
+  <p-button label="Procesar interacciones" icon="pi pi-sparkles" routerLink="/ingest" styleClass="shadow-lg shadow-indigo-500/25 transition hover:-translate-y-0.5 hover:shadow-indigo-500/40" />
+</div>
+
+<!-- MVP flow -->
+<section class="card p-5">
+  <h2 class="card-title">Cómo funciona</h2>
+  <ol class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    @for (s of steps; track s.title; let i = $index) {
+      <li class="animate-fade-up relative" [style.animation-delay.ms]="i * 80">
+        @if (i < steps.length - 1) {
+          <span class="pointer-events-none absolute -right-3 top-1/2 z-10 hidden h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white text-slate-300 shadow-sm ring-1 ring-slate-100 dark:bg-slate-900 dark:text-slate-600 dark:ring-slate-800 xl:flex">
+            <i class="pi pi-chevron-right text-[10px]"></i>
+          </span>
+        }
+        <a [routerLink]="s.link"
+          class="raised hover-lift group flex h-full gap-3 rounded-xl border border-slate-100 p-4 hover:border-indigo-200 hover:bg-indigo-50/40 dark:border-slate-800 dark:hover:border-indigo-500/30 dark:hover:bg-indigo-500/5">
+          <span class="icon-glow flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-50 to-violet-100 text-indigo-600 transition duration-300 group-hover:rotate-6 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white dark:bg-indigo-500/10 dark:text-indigo-300">
+            <i [class]="s.icon" class="text-sm"></i>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Paso {{ i + 1 }}</span>
+            <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ s.title }}</span>
+            <span class="mt-1 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ s.text }}</span>
+          </span>
+        </a>
+      </li>
+    }
+  </ol>
+</section>
+
+<!-- Real metrics -->
+<section class="mt-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
+  @for (s of stats(); track s.label; let i = $index) {
+    <a [routerLink]="s.link" class="hover-lift animate-fade-up block rounded-2xl" [style.animation-delay.ms]="i * 60" [attr.aria-label]="s.label">
+      <app-stat-card [stat]="s" [color]="statColors[i]" />
+    </a>
+  }
+</section>
+
+<section class="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-5">
+  <!-- Pending review -->
+  <div class="card xl:col-span-3">
+    <div class="card-header">
+      <h2 class="card-title">Pendientes de revisión</h2>
+      <a routerLink="/content" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">Ir a curaduría</a>
+    </div>
+    <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+      @for (a of pending(); track a.id; let i = $index) {
+        <li class="animate-fade-up flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40"
+          [style.animation-delay.ms]="i * 40" [class.animate-leave]="leaving().has(a.id)">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" [class]="typeTint[a.type]">
+            <i [class]="typeIcon[a.type]" class="text-sm"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a.title }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ typeLabel[a.type] }} · {{ routeLabel[a.origin.route] }} · {{ a.origin.author }}</p>
+          </div>
+          <p-button label="Aprobar" icon="pi pi-check" size="small" [outlined]="true" [loading]="store.isBusy(a.id)" (onClick)="approve(a)" />
+        </li>
+      } @empty {
+        <li class="flex flex-col items-center gap-2 px-5 py-12 text-center">
+          <i class="pi pi-check-circle animate-pop text-3xl text-emerald-500"></i>
+          <p class="text-sm font-medium">Todo revisado</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Procesa nuevas interacciones para generar más contenido.</p>
+        </li>
+      }
+    </ul>
+  </div>
+
+  <!-- Latest OCI packages -->
+  <div class="card xl:col-span-2">
+    <div class="card-header">
+      <h2 class="card-title">Últimos paquetes en OCI</h2>
+      <a routerLink="/storage" class="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400">Ver bucket</a>
+    </div>
+    <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+      @for (o of latestObjects(); track o.objectName; let i = $index) {
+        <li class="animate-fade-up" [style.animation-delay.ms]="i * 40">
+          <a routerLink="/storage" class="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#c74634] transition-transform group-hover:scale-110 dark:bg-orange-500/10 dark:text-orange-300">
+            <i class="pi pi-file text-sm"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-mono text-xs font-medium text-slate-800 dark:text-slate-100">{{ fileName(o.objectName) }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ o.interactions }} mensajes · {{ o.assets }} contenidos · {{ o.storedAt | date: 'short' }}</p>
+          </div>
+          <i class="pi pi-chevron-right text-[10px] text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500"></i>
+          </a>
+        </li>
+      } @empty {
+        <li class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">El bucket está vacío.</li>
+      }
+    </ul>
+  </div>
+</section>
