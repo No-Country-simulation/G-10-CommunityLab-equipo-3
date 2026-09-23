@@ -2,12 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { GeneratedAsset } from '../../../core/api/api.models';
-import { I18n } from '../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../core/ui-maps';
-import { WorkspaceStore } from '../../../core/workspace.store';
-import { StatCard, StatItem } from '../../../shared/stat-card/stat-card';
+import { GeneratedAsset } from '../../../../core/api/api.models';
+import { I18n } from '../../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../../core/ui-maps';
+import { WorkspaceStore } from '../../../../core/workspace.store';
+import { StatCard, StatItem } from '../../../../shared/stat-card/stat-card';
 
 @Component({
   selector: 'app-summary',

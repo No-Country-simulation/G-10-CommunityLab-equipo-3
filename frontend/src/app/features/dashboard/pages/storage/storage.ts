@@ -4,11 +4,11 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { ProcessResult, StoredObject } from '../../../core/api/api.models';
-import { downloadBlob } from '../../../core/banner';
-import { I18n } from '../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { WorkspaceStore } from '../../../core/workspace.store';
+import { ProcessResult, StoredObject } from '../../../../core/api/api.models';
+import { downloadBlob } from '../../../../core/banner';
+import { I18n } from '../../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { WorkspaceStore } from '../../../../core/workspace.store';
 
 /** Always Free tier: 20 GB across Standard + Infrequent Access + Archive. */
 const FREE_TIER_BYTES = 20 * 1024 ** 3;

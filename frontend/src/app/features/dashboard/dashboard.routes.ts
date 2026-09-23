@@ -4,7 +4,7 @@ import { Summary } from './pages/summary/summary';
 import { Ingest } from './pages/ingest/ingest';
 import { Content } from './pages/content/content';
 import { Storage } from './pages/storage/storage';
-import { PAGE_ICON } from '../core/page-icons';
+import { PAGE_ICON } from '../../core/page-icons';
 
 /** One page per step of the challenge: ingest+analyze → curate → store in OCI. */
 export const dashboardRoutes: Routes = [

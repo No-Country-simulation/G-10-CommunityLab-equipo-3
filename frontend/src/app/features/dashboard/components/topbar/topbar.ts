@@ -4,12 +4,12 @@ import { MenuItem } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
 import { TooltipModule } from 'primeng/tooltip';
-import { API_CONFIG } from '../../../core/api/community-lab.api';
-import { MOCK_STORAGE_KEY } from '../../../core/api/mock-community-lab.api';
-import { I18n, LANGS, Lang } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { CurrentPage } from '../../../core/current-page';
-import { ThemeService } from '../../../core/theme.service';
+import { API_CONFIG } from '../../../../core/api/community-lab.api';
+import { MOCK_STORAGE_KEY } from '../../../../core/api/mock-community-lab.api';
+import { I18n, LANGS, Lang } from '../../../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { CurrentPage } from '../../../../core/current-page';
+import { ThemeService } from '../../../../core/theme.service';
 
 @Component({
   selector: 'app-topbar',

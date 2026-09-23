@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CurrentPage } from '../../../core/current-page';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { CurrentPage } from '../../../../core/current-page';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 /** "Inicio › Página actual", shown above every page title. */
 @Component({

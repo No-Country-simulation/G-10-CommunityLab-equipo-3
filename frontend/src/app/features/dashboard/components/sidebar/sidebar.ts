@@ -4,12 +4,12 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-import { API_CONFIG } from '../../../core/api/community-lab.api';
-import { I18n } from '../../../core/i18n/i18n.service';
-import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { SOURCE_BRAND, SOURCE_ICON } from '../../../core/ui-maps';
-import { PAGE_ICON } from '../../../core/page-icons';
-import { WorkspaceStore } from '../../../core/workspace.store';
+import { API_CONFIG } from '../../../../core/api/community-lab.api';
+import { I18n } from '../../../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { SOURCE_BRAND, SOURCE_ICON } from '../../../../core/ui-maps';
+import { PAGE_ICON } from '../../../../core/page-icons';
+import { WorkspaceStore } from '../../../../core/workspace.store';
 
 interface NavItem {
   /** i18n key */

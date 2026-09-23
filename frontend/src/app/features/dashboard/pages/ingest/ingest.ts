@@ -11,12 +11,12 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { AnalyzedInteraction, GeneratedAsset, INTERACTION_SOURCES, Interaction, InteractionSource } from '../../../core/api/api.models';
-import { SAMPLE_INTERACTIONS } from '../../../core/api/sample-interactions';
-import { downloadBlob } from '../../../core/banner';
-import { I18n } from '../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
-import { ParseError, parseInteractions } from '../../../core/interaction-parser';
+import { AnalyzedInteraction, GeneratedAsset, INTERACTION_SOURCES, Interaction, InteractionSource } from '../../../../core/api/api.models';
+import { SAMPLE_INTERACTIONS } from '../../../../core/api/sample-interactions';
+import { downloadBlob } from '../../../../core/banner';
+import { I18n } from '../../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { ParseError, parseInteractions } from '../../../../core/interaction-parser';
 import {
   ASSET_STATUS_SEVERITY,
   ASSET_TYPE_ICON,
@@ -26,10 +26,10 @@ import {
   SENTIMENT_TINT,
   SOURCE_ICON,
   SOURCE_TINT,
-} from '../../../core/ui-maps';
-import { WorkspaceStore } from '../../../core/workspace.store';
-import { AssetPreview } from '../../../shared/asset-preview/asset-preview';
-import { CountUp } from '../../../shared/count-up.directive';
+} from '../../../../core/ui-maps';
+import { WorkspaceStore } from '../../../../core/workspace.store';
+import { AssetPreview } from '../../../../shared/asset-preview/asset-preview';
+import { CountUp } from '../../../../shared/count-up.directive';
 
 type InputMode = 'samples' | 'data' | 'manual';
 

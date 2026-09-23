@@ -9,11 +9,11 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { AssetStatus, GeneratedAsset } from '../../../core/api/api.models';
-import { buildBannerSvg, downloadBannerPng, svgDataUrl } from '../../../core/banner';
-import { confetti, originOf } from '../../../core/confetti';
-import { I18n } from '../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { AssetStatus, GeneratedAsset } from '../../../../core/api/api.models';
+import { buildBannerSvg, downloadBannerPng, svgDataUrl } from '../../../../core/banner';
+import { confetti, originOf } from '../../../../core/confetti';
+import { I18n } from '../../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import {
   ASSET_STATUS_DOT,
   ASSET_STATUS_SEVERITY,
@@ -23,9 +23,9 @@ import {
   SENTIMENT_TINT,
   SOURCE_ICON,
   SOURCE_TINT,
-} from '../../../core/ui-maps';
-import { WorkspaceStore } from '../../../core/workspace.store';
-import { AssetPreview } from '../../../shared/asset-preview/asset-preview';
+} from '../../../../core/ui-maps';
+import { WorkspaceStore } from '../../../../core/workspace.store';
+import { AssetPreview } from '../../../../shared/asset-preview/asset-preview';
 
 type Filter = 'pending' | 'approved' | 'published' | 'rejected' | 'all';
 
