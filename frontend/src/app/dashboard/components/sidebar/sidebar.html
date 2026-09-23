@@ -1,112 +1,144 @@
 <!-- Mobile backdrop -->
 @if (open()) {
-  <div class="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden" (click)="close.emit()"></div>
+  <div class="fixed inset-0 z-30 bg-espresso/40 backdrop-blur-sm lg:hidden" (click)="close.emit()"></div>
 }
 
 @let c = collapsed();
 
+<!-- Floating "clay" panel: sand background, inset bevel, fully rounded -->
 <aside
-  class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-slate-900/[0.06] bg-gradient-to-b from-white via-white to-blue-50/50 shadow-[1px_0_24px_-12px_rgb(30_41_99/0.15)] transition-[transform,width] duration-300 ease-out dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900 dark:shadow-none lg:translate-x-0"
+  class="fixed inset-y-0 left-0 z-40 flex w-[290px] flex-col overflow-hidden rounded-r-clay border border-clay-border bg-sidebar shadow-clay-inset transition-[transform,width] duration-300 ease-out dark:border-stone-800 dark:bg-espresso-card lg:inset-y-4 lg:left-4 lg:translate-x-0 lg:rounded-clay"
   [class.-translate-x-full]="!open()"
   [class.lg:w-20]="c"
-  [class.lg:w-64]="!c"
+  [class.lg:w-68]="!c"
 >
-  <!-- Decorative glow behind the brand (light mode only) -->
-  <div class="pointer-events-none absolute -left-16 -top-20 -z-10 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(14_165_233/0.22),transparent_65%)] dark:hidden"></div>
-
-  <!-- Brand -->
-  <div class="flex h-20 shrink-0 items-center gap-3 border-b border-slate-900/[0.06] px-5 dark:border-slate-800" [class.lg:justify-center]="c" [class.lg:px-0]="c">
-    <img src="image/logo/KoraLogo.png" alt="Kora" width="48" height="48"
-      class="h-12 w-12 shrink-0 object-contain drop-shadow-[0_6px_14px_rgb(59_130_246/0.4)] transition-transform duration-300 hover:-rotate-6 hover:scale-105"
-      [class.lg:h-10]="c" [class.lg:w-10]="c" />
-    <div class="min-w-0" [class.lg:hidden]="c">
-      <p class="font-display text-2xl font-extrabold leading-none tracking-tight text-slate-900 dark:text-white">Kora</p>
-      <p class="mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">Tu comunidad habla.<br />Kora publica.</p>
+  <div class="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-5 py-6" [class.lg:px-3]="c">
+    <!-- Brand -->
+    <div class="mb-5 flex items-center gap-3" [class.lg:justify-center]="c">
+      <div class="h-16 w-16 shrink-0 overflow-hidden rounded-[18px] border border-amber-500/30 bg-gradient-to-br from-amber-100 to-amber-200 shadow-[0_6px_14px_rgb(217_119_6/0.3)] transition-all duration-300 hover:-rotate-6 hover:scale-105"
+        [class.lg:h-14]="c" [class.lg:w-14]="c">
+        <img src="image/logo/oso-head.png" alt="Kora" width="64" height="64" class="h-full w-full object-cover" />
+      </div>
+      <div class="min-w-0" [class.lg:hidden]="c">
+        <p class="font-display text-[1.3rem] font-extrabold leading-none text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></p>
+        <p class="mt-1 text-[11px] leading-snug text-stone-500 dark:text-stone-400">{{ 'brand.tagline' | t }}</p>
+      </div>
+      <button type="button" class="ml-auto rounded-full p-2 text-stone-400 hover:bg-white/60 dark:hover:bg-white/5 lg:hidden"
+        (click)="close.emit()" [attr.aria-label]="'sidebar.closeMenu' | t">
+        <i class="pi pi-times"></i>
+      </button>
     </div>
-    <button type="button" class="ml-auto rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
-      (click)="close.emit()" aria-label="Cerrar menú">
-      <i class="pi pi-times"></i>
+
+    <!-- Network switcher (CommuPulse "server selector"): each click flips Discord ↔ Telegram -->
+    @let net = activeNetwork();
+    <button type="button" (click)="toggleNetwork()"
+      [attr.aria-label]="'sidebar.network.switchAria' | t: { name: net.name }"
+      class="flex w-full items-center justify-between rounded-2xl border border-clay-subtle bg-white px-3.5 py-3 text-left shadow-[0_2px_6px_rgb(0_0_0/0.02)] transition-colors duration-200 hover:border-amber-600 dark:border-stone-700 dark:bg-stone-900 dark:hover:border-amber-500"
+      [class.lg:hidden]="c">
+      <span class="flex min-w-0 items-center gap-2.5">
+        <span class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] text-white transition-[background] duration-300" [style.background]="net.gradient">
+          <i [class]="net.icon" class="text-[1.05rem]"></i>
+        </span>
+        <span class="min-w-0 leading-tight">
+          <span class="block text-[0.86rem] font-bold leading-snug text-espresso dark:text-white">{{ net.name }}</span>
+          <span class="block truncate text-[0.74rem] text-stone-500 dark:text-stone-400">{{ net.detail }}</span>
+        </span>
+      </span>
+      <span class="ml-2 text-[0.75rem] text-stone-500 dark:text-stone-400" aria-hidden="true">▾</span>
     </button>
-  </div>
 
-  <!-- Navigation -->
-  <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4" [class.lg:px-2.5]="c" aria-label="Principal">
-    <div class="relative">
-      <!-- One pill that glides to the active item instead of each item toggling its own background -->
-      @if (activeIndex() >= 0) {
-        <div aria-hidden="true"
-          class="nav-active pointer-events-none absolute inset-x-0 top-0 h-[52px] rounded-xl bg-gradient-to-r from-blue-700 to-blue-900 transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)] dark:from-blue-500/15 dark:to-blue-500/5 dark:ring-1 dark:ring-inset dark:ring-blue-500/20"
-          [style.transform]="'translateY(' + activeIndex() * itemStep + 'px)'">
-          <span class="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-blue-600 dark:bg-blue-400" [class.lg:-left-2.5]="c"></span>
-        </div>
-      }
+    <!-- Collapsed rail: just the network tile, same toggle -->
+    <button type="button" (click)="toggleNetwork()"
+      class="mx-auto hidden h-[42px] w-[42px] items-center justify-center rounded-xl text-white shadow-sm transition-transform hover:scale-105"
+      [class.lg:flex]="c" [style.background]="net.gradient"
+      [pTooltip]="'sidebar.network.railTip' | t: { name: net.name }" tooltipPosition="right" [attr.aria-label]="'sidebar.network.switchAria' | t: { name: net.name }">
+      <i [class]="net.icon" class="text-[15px]"></i>
+    </button>
 
-      <ul class="relative space-y-1">
-        @for (item of items; track item.path; let i = $index) {
-          @let count = item.badge ? item.badge() : 0;
-          @let active = activeIndex() === i;
-          <li>
-            <a
-              [routerLink]="item.path"
-              (click)="close.emit()"
-              [attr.aria-current]="active ? 'page' : null"
-              [pTooltip]="item.label + (count ? ' (' + count + ')' : '')" tooltipPosition="right" [tooltipDisabled]="!c"
-              class="group relative flex h-[52px] items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors duration-200"
-              [class]="active
-                ? 'text-white dark:text-blue-300'
-                : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-white'"
-              [class.lg:justify-center]="c" [class.lg:px-0]="c"
-            >
-              <span class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-200"
-                [class]="active
-                  ? 'bg-white/20 text-white ring-1 ring-white/30 dark:bg-slate-900 dark:text-blue-300 dark:ring-0'
-                  : 'bg-white text-slate-500 shadow-sm ring-1 ring-slate-900/[0.05] group-hover:text-blue-600 dark:bg-transparent dark:text-slate-400 dark:shadow-none dark:ring-0 dark:group-hover:text-slate-200'">
-                <i [class]="item.icon" class="text-[15px]"></i>
-                @if (c && count > 0) {
-                  <span class="absolute -right-0.5 -top-0.5 hidden h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-slate-900 lg:block"></span>
-                }
-              </span>
-
-              <span class="min-w-0 flex-1 leading-tight" [class.lg:hidden]="c">
-                <span class="block truncate">{{ item.label }}</span>
-                <span class="block truncate text-[11px] font-normal transition-colors duration-200"
-                  [class]="active ? 'text-white/75 dark:text-slate-500' : 'text-slate-400 dark:text-slate-500'">{{ item.hint }}</span>
-              </span>
-
-              @if (count > 0) {
-                <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums transition-colors duration-200"
-                  [class]="active ? 'bg-white/25 text-white dark:bg-blue-500/20 dark:text-blue-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'"
-                  [class.lg:hidden]="c">{{ count }}</span>
-              }
-            </a>
-          </li>
-        }
-      </ul>
+    <!-- Divider between the network switcher and the menu -->
+    <div class="sidebar-divider my-6" role="separator" [class.lg:my-5]="c">
+      <span class="sidebar-divider-groove"></span>
     </div>
-  </nav>
 
-  <!-- Backend mode: explicit so nobody confuses the demo with the real integration -->
-  <div class="mx-3 mb-3 rounded-xl border p-3 text-xs"
-    [class]="api.useMocks
-      ? 'border-amber-200 bg-amber-50/80 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
-      : 'border-emerald-200 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'"
-    [class.lg:hidden]="c">
-    <p class="flex items-center gap-2 font-semibold">
-      <span class="live-dot relative h-2 w-2 rounded-full" [class]="api.useMocks ? 'bg-amber-500' : 'bg-emerald-500'"></span>
-      {{ api.useMocks ? 'Modo demo' : 'API conectada' }}
-    </p>
-    <p class="mt-1 leading-snug opacity-80">
-      {{ api.useMocks ? 'Resultados simulados en el navegador.' : api.baseUrl }}
-    </p>
+    <!-- Navigation -->
+    <nav class="flex-1" [attr.aria-label]="'sidebar.navAria' | t">
+      <div class="relative">
+        <!-- One pill that glides to the active item instead of each item toggling its own background -->
+        @if (activeIndex() >= 0) {
+          <div aria-hidden="true"
+            class="pointer-events-none absolute inset-x-0 top-0 h-[46px] rounded-full bg-white shadow-[0_4px_12px_rgb(28_25_23/0.05)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)] dark:bg-white/10 dark:shadow-none"
+            [style.transform]="'translateY(' + activeIndex() * itemStep + 'px)'">
+          </div>
+        }
+
+        <ul class="relative space-y-2">
+          @for (item of items; track item.path; let i = $index) {
+            @let count = item.badge ? item.badge() : 0;
+            @let active = activeIndex() === i;
+            <li>
+              <a
+                [routerLink]="item.path"
+                (click)="close.emit()"
+                [attr.aria-current]="active ? 'page' : null"
+                [pTooltip]="(item.label | t) + (count ? ' (' + count + ')' : '')" tooltipPosition="right" [tooltipDisabled]="!c"
+                class="group relative flex h-[46px] items-center gap-3 rounded-full pl-2 pr-4 text-[0.92rem] transition-all duration-200"
+                [class]="active
+                  ? 'font-bold text-amber-700 dark:text-amber-300'
+                  : 'font-semibold text-stone-700 hover:translate-x-[3px] hover:bg-white/60 hover:text-espresso dark:text-stone-300 dark:hover:bg-white/5 dark:hover:text-white'"
+                [class.lg:justify-center]="c" [class.lg:px-0]="c" [class.lg:hover:translate-x-0]="c"
+              >
+                <span class="icon-3d" [class.icon-3d-active]="active">
+                  <img [src]="item.emoji" alt="" width="28" height="28" loading="lazy" decoding="async" />
+                  @if (c && count > 0) {
+                    <span class="absolute -right-1 -top-1 hidden h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-sidebar dark:ring-espresso-card lg:block"></span>
+                  }
+                </span>
+
+                <span class="min-w-0 flex-1 truncate" [class.lg:hidden]="c">{{ item.label | t }}</span>
+
+                @if (count > 0) {
+                  <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold tabular-nums text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                    [class.lg:hidden]="c">{{ count }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </div>
+    </nav>
+
+    <!-- System status widget: explicit backend mode so nobody confuses the demo with the real integration -->
+    <div class="mt-5 flex flex-col gap-2 rounded-3xl border border-clay-subtle bg-white p-4 shadow-[0_4px_12px_rgb(28_25_23/0.03)] dark:border-stone-700 dark:bg-stone-900"
+      [class.lg:hidden]="c">
+      <div class="flex items-center justify-between text-[0.8rem] font-bold text-espresso dark:text-white">
+        <span>{{ (api.useMocks ? 'sidebar.mode.demo' : 'sidebar.mode.live') | t }}</span>
+        <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.7rem] font-extrabold"
+          [class]="api.useMocks
+            ? 'border-amber-500/20 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+            : 'border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'">
+          <span class="live-dot relative h-[7px] w-[7px] rounded-full" [class]="api.useMocks ? 'bg-amber-500' : 'bg-emerald-500'"></span>
+          {{ api.useMocks ? 'MOCK' : 'LIVE' }}
+        </span>
+      </div>
+      <p class="text-[0.74rem] leading-snug text-stone-500 dark:text-stone-400">
+        {{ api.useMocks ? ('sidebar.mode.demoDetail' | t) : 'Spring Boot + OCI Object Storage' }}
+      </p>
+      <p class="truncate border-t border-dashed border-stone-200 pt-1.5 font-mono text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
+        {{ api.useMocks ? 'mock-engine' : api.baseUrl }}
+      </p>
+    </div>
   </div>
 
   <!-- Footer / collapse -->
-  <div class="flex items-center gap-2 border-t border-slate-900/[0.06] px-4 py-3 dark:border-slate-800" [class.lg:justify-center]="c" [class.lg:px-0]="c">
-    <p class="flex-1 truncate text-[11px] text-slate-400 dark:text-slate-500" [class.lg:hidden]="c">Reto CommunityLab · G-10 Equipo 3</p>
+  <div class="flex items-center gap-2 border-t border-clay-border px-5 py-3 dark:border-stone-800" [class.lg:justify-center]="c" [class.lg:px-0]="c">
+    <div class="flex min-w-0 flex-1 items-center gap-2" [class.lg:hidden]="c">
+      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-espresso text-[0.75rem] font-bold text-white dark:bg-amber-500 dark:text-espresso">CM</span>
+      <span class="truncate text-[0.84rem] font-bold text-espresso dark:text-white">Community Manager</span>
+    </div>
     <button type="button" (click)="toggleCollapse.emit()"
-      class="hidden h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:flex"
-      [pTooltip]="c ? 'Expandir menú' : 'Contraer menú'" tooltipPosition="right"
-      [attr.aria-label]="c ? 'Expandir menú' : 'Contraer menú'">
+      class="hidden h-8 w-8 items-center justify-center rounded-full text-stone-400 transition hover:bg-white hover:text-amber-700 dark:hover:bg-white/10 dark:hover:text-amber-300 lg:flex"
+      [pTooltip]="(c ? 'sidebar.expand' : 'sidebar.collapse') | t" tooltipPosition="right"
+      [attr.aria-label]="(c ? 'sidebar.expand' : 'sidebar.collapse') | t">
       <i class="pi text-sm" [class]="c ? 'pi-angle-double-right' : 'pi-angle-double-left'"></i>
     </button>
   </div>

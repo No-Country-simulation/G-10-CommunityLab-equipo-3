@@ -4,26 +4,18 @@ export type Severity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'c
 
 export const SOURCE_ICON: Record<InteractionSource, string> = {
   Discord: 'pi pi-discord',
-  Slack: 'pi pi-slack',
-  GitHub: 'pi pi-github',
-  Foro: 'pi pi-comments',
-  Formulario: 'pi pi-list-check',
+  Telegram: 'pi pi-telegram',
 };
 
 export const SOURCE_TINT: Record<InteractionSource, string> = {
-  Discord: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300',
-  Slack: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300',
-  GitHub: 'bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200',
-  Foro: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
-  Formulario: 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-300',
+  Discord: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300',
+  Telegram: 'bg-[#229ed9]/10 text-[#1b86b9] dark:bg-[#229ed9]/15 dark:text-[#5cc2ef]',
 };
 
-export const ASSET_TYPE_LABEL: Record<AssetType, string> = {
-  linkedin_post: 'Post LinkedIn',
-  x_post: 'Post X',
-  newsletter_highlight: 'Newsletter',
-  faq: 'FAQ',
-  success_story: 'Caso de éxito',
+/** Brand colors for the network switcher (gradient from → to). */
+export const SOURCE_BRAND: Record<InteractionSource, [string, string]> = {
+  Discord: ['#5865f2', '#7289da'],
+  Telegram: ['#0088cc', '#34aadc'],
 };
 
 export const ASSET_TYPE_ICON: Record<AssetType, string> = {
@@ -42,14 +34,6 @@ export const ASSET_TYPE_TINT: Record<AssetType, string> = {
   success_story: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
 };
 
-export const ASSET_STATUS_LABEL: Record<AssetStatus, string> = {
-  draft: 'Borrador',
-  in_review: 'En revisión',
-  approved: 'Aprobado',
-  published: 'Publicado',
-  rejected: 'Rechazado',
-};
-
 export const ASSET_STATUS_SEVERITY: Record<AssetStatus, Severity> = {
   draft: 'secondary',
   in_review: 'warn',
@@ -64,14 +48,6 @@ export const ASSET_STATUS_DOT: Record<AssetStatus, string> = {
   approved: 'bg-sky-500',
   published: 'bg-emerald-500',
   rejected: 'bg-rose-500',
-};
-
-export const ROUTE_LABEL: Record<ContentRoute, string> = {
-  success_story: 'Caso de éxito',
-  testimonial: 'Testimonio',
-  faq: 'FAQ / Tip',
-  alert: 'Alerta a CM',
-  discard: 'Descartado',
 };
 
 export const ROUTE_TINT: Record<ContentRoute, string> = {
@@ -91,13 +67,13 @@ export const ROUTE_ICON: Record<ContentRoute, string> = {
 };
 
 export const SENTIMENT_TINT: Record<Sentiment, string> = {
-  positivo: 'text-emerald-600 dark:text-emerald-400',
+  positive: 'text-emerald-600 dark:text-emerald-400',
   neutral: 'text-slate-500 dark:text-slate-400',
-  negativo: 'text-rose-600 dark:text-rose-400',
+  negative: 'text-rose-600 dark:text-rose-400',
 };
 
 export const SENTIMENT_ICON: Record<Sentiment, string> = {
-  positivo: 'pi pi-face-smile',
+  positive: 'pi pi-face-smile',
   neutral: 'pi pi-minus',
-  negativo: 'pi pi-exclamation-circle',
+  negative: 'pi pi-exclamation-circle',
 };

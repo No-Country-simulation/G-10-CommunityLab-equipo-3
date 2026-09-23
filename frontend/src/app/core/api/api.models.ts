@@ -3,7 +3,9 @@
  * The mock API returns exactly these shapes, so the backend only has to match them.
  */
 
-export type InteractionSource = 'Discord' | 'Slack' | 'GitHub' | 'Foro' | 'Formulario';
+export const INTERACTION_SOURCES = ['Discord', 'Telegram'] as const;
+
+export type InteractionSource = (typeof INTERACTION_SOURCES)[number];
 
 /** A raw community message, as ingested from JSON / CSV / webhook. */
 export interface Interaction {
@@ -15,7 +17,7 @@ export interface Interaction {
   timestamp: string; // ISO-8601
 }
 
-export type Sentiment = 'positivo' | 'neutral' | 'negativo';
+export type Sentiment = 'positive' | 'neutral' | 'negative';
 
 /** Conditional branch chosen by the orchestrator for each message. */
 export type ContentRoute = 'success_story' | 'testimonial' | 'faq' | 'alert' | 'discard';

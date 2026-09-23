@@ -1,9 +1,9 @@
 <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
   <div>
-    <h1 class="page-title">OCI Object Storage</h1>
-    <p class="page-subtitle">Cada lote procesado se guarda como un paquete JSON con su análisis y contenidos.</p>
+    <h1 class="page-title">{{ 'nav.storage' | t }}</h1>
+    <p class="page-subtitle">{{ 'storage.subtitle' | t }}</p>
   </div>
-  <p-button label="Actualizar" icon="pi pi-refresh" size="small" severity="secondary" [outlined]="true" (onClick)="store.refreshStorage()" />
+  <p-button [label]="'storage.refresh' | t" icon="pi pi-refresh" size="small" severity="secondary" [outlined]="true" (onClick)="store.refreshStorage()" />
 </div>
 
 <!-- Bucket -->
@@ -19,8 +19,8 @@
   </div>
   <div class="sm:ml-auto sm:w-64">
     <div class="flex justify-between text-xs">
-      <span class="text-slate-500 dark:text-slate-400">{{ totals().objects }} objetos · {{ totals().bytes / 1024 | number: '1.1-1' }} KB</span>
-      <span class="text-slate-400">de 20 GB</span>
+      <span class="text-slate-500 dark:text-slate-400">{{ 'storage.usage' | t: { n: totals().objects, kb: (totals().bytes / 1024 | number: '1.1-1') } }}</span>
+      <span class="text-slate-400">{{ 'storage.of' | t }}</span>
     </div>
     <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
       <div class="animate-grow-x h-full rounded-full bg-emerald-500" [style.width.%]="totals().usagePct < 1 ? 1 : totals().usagePct"></div>
@@ -31,17 +31,17 @@
 <!-- Object list -->
 <section class="card mt-6 overflow-hidden">
   <div class="card-header">
-    <h2 class="card-title">Objetos del bucket</h2>
+    <h2 class="card-title">{{ 'storage.objects' | t }}</h2>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full min-w-[44rem] text-sm">
       <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
         <tr>
-          <th class="px-5 py-3 font-semibold">Nombre</th>
-          <th class="px-5 py-3 text-right font-semibold">Interacciones</th>
-          <th class="px-5 py-3 text-right font-semibold">Contenidos</th>
-          <th class="px-5 py-3 text-right font-semibold">Tamaño</th>
-          <th class="px-5 py-3 font-semibold">Guardado</th>
+          <th class="px-5 py-3 font-semibold">{{ 'storage.col.name' | t }}</th>
+          <th class="px-5 py-3 text-right font-semibold">{{ 'common.interactions' | t }}</th>
+          <th class="px-5 py-3 text-right font-semibold">{{ 'storage.col.contents' | t }}</th>
+          <th class="px-5 py-3 text-right font-semibold">{{ 'common.size' | t }}</th>
+          <th class="px-5 py-3 font-semibold">{{ 'storage.col.saved' | t }}</th>
           <th class="px-5 py-3"></th>
         </tr>
       </thead>
@@ -57,7 +57,7 @@
                   <p class="flex items-center gap-2 truncate font-mono text-xs font-medium text-slate-800 dark:text-slate-100">
                     {{ fileName(o.objectName) }}
                     @if (isNew(o)) {
-                      <span class="animate-pop rounded-full bg-emerald-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">Nuevo</span>
+                      <span class="animate-pop rounded-full bg-emerald-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">{{ 'storage.new' | t }}</span>
                     }
                   </p>
                   <p class="truncate font-mono text-[11px] text-slate-400">{{ folder(o.objectName) }}</p>
@@ -67,19 +67,19 @@
             <td class="px-5 py-3 text-right tabular-nums">{{ o.interactions }}</td>
             <td class="px-5 py-3 text-right tabular-nums">{{ o.assets }}</td>
             <td class="px-5 py-3 text-right tabular-nums">{{ o.sizeBytes / 1024 | number: '1.1-1' }} KB</td>
-            <td class="px-5 py-3 text-slate-500 dark:text-slate-400">{{ o.storedAt | date: 'medium' }}</td>
+            <td class="px-5 py-3 text-slate-500 dark:text-slate-400">{{ o.storedAt | ldate: 'medium' }}</td>
             <td class="px-5 py-3" (click)="$event.stopPropagation()">
               <div class="flex justify-end gap-1">
-                <p-button icon="pi pi-eye" [text]="true" [rounded]="true" size="small" pTooltip="Ver contenido" tooltipPosition="top"
-                  [loading]="loadingObject() === o.objectName" (onClick)="open(o)" ariaLabel="Ver contenido del objeto" />
-                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" pTooltip="Copiar URL"
-                  tooltipPosition="top" (onClick)="copy(o.url)" ariaLabel="Copiar URL del objeto" />
+                <p-button icon="pi pi-eye" [text]="true" [rounded]="true" size="small" [pTooltip]="'storage.view' | t" tooltipPosition="top"
+                  [loading]="loadingObject() === o.objectName" (onClick)="open(o)" [ariaLabel]="'storage.viewAria' | t" />
+                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" [pTooltip]="'ingest.oci.copyUrl' | t"
+                  tooltipPosition="top" (onClick)="copy(o.url)" [ariaLabel]="'storage.copyUrlAria' | t" />
               </div>
             </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">El bucket está vacío.</td>
+            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">{{ 'common.bucketEmpty' | t }}</td>
           </tr>
         }
       </tbody>
@@ -91,7 +91,7 @@
   [style]="{ width: 'min(900px, 95vw)' }" [dismissableMask]="true">
   <pre class="max-h-[60vh] overflow-auto rounded-lg bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">{{ viewingJson() }}</pre>
   <ng-template #footer>
-    <p-button label="Cerrar" [text]="true" severity="secondary" (onClick)="viewing.set(null)" />
-    <p-button label="Descargar" icon="pi pi-download" (onClick)="download()" />
+    <p-button [label]="'common.close' | t" [text]="true" severity="secondary" (onClick)="viewing.set(null)" />
+    <p-button [label]="'common.download' | t" icon="pi pi-download" (onClick)="download()" />
   </ng-template>
 </p-dialog>

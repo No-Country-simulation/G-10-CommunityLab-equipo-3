@@ -103,7 +103,7 @@ export function analyze(interaction: Interaction): InteractionAnalysis {
   for (const [re, w] of NEGATIVE) if (re.test(text)) score -= w;
   score = Math.max(-1, Math.min(1, score));
 
-  const sentiment: Sentiment = score > 0.2 ? 'positivo' : score < -0.2 ? 'negativo' : 'neutral';
+  const sentiment: Sentiment = score > 0.2 ? 'positive' : score < -0.2 ? 'negative' : 'neutral';
   const topics = Object.entries(TOPICS)
     .filter(([, keys]) => keys.some((k) => text.includes(k)))
     .map(([topic]) => topic);
@@ -318,8 +318,8 @@ function receipt(result: ProcessResult): StorageReceipt {
 }
 
 function sentimentLabel(avg: number, list: AnalyzedInteraction[]): string {
-  const hasNeg = list.some((i) => i.analysis.sentiment === 'negativo');
-  const hasPos = list.some((i) => i.analysis.sentiment === 'positivo');
+  const hasNeg = list.some((i) => i.analysis.sentiment === 'negative');
+  const hasPos = list.some((i) => i.analysis.sentiment === 'positive');
   if (avg >= 0.5) return 'Altamente Positivo';
   if (avg > 0.15) return hasNeg ? 'Mayormente Positivo' : 'Positivo';
   if (avg < -0.3) return 'Negativo';

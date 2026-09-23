@@ -6,7 +6,7 @@
 
 @layer base {
   html {
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -14,16 +14,13 @@
     @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200;
   }
 
-  /* Light mode: soft tinted canvas instead of flat gray */
+  /* Light mode: warm sand canvas with a faint amber glow */
   html:not(.dark) body {
     background:
-      radial-gradient(1000px 560px at 8% -10%, rgb(59 130 246 / 0.16), transparent 60%),
-      radial-gradient(900px 520px at 100% 0%, rgb(6 182 212 / 0.11), transparent 55%),
-      radial-gradient(800px 480px at 60% 105%, rgb(20 184 166 / 0.09), transparent 60%),
-      radial-gradient(600px 400px at 0% 100%, rgb(14 165 233 / 0.07), transparent 60%),
-      radial-gradient(rgb(15 23 42 / 0.055) 1px, transparent 1px) 0 0 / 22px 22px,
-      #f2f3fa;
+      radial-gradient(900px 520px at 100% -10%, rgb(245 158 11 / 0.08), transparent 60%),
+      #f6f3ee;
     background-attachment: fixed;
+    color: #44403c;
   }
 
   ::selection {
@@ -38,11 +35,11 @@
 @layer components {
   .card {
     @apply rounded-2xl border bg-white dark:border-slate-800 dark:bg-slate-900;
-    border-color: rgb(15 23 42 / 0.07);
+    border-color: rgb(28 25 23 / 0.07);
     box-shadow:
-      0 1px 2px rgb(16 24 40 / 0.04),
-      0 1px 3px rgb(16 24 40 / 0.03),
-      0 12px 32px -16px rgb(30 41 99 / 0.12);
+      0 1px 2px rgb(28 25 23 / 0.04),
+      0 1px 3px rgb(28 25 23 / 0.03),
+      0 12px 32px -16px rgb(120 53 15 / 0.12);
   }
 
   .dark .card {
@@ -140,8 +137,8 @@
 }
 
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(59 130 246 / 0.45); }
-  100% { box-shadow: 0 0 0 12px rgb(59 130 246 / 0); }
+  0% { box-shadow: 0 0 0 0 rgb(217 119 6 / 0.45); }
+  100% { box-shadow: 0 0 0 12px rgb(217 119 6 / 0); }
 }
 
 @keyframes shimmer {
@@ -151,11 +148,6 @@
 
 @keyframes leave {
   to { opacity: 0; transform: translateX(24px); }
-}
-
-/* Cards that navigate or open something */
-.hover-lift {
-  @apply cursor-pointer transition duration-200 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/10 active:translate-y-0 active:scale-[0.99] dark:hover:shadow-black/40;
 }
 
 /* Tactile press feedback on every button */
@@ -219,13 +211,13 @@ a.pressable:active {
 
 /* ── Light mode refinements ─────────────────────────────────────── */
 html:not(.dark) .card-title {
-  color: #0b1324;
+  color: #1c1917;
 }
 
 /* Inset panels inside cards read as recessed wells, not flat gray boxes */
 html:not(.dark) .card .bg-slate-50 {
-  background-color: rgb(248 250 252 / 0.85);
-  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.04);
+  background-color: rgb(250 248 245 / 0.85);
+  box-shadow: inset 0 0 0 1px rgb(28 25 23 / 0.04);
 }
 
 /* PrimeNG controls matched to the card surface */
@@ -238,7 +230,7 @@ html:not(.dark) .p-selectbutton .p-togglebutton {
 }
 
 html:not(.dark) .p-togglebutton.p-togglebutton-checked .p-togglebutton-content {
-  box-shadow: 0 1px 2px rgb(16 24 40 / 0.08), 0 0 0 1px rgb(15 23 42 / 0.04);
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.08), 0 0 0 1px rgb(28 25 23 / 0.04);
 }
 
 html:not(.dark) .p-select,
@@ -265,7 +257,7 @@ html:not(.dark) .p-tag {
 .flow-line {
   background-image:
     linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.85) 50%, transparent 100%),
-    linear-gradient(90deg, #1e40af, #2563eb, #0891b2, #c74634);
+    linear-gradient(90deg, #b45309, #d97706, #ea580c, #c74634);
   background-size: 50% 100%, 100% 100%;
   background-repeat: repeat-x, no-repeat;
   animation: flow 2.8s linear infinite;
@@ -275,7 +267,7 @@ html:not(.dark) .p-tag {
 .flow-line-vertical {
   background-image:
     linear-gradient(180deg, transparent 0%, rgb(255 255 255 / 0.85) 50%, transparent 100%),
-    linear-gradient(180deg, #1e40af, #2563eb, #0891b2, #c74634);
+    linear-gradient(180deg, #b45309, #d97706, #ea580c, #c74634);
   background-size: 100% 50%, 100% 100%;
   background-repeat: repeat-y, no-repeat;
   animation-name: flow-vertical;
@@ -299,7 +291,6 @@ html:not(.dark) .p-tag {
     animation: none;
   }
 
-  .hover-lift,
   button:active,
   .p-button:active {
     transform: none !important;
@@ -311,43 +302,38 @@ html:not(.dark) .p-tag {
    top highlights and colored glows so surfaces don't read as flat. */
 
 html:not(.dark) {
-  --elev-1: 0 0 0 1px rgb(15 23 42 / 0.05), 0 1px 2px rgb(15 23 42 / 0.06);
-  --elev-2: 0 0 0 1px rgb(15 23 42 / 0.05), 0 1px 2px rgb(15 23 42 / 0.05),
-    0 4px 10px -2px rgb(15 23 42 / 0.06), 0 18px 36px -14px rgb(30 41 99 / 0.18);
-  --elev-3: 0 0 0 1px rgb(15 23 42 / 0.05), 0 2px 4px rgb(15 23 42 / 0.05),
-    0 12px 24px -6px rgb(30 41 99 / 0.14), 0 32px 56px -20px rgb(37 99 235 / 0.28);
+  --elev-1: 0 0 0 1px rgb(28 25 23 / 0.05), 0 1px 2px rgb(28 25 23 / 0.06);
+  --elev-2: 0 0 0 1px rgb(28 25 23 / 0.05), 0 1px 2px rgb(28 25 23 / 0.05),
+    0 4px 10px -2px rgb(28 25 23 / 0.06), 0 18px 36px -14px rgb(120 53 15 / 0.18);
+  --elev-3: 0 0 0 1px rgb(28 25 23 / 0.05), 0 2px 4px rgb(28 25 23 / 0.05),
+    0 12px 24px -6px rgb(120 53 15 / 0.14), 0 32px 56px -20px rgb(180 83 9 / 0.28);
   --highlight: inset 0 1px 0 rgb(255 255 255 / 0.95);
-  --glow-primary: 0 1px 2px rgb(30 58 138 / 0.3), 0 6px 16px -4px rgb(59 130 246 / 0.55);
+  --glow-primary: 0 1px 2px rgb(120 53 15 / 0.3), 0 6px 16px -4px rgb(217 119 6 / 0.55);
   --glow-success: 0 1px 2px rgb(6 78 59 / 0.3), 0 6px 16px -4px rgb(16 185 129 / 0.5);
 }
 
 /* Cards: layered elevation + soft top highlight */
 html:not(.dark) .card {
   border-color: transparent;
-  background-image: linear-gradient(180deg, #ffffff 0%, #fdfdff 60%, #fafbff 100%);
+  background-image: linear-gradient(180deg, #ffffff 0%, #fffdfa 60%, #fdfbf7 100%);
   box-shadow: var(--highlight), var(--elev-2);
 }
 
 html:not(.dark) .card-header {
-  background-image: linear-gradient(180deg, rgb(248 250 252 / 0.9), rgb(255 255 255 / 0));
-  border-bottom-color: rgb(15 23 42 / 0.06);
-}
-
-html:not(.dark) .hover-lift:hover,
-html:not(.dark) .hover-lift:hover .card {
-  box-shadow: var(--highlight), var(--elev-3);
+  background-image: linear-gradient(180deg, rgb(250 248 245 / 0.9), rgb(255 255 255 / 0));
+  border-bottom-color: rgb(28 25 23 / 0.06);
 }
 
 /* Primary buttons: gradient + indigo glow */
 html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast) {
   border-color: transparent;
-  background-image: linear-gradient(180deg, #2563eb 0%, #1e40af 100%);
+  background-image: linear-gradient(180deg, #d97706 0%, #b45309 100%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--glow-primary);
 }
 
 html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast):not(:disabled):hover {
-  background-image: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 1px 2px rgb(30 58 138 / 0.3), 0 10px 22px -6px rgb(59 130 246 / 0.6);
+  background-image: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 1px 2px rgb(120 53 15 / 0.3), 0 10px 22px -6px rgb(217 119 6 / 0.6);
 }
 
 html:not(.dark) .p-button.p-button-success:not(.p-button-outlined):not(.p-button-text) {
@@ -369,7 +355,7 @@ html:not(.dark) .p-button.p-button-outlined {
 }
 
 html:not(.dark) .p-button.p-button-outlined:not(:disabled):hover {
-  box-shadow: var(--highlight), 0 0 0 1px rgb(15 23 42 / 0.06), 0 4px 12px -4px rgb(30 41 99 / 0.2);
+  box-shadow: var(--highlight), 0 0 0 1px rgb(28 25 23 / 0.06), 0 4px 12px -4px rgb(120 53 15 / 0.2);
 }
 
 html:not(.dark) .p-button:disabled {
@@ -382,24 +368,24 @@ html:not(.dark) input:not([type]),
 html:not(.dark) input[type='text'],
 html:not(.dark) .p-textarea,
 html:not(.dark) .p-select {
-  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 0 rgb(255 255 255 / 0.9);
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.06), 0 1px 0 rgb(255 255 255 / 0.9);
 }
 
 html:not(.dark) input:focus,
 html:not(.dark) .p-textarea:focus,
 html:not(.dark) .p-select.p-focus {
-  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.04), 0 0 0 4px rgb(59 130 246 / 0.14);
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.04), 0 0 0 4px rgb(217 119 6 / 0.14);
 }
 
 /* Segmented control: recessed track, raised thumb */
 html:not(.dark) .p-selectbutton {
-  background-color: rgb(241 245 249 / 0.9);
-  box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.08);
+  background-color: rgb(243 239 230 / 0.9);
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.08);
 }
 
 html:not(.dark) .p-togglebutton.p-togglebutton-checked .p-togglebutton-content {
   background-color: #fff;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.1), 0 2px 6px -1px rgb(30 41 99 / 0.12);
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.1), 0 2px 6px -1px rgb(120 53 15 / 0.12);
 }
 
 /* Floating layers */
@@ -407,89 +393,452 @@ html:not(.dark) .p-dialog,
 html:not(.dark) .p-menu-overlay,
 html:not(.dark) .p-popover,
 html:not(.dark) .p-select-overlay {
-  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.06), 0 24px 48px -12px rgb(30 41 99 / 0.3), 0 8px 16px -8px rgb(15 23 42 / 0.12);
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.06), 0 24px 48px -12px rgb(120 53 15 / 0.3), 0 8px 16px -8px rgb(28 25 23 / 0.12);
 }
 
 html:not(.dark) .p-toast-message {
-  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.05), 0 16px 32px -12px rgb(30 41 99 / 0.28);
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.05), 0 16px 32px -12px rgb(120 53 15 / 0.28);
 }
 
-/* Shell */
-html:not(.dark) aside {
-  box-shadow: 1px 0 0 rgb(15 23 42 / 0.05), 8px 0 32px -16px rgb(30 41 99 / 0.22);
-}
-
-html:not(.dark) header.sticky {
-  box-shadow: 0 1px 0 rgb(15 23 42 / 0.05), 0 8px 24px -16px rgb(30 41 99 / 0.25);
-}
 
 /* Tags and chips get a hairline so they don't dissolve into white */
 html:not(.dark) .p-tag {
-  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.06), 0 1px 1px rgb(15 23 42 / 0.04);
+  box-shadow: inset 0 0 0 1px rgb(28 25 23 / 0.06), 0 1px 1px rgb(28 25 23 / 0.04);
 }
 
 html:not(.dark) .chip {
-  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.05);
+  box-shadow: inset 0 0 0 1px rgb(28 25 23 / 0.05);
 }
 
 /* Channel previews (LinkedIn / X / newsletter / FAQ) look like real floating cards */
 html:not(.dark) app-asset-preview > div {
-  box-shadow: var(--highlight), 0 1px 2px rgb(15 23 42 / 0.05), 0 10px 24px -14px rgb(30 41 99 / 0.25);
+  box-shadow: var(--highlight), 0 1px 2px rgb(28 25 23 / 0.05), 0 10px 24px -14px rgb(120 53 15 / 0.25);
 }
 
 /* Colored icon tiles inside cards pick up a soft glow of their own tint */
 html:not(.dark) .icon-glow {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 6px 14px -6px var(--glow, rgb(59 130 246 / 0.5));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 6px 14px -6px var(--glow, rgb(217 119 6 / 0.5));
 }
 
 /* Nested tiles inside cards (steps, samples, pipeline, origin boxes) */
 /* Shadow only, so state colors (active / done / selected) still show through */
 html:not(.dark) .raised {
-  box-shadow: var(--highlight), 0 1px 2px rgb(15 23 42 / 0.05), 0 4px 10px -6px rgb(30 41 99 / 0.14);
+  box-shadow: var(--highlight), 0 1px 2px rgb(28 25 23 / 0.05), 0 4px 10px -6px rgb(120 53 15 / 0.14);
 }
 
 /* ══ Light mode design layer ═════════════════════════════════════════ */
 
-/* Cards: hairline gradient border (indigo on top fading to neutral) */
+/* Cards: "clay" surface — white, warm hairline border, soft amber-tinted shadow */
 html:not(.dark) .card {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%) padding-box,
-    linear-gradient(180deg, rgb(59 130 246 / 0.2), rgb(15 23 42 / 0.06) 35%, rgb(15 23 42 / 0.08)) border-box;
+  border: 1px solid #e8e2d8;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px -8px rgb(180 83 9 / 0.08), 0 4px 12px rgb(28 25 23 / 0.03);
 }
 
-/* Page titles pick up a subtle ink-to-indigo gradient */
+/* Page titles pick up a subtle espresso-to-amber gradient */
 html:not(.dark) .page-title {
-  background: linear-gradient(90deg, #0b1324 0%, #1e3a8a 70%, #1d4ed8 100%);
+  background: linear-gradient(90deg, #1c1917 0%, #92400e 70%, #b45309 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* Sidebar: tinted panel with an indigo edge */
-html:not(.dark) aside {
-  background-image: linear-gradient(180deg, #f8fafc 0%, #f1f5fb 45%, #e9eff8 100%);
-  border-right-color: rgb(59 130 246 / 0.14);
-}
-
-html:not(.dark) aside > div:first-of-type + div {
-  border-bottom-color: rgb(59 130 246 / 0.12);
-}
-
-html:not(.dark) .nav-active {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 1px 2px rgb(30 58 138 / 0.3), 0 10px 22px -8px rgb(59 130 246 / 0.6);
-}
-
 /* Navbar tiles (menu, theme, user) sit raised on the glass bar */
 html:not(.dark) .nav-tile {
   background-color: #fff;
-  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(15 23 42 / 0.06), 0 2px 6px -2px rgb(30 41 99 / 0.14);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(28 25 23 / 0.06), 0 2px 6px -2px rgb(120 53 15 / 0.14);
 }
 
 html:not(.dark) .nav-tile:hover {
-  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(59 130 246 / 0.25), 0 6px 14px -6px rgb(59 130 246 / 0.45);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(217 119 6 / 0.25), 0 6px 14px -6px rgb(217 119 6 / 0.45);
+}
+
+
+/* ── Sidebar 3D icons: free-standing Fluent 3D emoji with a soft floor shadow ── */
+.icon-3d {
+  position: relative;
+  display: flex;
+  height: 2.125rem;
+  width: 2.125rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-3d > img {
+  height: 1.75rem;
+  width: 1.75rem;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 4px rgb(28 25 23 / 0.18));
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1), filter 220ms ease;
+}
+
+a:hover > .icon-3d > img,
+.icon-3d-active > img {
+  transform: translateY(-2px) rotate(-8deg) scale(1.12);
+  filter: drop-shadow(0 7px 6px rgb(28 25 23 / 0.22));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a:hover > .icon-3d > img,
+  .icon-3d-active > img {
+    transform: none;
+  }
+}
+
+/* ══ Depth layer ═════════════════════════════════════════════════════
+   Stronger "clay" elevation so surfaces float off the sand canvas:
+   top highlight + tight contact shadow + wide warm ambient shadow. */
+
+html:not(.dark) {
+  --depth-card:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 1px 2px rgb(28 25 23 / 0.06),
+    0 6px 12px -4px rgb(28 25 23 / 0.06),
+    0 18px 36px -12px rgb(146 64 14 / 0.16),
+    0 36px 64px -28px rgb(180 83 9 / 0.22);
+  --depth-card-hover:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 2px 4px rgb(28 25 23 / 0.06),
+    0 10px 20px -6px rgb(28 25 23 / 0.08),
+    0 28px 48px -14px rgb(146 64 14 / 0.22),
+    0 48px 80px -30px rgb(180 83 9 / 0.3);
+}
+
+/* Canvas: warm light from the top, a touch darker at the bottom so white cards pop */
+html:not(.dark) body {
+  background:
+    radial-gradient(1100px 600px at 85% -15%, rgb(251 191 36 / 0.14), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgb(180 83 9 / 0.08), transparent 60%),
+    linear-gradient(180deg, #f8f5f0 0%, #f2ede4 100%);
+  background-attachment: fixed;
+}
+
+/* Cards */
+.card {
+  transition: box-shadow 250ms ease, transform 250ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+html:not(.dark) .card {
+  border-color: rgb(232 226 216 / 0.9);
+  box-shadow: var(--depth-card);
+}
+
+html:not(.dark) .card:hover {
+  box-shadow: var(--depth-card-hover);
+}
+
+/* Stat cards lift on hover; only the card moves and casts the shadow, never its link wrapper */
+app-stat-card .card:hover {
+  transform: translateY(-4px);
+}
+
+/* Anything painted inside a card (header strip, row hovers) follows its rounded corners */
+.card > :first-child:not(.absolute) {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+.card > :last-child:not(.absolute) {
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
+/* Card header reads as a slightly raised strip */
+html:not(.dark) .card-header {
+  background-image: linear-gradient(180deg, #fdfbf7 0%, rgb(255 255 255 / 0) 100%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+/* Icon tiles: glossy 3D chips with a tinted drop shadow */
+html:not(.dark) .icon-glow {
+  box-shadow:
+    inset 0 2px 1px rgb(255 255 255 / 0.75),
+    inset 0 -2px 3px rgb(28 25 23 / 0.08),
+    0 2px 3px rgb(28 25 23 / 0.06),
+    0 10px 18px -6px var(--glow, rgb(217 119 6 / 0.55));
+}
+
+/* Nested tiles inside cards */
+html:not(.dark) .raised {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 1px 2px rgb(28 25 23 / 0.06),
+    0 8px 18px -8px rgb(146 64 14 / 0.2);
+}
+
+/* Wells (bg-slate-50 inside cards) read as pressed into the surface */
+html:not(.dark) .card .bg-slate-50 {
+  background-color: #f7f3ec;
+  box-shadow: inset 0 2px 4px rgb(28 25 23 / 0.06), inset 0 0 0 1px rgb(28 25 23 / 0.04);
+}
+
+/* Primary buttons: amber gradient, glossy top, darker base, warm glow */
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast) {
+  background-image: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -2px 0 rgb(120 53 15 / 0.35),
+    0 2px 4px rgb(120 53 15 / 0.2),
+    0 10px 20px -6px rgb(217 119 6 / 0.55);
+}
+
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast):not(:disabled):hover {
+  background-image: linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    inset 0 -2px 0 rgb(120 53 15 / 0.3),
+    0 4px 8px rgb(120 53 15 / 0.2),
+    0 16px 28px -8px rgb(217 119 6 / 0.6);
+  transform: translateY(-1px);
+}
+
+html:not(.dark) .p-button.p-button-success:not(.p-button-outlined):not(.p-button-text) {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 -2px 0 rgb(6 78 59 / 0.3),
+    0 10px 20px -6px rgb(16 185 129 / 0.5);
+}
+
+html:not(.dark) .p-button.p-button-outlined {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.06),
+    0 6px 12px -6px rgb(146 64 14 / 0.2);
+}
+
+/* Shell: sidebar and topbar float above the canvas */
+html:not(.dark) aside {
+  box-shadow:
+    inset -2px -2px 6px rgb(255 255 255 / 0.8),
+    inset 2px 2px 6px rgb(28 25 23 / 0.05),
+    0 2px 4px rgb(28 25 23 / 0.04),
+    0 24px 48px -16px rgb(146 64 14 / 0.22);
 }
 
 html:not(.dark) header.sticky {
-  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(248 248 255 / 0.7));
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 12px 28px -10px rgb(146 64 14 / 0.2);
+}
+
+/* Sidebar inner cards (network switcher, status widget) and active nav pill */
+html:not(.dark) aside .bg-white {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 8px 16px -8px rgb(146 64 14 / 0.22);
+}
+
+/* Floating layers */
+html:not(.dark) .p-toast-message {
+  box-shadow: inset 0 1px 0 #fff, 0 20px 40px -12px rgb(146 64 14 / 0.3), 0 4px 10px rgb(28 25 23 / 0.06);
+}
+
+/* Dark mode: depth comes from a faint top rim and deep black shadows */
+.dark .card {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 16px 32px -12px rgb(0 0 0 / 0.6);
+}
+
+.dark .card:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 2px 4px rgb(0 0 0 / 0.4),
+    0 24px 48px -14px rgb(0 0 0 / 0.75);
+}
+
+.dark aside,
+.dark header.sticky {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 20px 40px -16px rgb(0 0 0 / 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  app-stat-card .card:hover {
+    transform: none;
+  }
+}
+
+/* ── Sidebar divider: engraved groove with a dark gradient flowing horizontally ── */
+@keyframes divider-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: -200% 50%; }
+}
+
+.sidebar-divider {
+  display: flex;
+  align-items: center;
+}
+
+/* 1px groove cut into the clay; espresso → stone → burnt amber tones slide sideways, ends fade out */
+.sidebar-divider-groove {
+  height: 1px;
+  flex: 1;
+  border-radius: 9999px;
+  background-image: linear-gradient(90deg, #1c1917 0%, #44403c 20%, #78350f 40%, #b45309 50%, #78350f 60%, #44403c 80%, #1c1917 100%);
+  background-size: 200% 100%;
+  animation: divider-flow 5s linear infinite;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.dark .sidebar-divider-groove {
+  background-image: linear-gradient(90deg, #0c0a09 0%, #292524 20%, #57534e 40%, #92400e 50%, #57534e 60%, #292524 80%, #0c0a09 100%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-divider-groove {
+    animation: none;
+  }
+}
+
+/* ── Topbar page icon: 3D icon pops in (with a small tilt) whenever the page changes ── */
+@keyframes page-icon-in {
+  0% { opacity: 0; transform: translateY(6px) scale(0.6) rotate(-14deg); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.08) rotate(4deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes page-title-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.topbar-page-icon {
+  filter: drop-shadow(0 5px 5px rgb(28 25 23 / 0.2));
+  animation: page-icon-in 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.dark .topbar-page-icon {
+  filter: drop-shadow(0 5px 6px rgb(0 0 0 / 0.5));
+}
+
+.topbar-page-title {
+  animation: page-title-in 300ms ease-out 80ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-page-icon,
+  .topbar-page-title {
+    animation: none;
+  }
+}
+
+/* ── Topbar language switch: recessed track, the active language is a raised amber chip ── */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 2.5rem;
+  border-radius: 9999px;
+  padding: 0 4px 0 10px;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 3px rgb(28 25 23 / 0.1), 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.lang-switch-globe {
+  margin-right: 4px;
+  font-size: 0.8rem;
+  color: #a8a29e;
+}
+
+.lang-switch-option {
+  height: 2rem;
+  min-width: 2.25rem;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #78716c;
+  transition: color 150ms ease, background-color 150ms ease, box-shadow 200ms ease;
+}
+
+.lang-switch-option:hover {
+  color: #1c1917;
+  background: rgb(255 255 255 / 0.6);
+}
+
+.lang-switch-option.is-active {
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(120 53 15 / 0.35),
+    0 4px 10px -3px rgb(217 119 6 / 0.6);
+}
+
+.lang-switch-option:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 1px;
+}
+
+.dark .lang-switch {
+  background: rgb(0 0 0 / 0.3);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.dark .lang-switch-globe {
+  color: #78716c;
+}
+
+.dark .lang-switch-option {
+  color: #a8a29e;
+}
+
+.dark .lang-switch-option:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.dark .lang-switch-option.is-active {
+  color: #1c1917;
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+}
+
+/* ── Resumen welcome card: warm gradient panel with the floating Kora bear ── */
+@keyframes bear-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-5px) rotate(1deg); }
+}
+
+.hero-welcome {
+  position: relative;
+  border: 1px solid #fde68a;
+  background:
+    radial-gradient(420px 180px at 0% 100%, rgb(245 158 11 / 0.18), transparent 70%),
+    linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #ffffff 100%);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 18px 36px -14px rgb(180 83 9 / 0.28);
+}
+
+.hero-bear {
+  filter: drop-shadow(0 10px 10px rgb(120 53 15 / 0.3));
+  animation: bear-float 4s ease-in-out infinite;
+}
+
+.dark .hero-welcome {
+  border-color: rgb(245 158 11 / 0.25);
+  background:
+    radial-gradient(420px 180px at 0% 100%, rgb(245 158 11 / 0.16), transparent 70%),
+    linear-gradient(135deg, #292524 0%, #1c1917 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 18px 36px -14px rgb(0 0 0 / 0.7);
+}
+
+.dark .hero-bear {
+  filter: drop-shadow(0 10px 12px rgb(0 0 0 / 0.6));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bear {
+    animation: none;
+  }
 }

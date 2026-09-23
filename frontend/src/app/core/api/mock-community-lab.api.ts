@@ -12,7 +12,8 @@ import { CommunityLabApi } from './community-lab.api';
 import { process } from './mock-engine';
 import { SEED_BATCHES } from './sample-interactions';
 
-export const MOCK_STORAGE_KEY = 'communitylab.mock-db';
+// v3: sentiment values in English (positive/neutral/negative); older saved demos are ignored
+export const MOCK_STORAGE_KEY = 'communitylab.mock-db.v3';
 
 /**
  * In-memory backend used while the real API does not exist (`useMocks: true`).

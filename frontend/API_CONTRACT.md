@@ -51,7 +51,7 @@ por canal, guarda el paquete en OCI Object Storage y devuelve todo.
 }
 ```
 
-- `source`: `Discord | Slack | GitHub | Foro | Formulario`
+- `source`: `Discord | Telegram`
 - `formats` es opcional; si falta, se generan todos los que permita la rama.
 - El frontend ya parsea JSON y CSV (con alias en español: `autor`, `mensaje`, `canal`…) y siempre envía este formato normalizado.
 
@@ -79,7 +79,7 @@ por canal, guarda el paquete en OCI Object Storage y devuelve todo.
       "channel": "#logros",
       "timestamp": "2026-09-22T14:05:00Z",
       "analysis": {
-        "sentiment": "positivo",
+        "sentiment": "positive",
         "sentimentScore": 0.95,
         "topics": ["LangChain", "OCI", "Empleabilidad"],
         "relevance": 0.97,
@@ -98,7 +98,7 @@ por canal, guarda el paquete en OCI Object Storage y devuelve todo.
         "source": "Discord",
         "channel": "#logros",
         "excerpt": "Me contrataron como Dev Jr de IA…",
-        "sentiment": "positivo",
+        "sentiment": "positive",
         "relevance": 0.97,
         "route": "success_story"
       },
@@ -129,7 +129,7 @@ por canal, guarda el paquete en OCI Object Storage y devuelve todo.
 
 | Campo | Valores |
 |-------|---------|
-| `analysis.sentiment` | `positivo`, `neutral`, `negativo` |
+| `analysis.sentiment` | `positive`, `neutral`, `negative` |
 | `analysis.sentimentScore` | `-1.0` … `1.0` |
 | `analysis.relevance` | `0.0` … `1.0` |
 | `analysis.route` | `success_story`, `testimonial`, `faq`, `alert`, `discard` |

@@ -4,11 +4,15 @@ import {
   AssetPatch,
   AssetStatus,
   GeneratedAsset,
+  INTERACTION_SOURCES,
   Interaction,
+  InteractionSource,
   ProcessResult,
   StoredObject,
 } from './api/api.models';
 import { CommunityLabApi } from './api/community-lab.api';
+
+const SOURCE_KEY = 'active-source';
 
 /** Shared state for ingestion results, curation and OCI storage, backed by CommunityLabApi. */
 @Injectable({ providedIn: 'root' })
@@ -19,21 +23,46 @@ export class WorkspaceStore {
   private readonly _objects = signal<StoredObject[]>([]);
   private readonly _lastResult = signal<ProcessResult | null>(null);
   private readonly _busyIds = signal<Set<string>>(new Set());
+  private readonly _activeSource = signal<InteractionSource>(readActiveSource());
 
-  readonly assets = this._assets.asReadonly();
+  /** Network the workspace is scoped to (Discord or Telegram). */
+  readonly activeSource = this._activeSource.asReadonly();
+
+  /** Assets of the selected network: what every page lists and counts. */
+  readonly assets = computed(() => {
+    const source = this._activeSource();
+    return this._assets().filter((a) => a.origin.source === source);
+  });
+
+  /** Asset count per network, for the network switcher. */
+  readonly sourceCounts = computed(() => {
+    const counts = Object.fromEntries(INTERACTION_SOURCES.map((s) => [s, 0])) as Record<InteractionSource, number>;
+    for (const a of this._assets()) counts[a.origin.source]++;
+    return counts;
+  });
+
   readonly objects = this._objects.asReadonly();
   readonly lastResult = this._lastResult.asReadonly();
   readonly loaded = signal(false);
 
   readonly pipeline = computed(() => {
     const order: AssetStatus[] = ['draft', 'in_review', 'approved', 'published'];
-    const list = this._assets();
+    const list = this.assets();
     return order.map((status) => ({ status, count: list.filter((a) => a.status === status).length }));
   });
 
   readonly pendingReview = computed(
-    () => this._assets().filter((a) => a.status === 'draft' || a.status === 'in_review').length,
+    () => this.assets().filter((a) => a.status === 'draft' || a.status === 'in_review').length,
   );
+
+  setActiveSource(source: InteractionSource) {
+    this._activeSource.set(source);
+    try {
+      localStorage.setItem(SOURCE_KEY, source);
+    } catch {
+      // selection just won't persist
+    }
+  }
 
   constructor() {
     this.api.listAssets().subscribe((assets) => {
@@ -100,5 +129,14 @@ export class WorkspaceStore {
       next.delete(id);
       return next;
     });
+  }
+}
+
+function readActiveSource(): InteractionSource {
+  try {
+    const saved = localStorage.getItem(SOURCE_KEY);
+    return INTERACTION_SOURCES.find((s) => s === saved) ?? 'Discord';
+  } catch {
+    return 'Discord';
   }
 }

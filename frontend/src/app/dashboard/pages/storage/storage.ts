@@ -1,11 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProcessResult, StoredObject } from '../../../core/api/api.models';
 import { downloadBlob } from '../../../core/banner';
+import { I18n } from '../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { WorkspaceStore } from '../../../core/workspace.store';
 
 /** Always Free tier: 20 GB across Standard + Infrequent Access + Archive. */
@@ -13,12 +15,13 @@ const FREE_TIER_BYTES = 20 * 1024 ** 3;
 
 @Component({
   selector: 'app-storage',
-  imports: [ButtonModule, DialogModule, TooltipModule, DatePipe, DecimalPipe],
+  imports: [ButtonModule, DialogModule, TooltipModule, DecimalPipe, TranslatePipe, LocalizedDatePipe],
   templateUrl: './storage.html',
 })
 export class Storage {
   protected readonly store = inject(WorkspaceStore);
   private readonly toast = inject(MessageService);
+  private readonly i18n = inject(I18n);
 
   protected readonly bucket = {
     name: 'kora-assets',
@@ -62,7 +65,7 @@ export class Storage {
 
   copy(text: string) {
     navigator.clipboard?.writeText(text).then(() =>
-      this.toast.add({ severity: 'info', summary: 'URL copiada', life: 2000 }),
+      this.toast.add({ severity: 'info', summary: this.i18n.t('toast.copied.url'), life: 2000 }),
     );
   }
 

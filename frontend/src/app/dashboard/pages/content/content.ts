@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { DatePipe, PercentPipe } from '@angular/common';
+import { PercentPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
@@ -12,14 +12,13 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AssetStatus, GeneratedAsset } from '../../../core/api/api.models';
 import { buildBannerSvg, downloadBannerPng, svgDataUrl } from '../../../core/banner';
 import { confetti, originOf } from '../../../core/confetti';
+import { I18n } from '../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
 import {
   ASSET_STATUS_DOT,
-  ASSET_STATUS_LABEL,
   ASSET_STATUS_SEVERITY,
   ASSET_TYPE_ICON,
-  ASSET_TYPE_LABEL,
   ASSET_TYPE_TINT,
-  ROUTE_LABEL,
   ROUTE_TINT,
   SENTIMENT_TINT,
   SOURCE_ICON,
@@ -48,9 +47,10 @@ const FILTER_STATUSES: Record<Filter, AssetStatus[] | null> = {
     TextareaModule,
     TooltipModule,
     FormsModule,
-    DatePipe,
     PercentPipe,
     AssetPreview,
+    TranslatePipe,
+    LocalizedDatePipe,
   ],
   templateUrl: './content.html',
   styleUrl: './content.css',
@@ -59,35 +59,34 @@ export class Content {
   protected readonly store = inject(WorkspaceStore);
   private readonly toast = inject(MessageService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly i18n = inject(I18n);
 
-  protected readonly typeLabel = ASSET_TYPE_LABEL;
   protected readonly typeIcon = ASSET_TYPE_ICON;
   protected readonly typeTint = ASSET_TYPE_TINT;
-  protected readonly statusLabel = ASSET_STATUS_LABEL;
   protected readonly statusSeverity = ASSET_STATUS_SEVERITY;
   protected readonly statusDot = ASSET_STATUS_DOT;
-  protected readonly routeLabel = ROUTE_LABEL;
   protected readonly routeTint = ROUTE_TINT;
   protected readonly sentimentTint = SENTIMENT_TINT;
   protected readonly sourceIcon = SOURCE_ICON;
   protected readonly sourceTint = SOURCE_TINT;
 
+  /** `label` is an i18n key */
   protected readonly filterTabs: { value: Filter; label: string; dot?: string }[] = [
-    { value: 'pending', label: 'Por revisar', dot: 'bg-amber-500' },
-    { value: 'approved', label: 'Aprobados', dot: 'bg-sky-500' },
-    { value: 'published', label: 'Publicados', dot: 'bg-emerald-500' },
-    { value: 'rejected', label: 'Rechazados', dot: 'bg-rose-500' },
-    { value: 'all', label: 'Todos' },
+    { value: 'pending', label: 'summary.stat.pending', dot: 'bg-amber-500' },
+    { value: 'approved', label: 'content.filter.approved', dot: 'bg-sky-500' },
+    { value: 'published', label: 'content.filter.published', dot: 'bg-emerald-500' },
+    { value: 'rejected', label: 'content.filter.rejected', dot: 'bg-rose-500' },
+    { value: 'all', label: 'content.filter.all' },
   ];
 
   protected readonly query = signal('');
   protected readonly status = signal<Filter>('pending');
   protected readonly selectedId = signal<string | null>(null);
 
-  protected readonly viewModes = [
-    { label: 'Vista previa', value: 'preview' },
-    { label: 'Editar', value: 'edit' },
-  ];
+  protected readonly viewModes = computed(() => [
+    { label: this.i18n.t('content.view.preview'), value: 'preview' },
+    { label: this.i18n.t('content.view.edit'), value: 'edit' },
+  ]);
   protected readonly view = signal<'preview' | 'edit'>('preview');
   protected draft = { title: '', body: '', hashtags: '' };
 
@@ -152,12 +151,16 @@ export class Content {
         .map((h) => (h.startsWith('#') ? h : `#${h}`)),
     });
     this.view.set('preview');
-    this.toast.add({ severity: 'success', summary: 'Cambios guardados', life: 2000 });
+    this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.saved'), life: 2000 });
   }
 
   protected setStatus(a: GeneratedAsset, status: AssetStatus) {
     this.store.update(a.id, { status });
-    this.toast.add({ severity: 'info', summary: `Marcado como ${ASSET_STATUS_LABEL[status].toLowerCase()}`, life: 2000 });
+    this.toast.add({
+      severity: 'info',
+      summary: this.i18n.t('content.toast.marked', { status: this.i18n.t(`status.${status}`).toLowerCase() }),
+      life: 2000,
+    });
   }
 
   protected publish(a: GeneratedAsset, event?: Event) {
@@ -165,8 +168,8 @@ export class Content {
     confetti(originOf(event));
     this.toast.add({
       severity: 'success',
-      summary: 'Publicado',
-      detail: `${ASSET_TYPE_LABEL[a.type]} de ${a.origin.author}`,
+      summary: this.i18n.t('content.toast.published'),
+      detail: this.i18n.t('content.toast.publishedDetail', { type: this.i18n.t(`assetType.${a.type}`), author: a.origin.author }),
       life: 3000,
     });
   }
@@ -175,13 +178,13 @@ export class Content {
     const approved = this.store.assets().filter((a) => a.status === 'approved');
     approved.forEach((a) => this.store.publish(a.id));
     confetti(originOf(event));
-    this.toast.add({ severity: 'success', summary: `${approved.length} contenidos publicados`, life: 3000 });
+    this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.publishedMany', { n: approved.length }), life: 3000 });
   }
 
   protected copy(a: GeneratedAsset) {
     const text = a.body + (a.hashtags.length ? `\n\n${a.hashtags.join(' ')}` : '');
     navigator.clipboard?.writeText(text).then(() =>
-      this.toast.add({ severity: 'info', summary: 'Texto copiado', life: 2000 }),
+      this.toast.add({ severity: 'info', summary: this.i18n.t('toast.copied.text'), life: 2000 }),
     );
   }
 

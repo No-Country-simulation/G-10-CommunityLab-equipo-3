@@ -16,5 +16,5 @@ export interface StatItem {
 })
 export class StatCard {
   readonly stat = input.required<StatItem>();
-  readonly color = input('#3b82f6');
+  readonly color = input('#d97706');
 }

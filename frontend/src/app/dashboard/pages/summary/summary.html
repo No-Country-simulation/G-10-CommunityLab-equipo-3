@@ -1,21 +1,38 @@
 <!-- Header -->
 <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
   <div>
-    <h1 class="page-title">Resumen</h1>
-    <p class="page-subtitle">Tu comunidad habla. Kora publica.</p>
+    <h1 class="page-title">{{ 'nav.summary' | t }}</h1>
+    <p class="page-subtitle">{{ 'brand.tagline' | t }}</p>
   </div>
-  <p-button label="Procesar interacciones" icon="pi pi-sparkles" routerLink="/ingest" styleClass="shadow-lg shadow-blue-500/25 transition hover:-translate-y-0.5 hover:shadow-blue-500/40" />
+  <p-button [label]="'summary.process' | t" icon="pi pi-sparkles" routerLink="/ingest" />
 </div>
+
+<!-- Welcome card with the Kora mascot (spectacled bear) -->
+@let pendingCount = store.pendingReview();
+<section class="hero-welcome mb-6 flex items-center gap-4 overflow-hidden rounded-3xl p-4 pr-5 sm:gap-6 sm:p-5 sm:pr-7">
+  <img src="image/logo/oso-full.png" [alt]="'summary.hero.alt' | t" width="100" height="120"
+    class="hero-bear h-24 w-20 shrink-0 object-contain sm:h-28 sm:w-24" />
+  <div class="min-w-0 flex-1">
+    <p class="font-display text-lg font-extrabold text-espresso dark:text-white sm:text-xl">{{ greetingKey | t }} 👋</p>
+    <p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+      {{ (pendingCount ? 'summary.hero.pending' : 'summary.hero.clear') | t: { network: store.activeSource() + ': CommunityLab', n: pendingCount } }}
+    </p>
+  </div>
+  @if (pendingCount) {
+    <p-button [label]="'summary.hero.cta' | t" icon="pi pi-arrow-right" iconPos="right" size="small" [outlined]="true"
+      routerLink="/content" styleClass="hidden sm:inline-flex" />
+  }
+</section>
 
 <!-- MVP flow: one timeline, message → LLM → content → OCI -->
 <section class="card overflow-hidden">
   <div class="flex flex-wrap items-end justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
     <div>
-      <h2 class="card-title">Cómo funciona</h2>
-      <p class="card-subtitle">De un mensaje de la comunidad a un post guardado en OCI, en 4 pasos.</p>
+      <h2 class="card-title">{{ 'summary.how.title' | t }}</h2>
+      <p class="card-subtitle">{{ 'summary.how.subtitle' | t }}</p>
     </div>
     <a routerLink="/ingest" class="group inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
-      Probar ahora <i class="pi pi-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5"></i>
+      {{ 'summary.how.try' | t }} <i class="pi pi-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5"></i>
     </a>
   </div>
 
@@ -36,11 +53,11 @@
               [style.color]="s.color">{{ i + 1 }}</span>
           </span>
           <span class="min-w-0 pt-1 xl:pt-0">
-            <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ s.title }}</span>
-            <span class="mt-1 block text-xs leading-relaxed text-slate-500 dark:text-slate-400 xl:mx-auto xl:max-w-[15rem]">{{ s.text }}</span>
+            <span class="block text-sm font-semibold text-slate-900 dark:text-white">{{ s.title | t }}</span>
+            <span class="mt-1 block text-xs leading-relaxed text-slate-500 dark:text-slate-400 xl:mx-auto xl:max-w-[15rem]">{{ s.text | t }}</span>
             <span class="mt-2 inline-flex items-center gap-1 text-xs font-semibold opacity-0 transition-all duration-200 group-hover:opacity-100 xl:translate-y-1 xl:group-hover:translate-y-0"
               [style.color]="s.color">
-              Ir <i class="pi pi-arrow-right text-[10px]"></i>
+              {{ 'summary.how.go' | t }} <i class="pi pi-arrow-right text-[10px]"></i>
             </span>
           </span>
         </a>
@@ -52,7 +69,7 @@
 <!-- Real metrics -->
 <section class="mt-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
   @for (s of stats(); track s.label; let i = $index) {
-    <a [routerLink]="s.link" class="hover-lift block rounded-2xl" [attr.aria-label]="s.label">
+    <a [routerLink]="s.link" class="block rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas" [attr.aria-label]="s.label">
       <app-stat-card [stat]="s" [color]="statColors[i]" />
     </a>
   }
@@ -60,10 +77,10 @@
 
 <section class="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-5">
   <!-- Pending review -->
-  <div class="card xl:col-span-3">
+  <div class="card overflow-hidden xl:col-span-3">
     <div class="card-header">
-      <h2 class="card-title">Pendientes de revisión</h2>
-      <a routerLink="/content" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">Ir a curaduría</a>
+      <h2 class="card-title">{{ 'summary.pending.title' | t }}</h2>
+      <a routerLink="/content" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ 'common.goCuration' | t }}</a>
     </div>
     <ul class="divide-y divide-slate-100 dark:divide-slate-800">
       @for (a of pending(); track a.id; let i = $index) {
@@ -74,25 +91,25 @@
           </div>
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a.title }}</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ typeLabel[a.type] }} · {{ routeLabel[a.origin.route] }} · {{ a.origin.author }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ 'assetType.' + a.type | t }} · {{ 'route.' + a.origin.route | t }} · {{ a.origin.author }}</p>
           </div>
-          <p-button label="Aprobar" icon="pi pi-check" size="small" [outlined]="true" [loading]="store.isBusy(a.id)" (onClick)="approve(a)" />
+          <p-button [label]="'common.approve' | t" icon="pi pi-check" size="small" [outlined]="true" [loading]="store.isBusy(a.id)" (onClick)="approve(a)" />
         </li>
       } @empty {
         <li class="flex flex-col items-center gap-2 px-5 py-12 text-center">
           <i class="pi pi-check-circle animate-pop text-3xl text-emerald-500"></i>
-          <p class="text-sm font-medium">Todo revisado</p>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Procesa nuevas interacciones para generar más contenido.</p>
+          <p class="text-sm font-medium">{{ 'summary.pending.emptyTitle' | t }}</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">{{ 'summary.pending.emptyText' | t }}</p>
         </li>
       }
     </ul>
   </div>
 
   <!-- Latest OCI packages -->
-  <div class="card xl:col-span-2">
+  <div class="card overflow-hidden xl:col-span-2">
     <div class="card-header">
-      <h2 class="card-title">Últimos paquetes en OCI</h2>
-      <a routerLink="/storage" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">Ver bucket</a>
+      <h2 class="card-title">{{ 'summary.latest.title' | t }}</h2>
+      <a routerLink="/storage" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ 'common.viewBucket' | t }}</a>
     </div>
     <ul class="divide-y divide-slate-100 dark:divide-slate-800">
       @for (o of latestObjects(); track o.objectName; let i = $index) {
@@ -103,13 +120,13 @@
           </div>
           <div class="min-w-0 flex-1">
             <p class="truncate font-mono text-xs font-medium text-slate-800 dark:text-slate-100">{{ fileName(o.objectName) }}</p>
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ o.interactions }} mensajes · {{ o.assets }} contenidos · {{ o.storedAt | date: 'short' }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ 'summary.latest.meta' | t: { m: o.interactions, c: o.assets, date: (o.storedAt | ldate: 'short') } }}</p>
           </div>
           <i class="pi pi-chevron-right text-[10px] text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500"></i>
           </a>
         </li>
       } @empty {
-        <li class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">El bucket está vacío.</li>
+        <li class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">{{ 'common.bucketEmpty' | t }}</li>
       }
     </ul>
   </div>

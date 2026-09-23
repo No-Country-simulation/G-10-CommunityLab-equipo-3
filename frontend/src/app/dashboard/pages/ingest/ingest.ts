@@ -1,5 +1,5 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe, LowerCasePipe, PercentPipe } from '@angular/common';
+import { DecimalPipe, LowerCasePipe, PercentPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription, interval, take } from 'rxjs';
@@ -11,17 +11,16 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { AnalyzedInteraction, GeneratedAsset, Interaction, InteractionSource } from '../../../core/api/api.models';
+import { AnalyzedInteraction, GeneratedAsset, INTERACTION_SOURCES, Interaction, InteractionSource } from '../../../core/api/api.models';
 import { SAMPLE_INTERACTIONS } from '../../../core/api/sample-interactions';
 import { downloadBlob } from '../../../core/banner';
+import { I18n } from '../../../core/i18n/i18n.service';
+import { LocalizedDatePipe, TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { ParseError, parseInteractions } from '../../../core/interaction-parser';
 import {
-  ASSET_STATUS_LABEL,
   ASSET_STATUS_SEVERITY,
   ASSET_TYPE_ICON,
-  ASSET_TYPE_LABEL,
   ROUTE_ICON,
-  ROUTE_LABEL,
   ROUTE_TINT,
   SENTIMENT_ICON,
   SENTIMENT_TINT,
@@ -72,12 +71,13 @@ const CSV_TEMPLATE =
     TooltipModule,
     FormsModule,
     RouterLink,
-    DatePipe,
     DecimalPipe,
     PercentPipe,
     LowerCasePipe,
     AssetPreview,
     CountUp,
+    TranslatePipe,
+    LocalizedDatePipe,
   ],
   templateUrl: './ingest.html',
 })
@@ -85,32 +85,30 @@ export class Ingest {
   protected readonly store = inject(WorkspaceStore);
   private readonly toast = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly i18n = inject(I18n);
 
   protected readonly sourceIcon = SOURCE_ICON;
   protected readonly sourceTint = SOURCE_TINT;
-  protected readonly routeLabel = ROUTE_LABEL;
   protected readonly routeTint = ROUTE_TINT;
   protected readonly routeIcon = ROUTE_ICON;
   protected readonly sentimentTint = SENTIMENT_TINT;
   protected readonly sentimentIcon = SENTIMENT_ICON;
-  protected readonly typeLabel = ASSET_TYPE_LABEL;
   protected readonly typeIcon = ASSET_TYPE_ICON;
-  protected readonly statusLabel = ASSET_STATUS_LABEL;
   protected readonly statusSeverity = ASSET_STATUS_SEVERITY;
 
-  protected readonly modes: { label: string; value: InputMode; icon: string }[] = [
-    { label: 'Ejemplos del reto', value: 'samples', icon: 'pi pi-star' },
-    { label: 'JSON / CSV', value: 'data', icon: 'pi pi-code' },
-    { label: 'Escribir', value: 'manual', icon: 'pi pi-pencil' },
-  ];
+  protected readonly modes = computed<{ label: string; value: InputMode; icon: string }[]>(() => [
+    { label: this.i18n.t('ingest.mode.samples'), value: 'samples', icon: 'pi pi-star' },
+    { label: this.i18n.t('ingest.mode.data'), value: 'data', icon: 'pi pi-code' },
+    { label: this.i18n.t('ingest.mode.manual'), value: 'manual', icon: 'pi pi-pencil' },
+  ]);
   protected readonly mode = signal<InputMode>('samples');
 
-  /** Same steps and colors as "Cómo funciona" in Resumen: navy → blue → cyan → Oracle red. */
+  /** Same steps and colors as "Cómo funciona" in Resumen (title/detail are i18n keys). */
   protected readonly steps = [
-    { title: 'Ingesta', detail: 'Normaliza JSON / CSV / webhook', icon: 'pi pi-inbox', color: '#1e40af', colorTo: '#1e3a8a' },
-    { title: 'Análisis con LLM', detail: 'Sentimiento, temas y relevancia', icon: 'pi pi-sparkles', color: '#2563eb', colorTo: '#1d4ed8' },
-    { title: 'Orquestación', detail: 'Bifurcación y tono por canal', icon: 'pi pi-sitemap', color: '#0891b2', colorTo: '#0e7490' },
-    { title: 'OCI Object Storage', detail: 'Paquete JSON en el bucket', icon: 'pi pi-cloud-upload', color: '#e0654f', colorTo: '#c74634' },
+    { title: 'step.ingest', detail: 'ingest.step.ingest', icon: 'pi pi-inbox', color: '#d97706', colorTo: '#b45309' },
+    { title: 'step.analysis', detail: 'ingest.step.analysis', icon: 'pi pi-sparkles', color: '#8b5cf6', colorTo: '#6d28d9' },
+    { title: 'step.orchestration', detail: 'ingest.step.orchestration', icon: 'pi pi-sitemap', color: '#10b981', colorTo: '#047857' },
+    { title: 'step.storage', detail: 'ingest.step.storage', icon: 'pi pi-cloud-upload', color: '#e0654f', colorTo: '#c74634' },
   ];
   /** -1 idle · 0..3 running step · 4 done */
   protected readonly step = signal(this.store.lastResult() ? 4 : -1);
@@ -131,7 +129,7 @@ export class Ingest {
   protected readonly dragOver = signal(false);
 
   // Manual
-  protected readonly sourceOptions: InteractionSource[] = ['Discord', 'Slack', 'GitHub', 'Foro', 'Formulario'];
+  protected readonly sourceOptions: InteractionSource[] = [...INTERACTION_SOURCES];
   protected manual = { author: '', source: 'Discord' as InteractionSource, channel: '', content: '' };
 
   protected readonly result = this.store.lastResult;
@@ -156,11 +154,11 @@ export class Ingest {
 
   addSamples() {
     const picked = this.samples.filter((s) => this.selectedSamples().includes(s.id));
-    this.enqueue(picked, 'ejemplos');
+    this.enqueue(picked, this.i18n.t('ingest.origin.samples'));
   }
 
   loadJson() {
-    this.tryParse(() => parseInteractions(this.jsonText()), 'texto pegado');
+    this.tryParse(() => parseInteractions(this.jsonText()), this.i18n.t('ingest.origin.pasted'));
   }
 
   onFile(event: Event) {
@@ -183,14 +181,14 @@ export class Ingest {
       [
         {
           id: `msg-${Date.now().toString(36)}`,
-          author: author.trim() || 'Anónimo',
+          author: author.trim() || this.i18n.t('ingest.manual.anonymous'),
           source,
           channel: channel.trim() || 'general',
           content: content.trim(),
           timestamp: new Date().toISOString(),
         },
       ],
-      'manual',
+      this.i18n.t('ingest.origin.manual'),
     );
     this.manual = { ...this.manual, author: '', content: '' };
   }
@@ -229,8 +227,8 @@ export class Ingest {
         this.queue.set([]);
         this.toast.add({
           severity: 'success',
-          summary: 'Lote procesado',
-          detail: `${res.assets.length} contenidos generados y guardados en ${res.storage.bucket}`,
+          summary: this.i18n.t('ingest.toast.processed'),
+          detail: this.i18n.t('ingest.toast.processedDetail', { n: res.assets.length, bucket: res.storage.bucket }),
           life: 4000,
         });
         setTimeout(() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -238,7 +236,7 @@ export class Ingest {
       error: (err: Error) => {
         this.stepTimer?.unsubscribe();
         this.step.set(-1);
-        this.toast.add({ severity: 'error', summary: 'Error al procesar', detail: err.message, life: 6000 });
+        this.toast.add({ severity: 'error', summary: this.i18n.t('ingest.toast.processError'), detail: err.message, life: 6000 });
       },
     });
     this.destroyRef.onDestroy(() => {
@@ -252,9 +250,10 @@ export class Ingest {
     this.step.set(-1);
   }
 
-  copy(text: string, what = 'Contenido') {
+  /** `copiedKey`: which toast to show (content, URL or JSON copied) */
+  copy(text: string, copiedKey = 'toast.copied.content') {
     navigator.clipboard?.writeText(text).then(() =>
-      this.toast.add({ severity: 'info', summary: `${what} copiado`, life: 2000 }),
+      this.toast.add({ severity: 'info', summary: this.i18n.t(copiedKey), life: 2000 }),
     );
   }
 
@@ -276,7 +275,11 @@ export class Ingest {
 
   private readFile(file: File) {
     if (!/\.(json|csv)$/i.test(file.name)) {
-      this.toast.add({ severity: 'warn', summary: 'Formato no soportado', detail: 'Usa un archivo .json o .csv' });
+      this.toast.add({
+        severity: 'warn',
+        summary: this.i18n.t('ingest.toast.badFormat'),
+        detail: this.i18n.t('ingest.toast.badFormatDetail'),
+      });
       return;
     }
     file.text().then((text) => this.tryParse(() => parseInteractions(text, file.name.toLowerCase()), file.name));
@@ -288,9 +291,9 @@ export class Ingest {
       this.parseError.set(null);
       this.enqueue(items, origin);
     } catch (e) {
-      const msg = e instanceof ParseError ? e.message : 'No se pudo leer el contenido.';
+      const msg = e instanceof ParseError ? this.i18n.t(e.key, e.params) : this.i18n.t('parse.unreadable');
       this.parseError.set(msg);
-      this.toast.add({ severity: 'error', summary: 'Error de formato', detail: msg, life: 5000 });
+      this.toast.add({ severity: 'error', summary: this.i18n.t('ingest.toast.parseError'), detail: msg, life: 5000 });
     }
   }
 
@@ -300,8 +303,8 @@ export class Ingest {
     this.queue.update((q) => [...q, ...fresh]);
     this.toast.add({
       severity: 'success',
-      summary: `${fresh.length} interacción(es) agregadas`,
-      detail: `Origen: ${origin}`,
+      summary: this.i18n.t('ingest.toast.added', { n: fresh.length }),
+      detail: this.i18n.t('ingest.toast.origin', { origin }),
       life: 2500,
     });
   }

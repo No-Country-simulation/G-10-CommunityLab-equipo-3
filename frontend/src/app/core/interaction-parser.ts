@@ -1,6 +1,6 @@
-import { Interaction, InteractionSource } from './api/api.models';
+import { INTERACTION_SOURCES, Interaction } from './api/api.models';
 
-/** Accepted aliases per field, so exports from Discord/Slack/forms load without reshaping. */
+/** Accepted aliases per field, so exports from Discord/Telegram load without reshaping. */
 const FIELDS: Record<keyof Omit<Interaction, 'id'>, string[]> = {
   author: ['author', 'autor', 'user', 'usuario', 'username', 'name', 'nombre'],
   content: ['content', 'contenido', 'message', 'mensaje', 'text', 'texto', 'body'],
@@ -9,18 +9,26 @@ const FIELDS: Record<keyof Omit<Interaction, 'id'>, string[]> = {
   timestamp: ['timestamp', 'date', 'fecha', 'created_at', 'createdAt'],
 };
 
-const SOURCES: InteractionSource[] = ['Discord', 'Slack', 'GitHub', 'Foro', 'Formulario'];
+const SOURCES = INTERACTION_SOURCES;
 
-export class ParseError extends Error {}
+/** Carries an i18n key (see core/i18n/messages.ts) so the UI can show it in the selected language. */
+export class ParseError extends Error {
+  constructor(
+    readonly key: string,
+    readonly params?: Record<string, string>,
+  ) {
+    super(key);
+  }
+}
 
 export function parseInteractions(text: string, fileName = ''): Interaction[] {
   const trimmed = text.trim();
-  if (!trimmed) throw new ParseError('El contenido está vacío.');
+  if (!trimmed) throw new ParseError('parse.empty');
   const isJson = fileName.endsWith('.json') || /^[\[{]/.test(trimmed);
   const rows = isJson ? parseJson(trimmed) : parseCsv(trimmed);
   const interactions = rows.map(normalize).filter((i): i is Interaction => !!i);
   if (!interactions.length) {
-    throw new ParseError('No se encontró ningún mensaje con un campo "content" / "mensaje".');
+    throw new ParseError('parse.noContent');
   }
   return interactions;
 }
@@ -30,7 +38,7 @@ function parseJson(text: string): Record<string, unknown>[] {
   try {
     data = JSON.parse(text);
   } catch (e) {
-    throw new ParseError(`JSON inválido: ${(e as Error).message}`);
+    throw new ParseError('parse.invalidJson', { error: (e as Error).message });
   }
   if (Array.isArray(data)) return data as Record<string, unknown>[];
   const obj = data as Record<string, unknown>;
@@ -41,7 +49,7 @@ function parseJson(text: string): Record<string, unknown>[] {
 
 function parseCsv(text: string): Record<string, unknown>[] {
   const rows = splitCsv(text);
-  if (rows.length < 2) throw new ParseError('El CSV necesita una fila de encabezados y al menos un mensaje.');
+  if (rows.length < 2) throw new ParseError('parse.csvRows');
   const headers = rows[0].map((h) => h.trim());
   return rows
     .slice(1)
@@ -98,7 +106,7 @@ function normalize(raw: Record<string, unknown>, index: number): Interaction | n
   if (!content) return null;
 
   const rawSource = pick('source').toLowerCase();
-  const source = SOURCES.find((s) => s.toLowerCase() === rawSource) ?? 'Formulario';
+  const source = SOURCES.find((s) => s.toLowerCase() === rawSource) ?? 'Discord';
 
   return {
     id: String(raw['id'] ?? `msg-${Date.now().toString(36)}-${index}`),
