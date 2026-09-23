@@ -15,6 +15,7 @@ Curar este contenido y redactarlo manualmente para redes sociales toma decenas d
 
 ## 🛠️ Tech Stack
 
+
 | Capa | Tecnología | Estado |
 |------|------------|--------|
 | Frontend | Angular | Definido |
