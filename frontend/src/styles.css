@@ -698,6 +698,41 @@ html:not(.dark) .p-toast-message {
   }
 }
 
+/* ── Sidebar divider: engraved groove with a dark gradient flowing horizontally ── */
+@keyframes divider-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: -200% 50%; }
+}
+
+.sidebar-divider {
+  display: flex;
+  align-items: center;
+}
+
+/* 1px groove cut into the clay; espresso → stone → burnt amber tones slide sideways, ends fade out */
+.sidebar-divider-groove {
+  height: 1px;
+  flex: 1;
+  border-radius: 9999px;
+  background-image: linear-gradient(90deg, #1c1917 0%, #44403c 20%, #78350f 40%, #b45309 50%, #78350f 60%, #44403c 80%, #1c1917 100%);
+  background-size: 200% 100%;
+  animation: divider-flow 5s linear infinite;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.dark .sidebar-divider-groove {
+  background-image: linear-gradient(90deg, #0c0a09 0%, #292524 20%, #57534e 40%, #92400e 50%, #57534e 60%, #292524 80%, #0c0a09 100%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-divider-groove {
+    animation: none;
+  }
+}
+
 /* ── Topbar page icon: 3D icon pops in (with a small tilt) whenever the page changes ── */
 @keyframes page-icon-in {
   0% { opacity: 0; transform: translateY(6px) scale(0.6) rotate(-14deg); }
@@ -732,7 +767,6 @@ html:not(.dark) .p-toast-message {
 
 /* ── Topbar language switch: recessed track, the active language is a raised amber chip ── */
 .lang-switch {
-  display: inline-flex;
   align-items: center;
   gap: 2px;
   height: 2.5rem;
@@ -841,4 +875,225 @@ html:not(.dark) .p-toast-message {
   .hero-bear {
     animation: none;
   }
+}
+
+/* ── Topbar language dropdown (phones): amber code pill + clay panel ── */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.lang-dropdown-trigger {
+  display: flex;
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0 0.55rem 0 0.25rem;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 3px rgb(28 25 23 / 0.1), 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.lang-dropdown-code {
+  display: inline-flex;
+  height: 1.75rem;
+  min-width: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 0 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(120 53 15 / 0.35),
+    0 3px 8px -3px rgb(217 119 6 / 0.6);
+}
+
+.lang-dropdown-chevron {
+  font-size: 0.6rem;
+  color: #78716c;
+  transition: transform 200ms ease;
+}
+
+.lang-dropdown-trigger.is-open .lang-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+.lang-dropdown-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.6rem);
+  z-index: 50;
+  width: 12.5rem;
+  border-radius: 1.25rem;
+  border: 1px solid #ebe5dc;
+  padding: 0.4rem;
+  background: #fff;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 2px 4px rgb(28 25 23 / 0.06),
+    0 24px 48px -12px rgb(146 64 14 / 0.35);
+  transform-origin: top right;
+  animation: dropdown-in 180ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.lang-dropdown-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem 0.45rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.lang-dropdown-heading > i {
+  font-size: 0.7rem;
+  color: #d97706;
+}
+
+.lang-dropdown-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #44403c;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.lang-dropdown-option:hover {
+  background: #faf6ef;
+  color: #1c1917;
+}
+
+.lang-dropdown-option.is-active {
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.lang-dropdown-badge {
+  display: inline-flex;
+  height: 1.6rem;
+  width: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #78716c;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.08);
+}
+
+.lang-dropdown-option.is-active .lang-dropdown-badge {
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 3px 8px -3px rgb(217 119 6 / 0.6);
+}
+
+.dark .lang-dropdown-trigger {
+  background: rgb(0 0 0 / 0.3);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.dark .lang-dropdown-code,
+.dark .lang-dropdown-option.is-active .lang-dropdown-badge {
+  color: #1c1917;
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+}
+
+.dark .lang-dropdown-panel {
+  border-color: #44403c;
+  background: #292524;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 48px -12px rgb(0 0 0 / 0.7);
+}
+
+.dark .lang-dropdown-option {
+  color: #d6d3d1;
+}
+
+.dark .lang-dropdown-option:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: #fff;
+}
+
+.dark .lang-dropdown-option.is-active {
+  background: rgb(245 158 11 / 0.12);
+  color: #fcd34d;
+}
+
+.dark .lang-dropdown-badge {
+  color: #a8a29e;
+  background: rgb(0 0 0 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-dropdown-panel {
+    animation: none;
+  }
+}
+
+/* ── Breadcrumb above each page title: Inicio › Página ── */
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.breadcrumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  color: #78716c;
+  transition: color 150ms ease;
+}
+
+.breadcrumb-link:hover {
+  color: #b45309;
+}
+
+.breadcrumb-link:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.breadcrumb-sep {
+  font-size: 0.65rem;
+  color: #a8a29e;
+}
+
+.breadcrumb-current {
+  font-weight: 600;
+  color: #44403c;
+}
+
+.dark .breadcrumb-link {
+  color: #a8a29e;
+}
+
+.dark .breadcrumb-link:hover {
+  color: #fcd34d;
+}
+
+.dark .breadcrumb-sep {
+  color: #57534e;
+}
+
+.dark .breadcrumb-current {
+  color: #e7e5e4;
 }

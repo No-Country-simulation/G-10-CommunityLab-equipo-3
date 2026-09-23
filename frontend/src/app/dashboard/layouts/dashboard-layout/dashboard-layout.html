@@ -11,6 +11,7 @@
     <app-topbar (toggleSidebar)="sidebarOpen.set(!sidebarOpen())" />
 
     <main class="page-transition mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <app-breadcrumb class="mb-3" />
       <router-outlet />
     </main>
   </div>

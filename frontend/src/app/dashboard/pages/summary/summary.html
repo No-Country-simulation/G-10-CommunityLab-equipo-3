@@ -9,7 +9,7 @@
 
 <!-- Welcome card with the Kora mascot (spectacled bear) -->
 @let pendingCount = store.pendingReview();
-<section class="hero-welcome mb-6 flex items-center gap-4 overflow-hidden rounded-3xl p-4 pr-5 sm:gap-6 sm:p-5 sm:pr-7">
+<section class="hero-welcome mb-6 flex flex-col items-center gap-3 overflow-hidden rounded-3xl p-5 text-center sm:flex-row sm:gap-6 sm:pr-7 sm:text-left">
   <img src="image/logo/oso-full.png" [alt]="'summary.hero.alt' | t" width="100" height="120"
     class="hero-bear h-24 w-20 shrink-0 object-contain sm:h-28 sm:w-24" />
   <div class="min-w-0 flex-1">
@@ -20,7 +20,7 @@
   </div>
   @if (pendingCount) {
     <p-button [label]="'summary.hero.cta' | t" icon="pi pi-arrow-right" iconPos="right" size="small" [outlined]="true"
-      routerLink="/content" styleClass="hidden sm:inline-flex" />
+      routerLink="/content" />
   }
 </section>
 

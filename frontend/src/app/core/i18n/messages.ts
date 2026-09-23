@@ -52,6 +52,8 @@ export const ES = {
   'topbar.resetDemo': 'Restablecer datos demo',
   'topbar.signOut': 'Cerrar sesión',
   'topbar.language': 'Idioma',
+  'breadcrumb.home': 'Inicio',
+  'breadcrumb.aria': 'Ruta de navegación',
 
   // Pipeline steps (Resumen + Ingesta)
   'step.ingest': 'Ingesta',
@@ -303,6 +305,8 @@ export const EN: Record<MessageKey, string> = {
   'topbar.resetDemo': 'Reset demo data',
   'topbar.signOut': 'Sign out',
   'topbar.language': 'Language',
+  'breadcrumb.home': 'Home',
+  'breadcrumb.aria': 'Breadcrumb',
 
   'step.ingest': 'Ingestion',
   'step.analysis': 'LLM analysis',
@@ -544,6 +548,8 @@ export const PT: Record<MessageKey, string> = {
   'topbar.resetDemo': 'Redefinir dados de demonstração',
   'topbar.signOut': 'Sair',
   'topbar.language': 'Idioma',
+  'breadcrumb.home': 'Início',
+  'breadcrumb.aria': 'Trilha de navegação',
 
   'step.ingest': 'Ingestão',
   'step.analysis': 'Análise com LLM',
