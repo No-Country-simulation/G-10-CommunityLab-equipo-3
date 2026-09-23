@@ -1,0 +1,56 @@
+name: sync frontend to main
+
+on:
+  push:
+    branches: [frontend]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout main con historial completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configurar git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sincronizar frontend y gestionar PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout -B sync/frontend main
+          git fetch origin
+
+          # Verificar existencia de la rama remota 'frontend'
+          if git ls-remote --exit-code --heads origin frontend; then
+            echo "La rama origin/frontend existe. Ejecutando subtree..."
+
+            if [ -d "frontend" ]; then
+              git subtree pull --prefix=frontend origin frontend --squash -m "sync: Update frontend from branch frontend"
+            else
+              git subtree add --prefix=frontend origin frontend --squash -m "sync: Add frontend subtree from branch frontend"
+            fi
+
+            # Subir la rama puente al remoto
+            git push origin sync/frontend --force
+
+            # Crear o reutilizar el PR hacia main
+            gh pr create \
+              --base main \
+              --head sync/frontend \
+              --title "Sync: update frontend" \
+              --body "Automatic update of the content \`frontend/\` in \`main\`, generated from branch \`frontend\`." \
+            || echo "Already exists PR for sync/frontend -> main; branch updated."
+
+          else
+            echo "La rama origin/frontend aún no existe en el remoto. Omitiendo sincronización."
+          fi
