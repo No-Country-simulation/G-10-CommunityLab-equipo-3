@@ -1,0 +1,1099 @@
+@import 'primeicons/primeicons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200;
+  }
+
+  /* Light mode: warm sand canvas with a faint amber glow */
+  html:not(.dark) body {
+    background:
+      radial-gradient(900px 520px at 100% -10%, rgb(245 158 11 / 0.08), transparent 60%),
+      #f6f3ee;
+    background-attachment: fixed;
+    color: #44403c;
+  }
+
+  ::selection {
+    @apply bg-blue-100 text-blue-900 dark:bg-blue-500/30 dark:text-white;
+  }
+
+  html:not(.dark) {
+    scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border bg-white dark:border-slate-800 dark:bg-slate-900;
+    border-color: rgb(28 25 23 / 0.07);
+    box-shadow:
+      0 1px 2px rgb(28 25 23 / 0.04),
+      0 1px 3px rgb(28 25 23 / 0.03),
+      0 12px 32px -16px rgb(120 53 15 / 0.12);
+  }
+
+  .dark .card {
+    border-color: rgb(30 41 59);
+    box-shadow: none;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-4 border-b border-slate-100/90 px-5 py-4 dark:border-slate-800;
+  }
+
+  .card-title {
+    @apply font-display text-sm font-semibold text-slate-900 dark:text-white;
+  }
+
+  .card-subtitle {
+    @apply mt-0.5 text-xs text-slate-500 dark:text-slate-400;
+  }
+
+  .page-title {
+    @apply font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-slate-500 dark:text-slate-400;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+/* PrimeNG table inside our cards: blend with card surface */
+.card .p-datatable .p-datatable-thead > tr > th {
+  @apply bg-slate-50/70 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-900/60 dark:text-slate-400;
+}
+
+.card .p-datatable .p-datatable-tbody > tr,
+.card .p-datatable .p-paginator {
+  @apply bg-transparent;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes soft-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  80%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-pan 14s ease infinite;
+}
+
+.live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: soft-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(217 119 6 / 0.45); }
+  100% { box-shadow: 0 0 0 12px rgb(217 119 6 / 0); }
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes leave {
+  to { opacity: 0; transform: translateX(24px); }
+}
+
+/* Tactile press feedback on every button */
+button:not(:disabled),
+.p-button:not(:disabled),
+a.pressable {
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 150ms;
+}
+
+button:not(:disabled):active,
+.p-button:not(:disabled):active,
+a.pressable:active {
+  transform: scale(0.97);
+}
+
+/* Progress-like bars grow from the left when they appear */
+.animate-grow-x {
+  transform-origin: left;
+  animation: grow-x 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-pop {
+  animation: pop 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+.animate-leave {
+  animation: leave 0.28s ease-in forwards;
+  pointer-events: none;
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+/* Route changes: a single short fade on the incoming page only.
+   The old page is swapped out instantly (no cross-fade, no size morphing),
+   and nothing inside the page animates on entry, so navigation feels immediate. */
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.page-transition > :not(router-outlet) {
+  display: block;
+  animation: page-fade-in 300ms ease-out both;
+}
+
+/* ── Light mode refinements ─────────────────────────────────────── */
+html:not(.dark) .card-title {
+  color: #1c1917;
+}
+
+/* Inset panels inside cards read as recessed wells, not flat gray boxes */
+html:not(.dark) .card .bg-slate-50 {
+  background-color: rgb(250 248 245 / 0.85);
+  box-shadow: inset 0 0 0 1px rgb(28 25 23 / 0.04);
+}
+
+/* PrimeNG controls matched to the card surface */
+html:not(.dark) .p-selectbutton {
+  @apply rounded-lg bg-slate-100/80 p-0.5 ring-1 ring-slate-200/70;
+}
+
+html:not(.dark) .p-selectbutton .p-togglebutton {
+  @apply border-transparent bg-transparent;
+}
+
+html:not(.dark) .p-togglebutton.p-togglebutton-checked .p-togglebutton-content {
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.08), 0 0 0 1px rgb(28 25 23 / 0.04);
+}
+
+html:not(.dark) .p-select,
+html:not(.dark) .p-textarea {
+  @apply border-slate-200 shadow-sm;
+}
+
+html:not(.dark) .p-tag {
+  @apply ring-1 ring-inset ring-black/5;
+}
+
+/* "Cómo funciona" connector: the step colors with a highlight that travels along the flow */
+/* Only the highlight layer moves; the color layer stays fixed */
+@keyframes flow {
+  from { background-position: 0% 0, 0 0; }
+  to { background-position: -200% 0, 0 0; }
+}
+
+@keyframes flow-vertical {
+  from { background-position: 0 0%, 0 0; }
+  to { background-position: 0 -200%, 0 0; }
+}
+
+.flow-line {
+  background-image:
+    linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.85) 50%, transparent 100%),
+    linear-gradient(90deg, #b45309, #d97706, #ea580c, #c74634);
+  background-size: 50% 100%, 100% 100%;
+  background-repeat: repeat-x, no-repeat;
+  animation: flow 2.8s linear infinite;
+  opacity: 0.55;
+}
+
+.flow-line-vertical {
+  background-image:
+    linear-gradient(180deg, transparent 0%, rgb(255 255 255 / 0.85) 50%, transparent 100%),
+    linear-gradient(180deg, #b45309, #d97706, #ea580c, #c74634);
+  background-size: 100% 50%, 100% 100%;
+  background-repeat: repeat-y, no-repeat;
+  animation-name: flow-vertical;
+}
+
+.dark .flow-line {
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition > :not(router-outlet),
+  .animate-fade-up,
+  .animate-slide-in,
+  .animate-gradient,
+  .animate-grow-x,
+  .animate-pop,
+  .animate-pulse-ring,
+  .shimmer::after,
+  .live-dot::after,
+  .flow-line {
+    animation: none;
+  }
+
+  button:active,
+  .p-button:active {
+    transform: none !important;
+  }
+}
+
+/* ══ Light mode depth ════════════════════════════════════════════════
+   Everything below only applies without .dark: layered elevation,
+   top highlights and colored glows so surfaces don't read as flat. */
+
+html:not(.dark) {
+  --elev-1: 0 0 0 1px rgb(28 25 23 / 0.05), 0 1px 2px rgb(28 25 23 / 0.06);
+  --elev-2: 0 0 0 1px rgb(28 25 23 / 0.05), 0 1px 2px rgb(28 25 23 / 0.05),
+    0 4px 10px -2px rgb(28 25 23 / 0.06), 0 18px 36px -14px rgb(120 53 15 / 0.18);
+  --elev-3: 0 0 0 1px rgb(28 25 23 / 0.05), 0 2px 4px rgb(28 25 23 / 0.05),
+    0 12px 24px -6px rgb(120 53 15 / 0.14), 0 32px 56px -20px rgb(180 83 9 / 0.28);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.95);
+  --glow-primary: 0 1px 2px rgb(120 53 15 / 0.3), 0 6px 16px -4px rgb(217 119 6 / 0.55);
+  --glow-success: 0 1px 2px rgb(6 78 59 / 0.3), 0 6px 16px -4px rgb(16 185 129 / 0.5);
+}
+
+/* Cards: layered elevation + soft top highlight */
+html:not(.dark) .card {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fffdfa 60%, #fdfbf7 100%);
+  box-shadow: var(--highlight), var(--elev-2);
+}
+
+html:not(.dark) .card-header {
+  background-image: linear-gradient(180deg, rgb(250 248 245 / 0.9), rgb(255 255 255 / 0));
+  border-bottom-color: rgb(28 25 23 / 0.06);
+}
+
+/* Primary buttons: gradient + indigo glow */
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast) {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--glow-primary);
+}
+
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast):not(:disabled):hover {
+  background-image: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 1px 2px rgb(120 53 15 / 0.3), 0 10px 22px -6px rgb(217 119 6 / 0.6);
+}
+
+html:not(.dark) .p-button.p-button-success:not(.p-button-outlined):not(.p-button-text) {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #22c58b 0%, #059669 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--glow-success);
+}
+
+html:not(.dark) .p-button.p-button-danger:not(.p-button-outlined):not(.p-button-text) {
+  border-color: transparent;
+  background-image: linear-gradient(180deg, #f75a72 0%, #e11d48 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 6px 16px -4px rgb(244 63 94 / 0.5);
+}
+
+/* Outlined buttons sit on a raised white surface */
+html:not(.dark) .p-button.p-button-outlined {
+  background-color: #fff;
+  box-shadow: var(--highlight), var(--elev-1);
+}
+
+html:not(.dark) .p-button.p-button-outlined:not(:disabled):hover {
+  box-shadow: var(--highlight), 0 0 0 1px rgb(28 25 23 / 0.06), 0 4px 12px -4px rgb(120 53 15 / 0.2);
+}
+
+html:not(.dark) .p-button:disabled {
+  box-shadow: none;
+}
+
+/* Inputs read as recessed; focus gets a soft halo */
+html:not(.dark) input[type='search'],
+html:not(.dark) input:not([type]),
+html:not(.dark) input[type='text'],
+html:not(.dark) .p-textarea,
+html:not(.dark) .p-select {
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.06), 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+html:not(.dark) input:focus,
+html:not(.dark) .p-textarea:focus,
+html:not(.dark) .p-select.p-focus {
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.04), 0 0 0 4px rgb(217 119 6 / 0.14);
+}
+
+/* Segmented control: recessed track, raised thumb */
+html:not(.dark) .p-selectbutton {
+  background-color: rgb(243 239 230 / 0.9);
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.08);
+}
+
+html:not(.dark) .p-togglebutton.p-togglebutton-checked .p-togglebutton-content {
+  background-color: #fff;
+  box-shadow: 0 1px 2px rgb(28 25 23 / 0.1), 0 2px 6px -1px rgb(120 53 15 / 0.12);
+}
+
+/* Floating layers */
+html:not(.dark) .p-dialog,
+html:not(.dark) .p-menu-overlay,
+html:not(.dark) .p-popover,
+html:not(.dark) .p-select-overlay {
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.06), 0 24px 48px -12px rgb(120 53 15 / 0.3), 0 8px 16px -8px rgb(28 25 23 / 0.12);
+}
+
+html:not(.dark) .p-toast-message {
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.05), 0 16px 32px -12px rgb(120 53 15 / 0.28);
+}
+
+
+/* Tags and chips get a hairline so they don't dissolve into white */
+html:not(.dark) .p-tag {
+  box-shadow: inset 0 0 0 1px rgb(28 25 23 / 0.06), 0 1px 1px rgb(28 25 23 / 0.04);
+}
+
+html:not(.dark) .chip {
+  box-shadow: inset 0 0 0 1px rgb(28 25 23 / 0.05);
+}
+
+/* Channel previews (LinkedIn / X / newsletter / FAQ) look like real floating cards */
+html:not(.dark) app-asset-preview > div {
+  box-shadow: var(--highlight), 0 1px 2px rgb(28 25 23 / 0.05), 0 10px 24px -14px rgb(120 53 15 / 0.25);
+}
+
+/* Colored icon tiles inside cards pick up a soft glow of their own tint */
+html:not(.dark) .icon-glow {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 6px 14px -6px var(--glow, rgb(217 119 6 / 0.5));
+}
+
+/* Nested tiles inside cards (steps, samples, pipeline, origin boxes) */
+/* Shadow only, so state colors (active / done / selected) still show through */
+html:not(.dark) .raised {
+  box-shadow: var(--highlight), 0 1px 2px rgb(28 25 23 / 0.05), 0 4px 10px -6px rgb(120 53 15 / 0.14);
+}
+
+/* ══ Light mode design layer ═════════════════════════════════════════ */
+
+/* Cards: "clay" surface — white, warm hairline border, soft amber-tinted shadow */
+html:not(.dark) .card {
+  border: 1px solid #e8e2d8;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px -8px rgb(180 83 9 / 0.08), 0 4px 12px rgb(28 25 23 / 0.03);
+}
+
+/* Page titles pick up a subtle espresso-to-amber gradient */
+html:not(.dark) .page-title {
+  background: linear-gradient(90deg, #1c1917 0%, #92400e 70%, #b45309 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Navbar tiles (menu, theme, user) sit raised on the glass bar */
+html:not(.dark) .nav-tile {
+  background-color: #fff;
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(28 25 23 / 0.06), 0 2px 6px -2px rgb(120 53 15 / 0.14);
+}
+
+html:not(.dark) .nav-tile:hover {
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(217 119 6 / 0.25), 0 6px 14px -6px rgb(217 119 6 / 0.45);
+}
+
+
+/* ── Sidebar 3D icons: free-standing Fluent 3D emoji with a soft floor shadow ── */
+.icon-3d {
+  position: relative;
+  display: flex;
+  height: 2.125rem;
+  width: 2.125rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-3d > img {
+  height: 1.75rem;
+  width: 1.75rem;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 4px rgb(28 25 23 / 0.18));
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1), filter 220ms ease;
+}
+
+a:hover > .icon-3d > img,
+.icon-3d-active > img {
+  transform: translateY(-2px) rotate(-8deg) scale(1.12);
+  filter: drop-shadow(0 7px 6px rgb(28 25 23 / 0.22));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a:hover > .icon-3d > img,
+  .icon-3d-active > img {
+    transform: none;
+  }
+}
+
+/* ══ Depth layer ═════════════════════════════════════════════════════
+   Stronger "clay" elevation so surfaces float off the sand canvas:
+   top highlight + tight contact shadow + wide warm ambient shadow. */
+
+html:not(.dark) {
+  --depth-card:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 1px 2px rgb(28 25 23 / 0.06),
+    0 6px 12px -4px rgb(28 25 23 / 0.06),
+    0 18px 36px -12px rgb(146 64 14 / 0.16),
+    0 36px 64px -28px rgb(180 83 9 / 0.22);
+  --depth-card-hover:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 2px 4px rgb(28 25 23 / 0.06),
+    0 10px 20px -6px rgb(28 25 23 / 0.08),
+    0 28px 48px -14px rgb(146 64 14 / 0.22),
+    0 48px 80px -30px rgb(180 83 9 / 0.3);
+}
+
+/* Canvas: warm light from the top, a touch darker at the bottom so white cards pop */
+html:not(.dark) body {
+  background:
+    radial-gradient(1100px 600px at 85% -15%, rgb(251 191 36 / 0.14), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgb(180 83 9 / 0.08), transparent 60%),
+    linear-gradient(180deg, #f8f5f0 0%, #f2ede4 100%);
+  background-attachment: fixed;
+}
+
+/* Cards */
+.card {
+  transition: box-shadow 250ms ease, transform 250ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+html:not(.dark) .card {
+  border-color: rgb(232 226 216 / 0.9);
+  box-shadow: var(--depth-card);
+}
+
+html:not(.dark) .card:hover {
+  box-shadow: var(--depth-card-hover);
+}
+
+/* Stat cards lift on hover; only the card moves and casts the shadow, never its link wrapper */
+app-stat-card .card:hover {
+  transform: translateY(-4px);
+}
+
+/* Anything painted inside a card (header strip, row hovers) follows its rounded corners */
+.card > :first-child:not(.absolute) {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+.card > :last-child:not(.absolute) {
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
+/* Card header reads as a slightly raised strip */
+html:not(.dark) .card-header {
+  background-image: linear-gradient(180deg, #fdfbf7 0%, rgb(255 255 255 / 0) 100%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+/* Icon tiles: glossy 3D chips with a tinted drop shadow */
+html:not(.dark) .icon-glow {
+  box-shadow:
+    inset 0 2px 1px rgb(255 255 255 / 0.75),
+    inset 0 -2px 3px rgb(28 25 23 / 0.08),
+    0 2px 3px rgb(28 25 23 / 0.06),
+    0 10px 18px -6px var(--glow, rgb(217 119 6 / 0.55));
+}
+
+/* Nested tiles inside cards */
+html:not(.dark) .raised {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 1px 2px rgb(28 25 23 / 0.06),
+    0 8px 18px -8px rgb(146 64 14 / 0.2);
+}
+
+/* Wells (bg-slate-50 inside cards) read as pressed into the surface */
+html:not(.dark) .card .bg-slate-50 {
+  background-color: #f7f3ec;
+  box-shadow: inset 0 2px 4px rgb(28 25 23 / 0.06), inset 0 0 0 1px rgb(28 25 23 / 0.04);
+}
+
+/* Primary buttons: amber gradient, glossy top, darker base, warm glow */
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast) {
+  background-image: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -2px 0 rgb(120 53 15 / 0.35),
+    0 2px 4px rgb(120 53 15 / 0.2),
+    0 10px 20px -6px rgb(217 119 6 / 0.55);
+}
+
+html:not(.dark) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-link):not(.p-button-secondary):not(.p-button-success):not(.p-button-danger):not(.p-button-warn):not(.p-button-help):not(.p-button-contrast):not(:disabled):hover {
+  background-image: linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    inset 0 -2px 0 rgb(120 53 15 / 0.3),
+    0 4px 8px rgb(120 53 15 / 0.2),
+    0 16px 28px -8px rgb(217 119 6 / 0.6);
+  transform: translateY(-1px);
+}
+
+html:not(.dark) .p-button.p-button-success:not(.p-button-outlined):not(.p-button-text) {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 -2px 0 rgb(6 78 59 / 0.3),
+    0 10px 20px -6px rgb(16 185 129 / 0.5);
+}
+
+html:not(.dark) .p-button.p-button-outlined {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.06),
+    0 6px 12px -6px rgb(146 64 14 / 0.2);
+}
+
+/* Shell: sidebar and topbar float above the canvas */
+html:not(.dark) aside {
+  box-shadow:
+    inset -2px -2px 6px rgb(255 255 255 / 0.8),
+    inset 2px 2px 6px rgb(28 25 23 / 0.05),
+    0 2px 4px rgb(28 25 23 / 0.04),
+    0 24px 48px -16px rgb(146 64 14 / 0.22);
+}
+
+html:not(.dark) header.sticky {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 12px 28px -10px rgb(146 64 14 / 0.2);
+}
+
+/* Sidebar inner cards (network switcher, status widget) and active nav pill */
+html:not(.dark) aside .bg-white {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 8px 16px -8px rgb(146 64 14 / 0.22);
+}
+
+/* Floating layers */
+html:not(.dark) .p-toast-message {
+  box-shadow: inset 0 1px 0 #fff, 0 20px 40px -12px rgb(146 64 14 / 0.3), 0 4px 10px rgb(28 25 23 / 0.06);
+}
+
+/* Dark mode: depth comes from a faint top rim and deep black shadows */
+.dark .card {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 16px 32px -12px rgb(0 0 0 / 0.6);
+}
+
+.dark .card:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 2px 4px rgb(0 0 0 / 0.4),
+    0 24px 48px -14px rgb(0 0 0 / 0.75);
+}
+
+.dark aside,
+.dark header.sticky {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 20px 40px -16px rgb(0 0 0 / 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  app-stat-card .card:hover {
+    transform: none;
+  }
+}
+
+/* ── Sidebar divider: engraved groove with a dark gradient flowing horizontally ── */
+@keyframes divider-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: -200% 50%; }
+}
+
+.sidebar-divider {
+  display: flex;
+  align-items: center;
+}
+
+/* 1px groove cut into the clay; espresso → stone → burnt amber tones slide sideways, ends fade out */
+.sidebar-divider-groove {
+  height: 1px;
+  flex: 1;
+  border-radius: 9999px;
+  background-image: linear-gradient(90deg, #1c1917 0%, #44403c 20%, #78350f 40%, #b45309 50%, #78350f 60%, #44403c 80%, #1c1917 100%);
+  background-size: 200% 100%;
+  animation: divider-flow 5s linear infinite;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.dark .sidebar-divider-groove {
+  background-image: linear-gradient(90deg, #0c0a09 0%, #292524 20%, #57534e 40%, #92400e 50%, #57534e 60%, #292524 80%, #0c0a09 100%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-divider-groove {
+    animation: none;
+  }
+}
+
+/* ── Sidebar divider: engraved groove with a dark gradient flowing horizontally ── */
+@keyframes divider-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: -200% 50%; }
+}
+
+.sidebar-divider {
+  display: flex;
+  align-items: center;
+}
+
+/* 1px groove cut into the clay; espresso → stone → burnt amber tones slide sideways, ends fade out */
+.sidebar-divider-groove {
+  height: 1px;
+  flex: 1;
+  border-radius: 9999px;
+  background-image: linear-gradient(90deg, #1c1917 0%, #44403c 20%, #78350f 40%, #b45309 50%, #78350f 60%, #44403c 80%, #1c1917 100%);
+  background-size: 200% 100%;
+  animation: divider-flow 5s linear infinite;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.dark .sidebar-divider-groove {
+  background-image: linear-gradient(90deg, #0c0a09 0%, #292524 20%, #57534e 40%, #92400e 50%, #57534e 60%, #292524 80%, #0c0a09 100%);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-divider-groove {
+    animation: none;
+  }
+}
+
+/* ── Topbar page icon: 3D icon pops in (with a small tilt) whenever the page changes ── */
+@keyframes page-icon-in {
+  0% { opacity: 0; transform: translateY(6px) scale(0.6) rotate(-14deg); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.08) rotate(4deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes page-title-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.topbar-page-icon {
+  filter: drop-shadow(0 5px 5px rgb(28 25 23 / 0.2));
+  animation: page-icon-in 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.dark .topbar-page-icon {
+  filter: drop-shadow(0 5px 6px rgb(0 0 0 / 0.5));
+}
+
+.topbar-page-title {
+  animation: page-title-in 300ms ease-out 80ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-page-icon,
+  .topbar-page-title {
+    animation: none;
+  }
+}
+
+/* ── Topbar language switch: recessed track, the active language is a raised amber chip ── */
+.lang-switch {
+  align-items: center;
+  gap: 2px;
+  height: 2.5rem;
+  border-radius: 9999px;
+  padding: 0 4px 0 10px;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 3px rgb(28 25 23 / 0.1), 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.lang-switch-globe {
+  margin-right: 4px;
+  font-size: 0.8rem;
+  color: #a8a29e;
+}
+
+.lang-switch-option {
+  height: 2rem;
+  min-width: 2.25rem;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #78716c;
+  transition: color 150ms ease, background-color 150ms ease, box-shadow 200ms ease;
+}
+
+.lang-switch-option:hover {
+  color: #1c1917;
+  background: rgb(255 255 255 / 0.6);
+}
+
+.lang-switch-option.is-active {
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(120 53 15 / 0.35),
+    0 4px 10px -3px rgb(217 119 6 / 0.6);
+}
+
+.lang-switch-option:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 1px;
+}
+
+.dark .lang-switch {
+  background: rgb(0 0 0 / 0.3);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.dark .lang-switch-globe {
+  color: #78716c;
+}
+
+.dark .lang-switch-option {
+  color: #a8a29e;
+}
+
+.dark .lang-switch-option:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.dark .lang-switch-option.is-active {
+  color: #1c1917;
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+}
+
+/* ── Resumen welcome card: warm gradient panel with the floating Kora bear ── */
+@keyframes bear-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-5px) rotate(1deg); }
+}
+
+.hero-welcome {
+  position: relative;
+  border: 1px solid #fde68a;
+  background:
+    radial-gradient(420px 180px at 0% 100%, rgb(245 158 11 / 0.18), transparent 70%),
+    linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #ffffff 100%);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 2px rgb(28 25 23 / 0.05),
+    0 18px 36px -14px rgb(180 83 9 / 0.28);
+}
+
+.hero-bear {
+  filter: drop-shadow(0 10px 10px rgb(120 53 15 / 0.3));
+  animation: bear-float 4s ease-in-out infinite;
+}
+
+.dark .hero-welcome {
+  border-color: rgb(245 158 11 / 0.25);
+  background:
+    radial-gradient(420px 180px at 0% 100%, rgb(245 158 11 / 0.16), transparent 70%),
+    linear-gradient(135deg, #292524 0%, #1c1917 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 18px 36px -14px rgb(0 0 0 / 0.7);
+}
+
+.dark .hero-bear {
+  filter: drop-shadow(0 10px 12px rgb(0 0 0 / 0.6));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bear {
+    animation: none;
+  }
+}
+
+/* ── Topbar language dropdown (phones): amber code pill + clay panel ── */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.lang-dropdown-trigger {
+  display: flex;
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0 0.55rem 0 0.25rem;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 3px rgb(28 25 23 / 0.1), 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.lang-dropdown-code {
+  display: inline-flex;
+  height: 1.75rem;
+  min-width: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 0 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 -1px 0 rgb(120 53 15 / 0.35),
+    0 3px 8px -3px rgb(217 119 6 / 0.6);
+}
+
+.lang-dropdown-chevron {
+  font-size: 0.6rem;
+  color: #78716c;
+  transition: transform 200ms ease;
+}
+
+.lang-dropdown-trigger.is-open .lang-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+.lang-dropdown-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.6rem);
+  z-index: 50;
+  width: 12.5rem;
+  border-radius: 1.25rem;
+  border: 1px solid #ebe5dc;
+  padding: 0.4rem;
+  background: #fff;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 2px 4px rgb(28 25 23 / 0.06),
+    0 24px 48px -12px rgb(146 64 14 / 0.35);
+  transform-origin: top right;
+  animation: dropdown-in 180ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.lang-dropdown-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem 0.45rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.lang-dropdown-heading > i {
+  font-size: 0.7rem;
+  color: #d97706;
+}
+
+.lang-dropdown-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #44403c;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.lang-dropdown-option:hover {
+  background: #faf6ef;
+  color: #1c1917;
+}
+
+.lang-dropdown-option.is-active {
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.lang-dropdown-badge {
+  display: inline-flex;
+  height: 1.6rem;
+  width: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #78716c;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 2px rgb(28 25 23 / 0.08);
+}
+
+.lang-dropdown-option.is-active .lang-dropdown-badge {
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 3px 8px -3px rgb(217 119 6 / 0.6);
+}
+
+.dark .lang-dropdown-trigger {
+  background: rgb(0 0 0 / 0.3);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.dark .lang-dropdown-code,
+.dark .lang-dropdown-option.is-active .lang-dropdown-badge {
+  color: #1c1917;
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+}
+
+.dark .lang-dropdown-panel {
+  border-color: #44403c;
+  background: #292524;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 48px -12px rgb(0 0 0 / 0.7);
+}
+
+.dark .lang-dropdown-option {
+  color: #d6d3d1;
+}
+
+.dark .lang-dropdown-option:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: #fff;
+}
+
+.dark .lang-dropdown-option.is-active {
+  background: rgb(245 158 11 / 0.12);
+  color: #fcd34d;
+}
+
+.dark .lang-dropdown-badge {
+  color: #a8a29e;
+  background: rgb(0 0 0 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-dropdown-panel {
+    animation: none;
+  }
+}
+
+/* ── Breadcrumb above each page title: Inicio › Página ── */
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.breadcrumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  color: #78716c;
+  transition: color 150ms ease;
+}
+
+.breadcrumb-link:hover {
+  color: #b45309;
+}
+
+.breadcrumb-link:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.breadcrumb-sep {
+  font-size: 0.65rem;
+  color: #a8a29e;
+}
+
+.breadcrumb-current {
+  font-weight: 600;
+  color: #44403c;
+}
+
+.dark .breadcrumb-link {
+  color: #a8a29e;
+}
+
+.dark .breadcrumb-link:hover {
+  color: #fcd34d;
+}
+
+.dark .breadcrumb-sep {
+  color: #57534e;
+}
+
+.dark .breadcrumb-current {
+  color: #e7e5e4;
+}
