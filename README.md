@@ -7,7 +7,7 @@
 
 **CommunityLab** es un motor inteligente que transforma el conocimiento disperso en comunidades digitales en contenido listo para distribuir en redes sociales.
 
-## ❓ Concepto y Problema
+## ❓ Conceptos y Problemas
 
 Las comunidades digitales (Discord, Slack, foros) generan a diario decenas de dudas valiosas, testimonios, logros y contrataciones. Sin embargo, esta información se pierde en el historial de chat.
 
