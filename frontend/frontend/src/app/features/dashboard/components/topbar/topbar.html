@@ -1,0 +1,69 @@
+<header class="sticky top-0 z-20 mx-3 mt-3 flex h-16 items-center gap-2 rounded-[24px] border border-clay-subtle bg-white/90 px-2.5 shadow-[0_10px_24px_-6px_rgb(28_25_23/0.05),0_2px_6px_rgb(28_25_23/0.02)] backdrop-blur-xl dark:border-stone-800 dark:bg-espresso-card/90 sm:h-[74px] sm:gap-3 sm:rounded-clay sm:px-7 lg:top-4 lg:ml-0 lg:mr-4 lg:mt-4">
+  <button type="button" class="nav-tile flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 sm:h-10 sm:w-10 lg:hidden"
+    (click)="toggleSidebar.emit()" [attr.aria-label]="'topbar.openMenu' | t">
+    <i class="pi pi-bars"></i>
+  </button>
+
+  <!-- Brand on phones/tablets, where the sidebar is hidden (the page name lives in the breadcrumb) -->
+  <a routerLink="/" class="flex min-w-0 items-center gap-2 lg:hidden">
+    <img src="image/logo/oso-head.png" alt="" width="32" height="32"
+      class="h-8 w-8 shrink-0 rounded-[10px] border border-amber-500/30 bg-amber-100 object-cover" />
+    <span class="font-display text-base font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></span>
+  </a>
+
+  <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+    <!-- Language: ES · EN · PT segmented switch (tablet/desktop) -->
+    <div class="lang-switch hidden sm:inline-flex" role="radiogroup" [attr.aria-label]="'topbar.language' | t">
+      <i class="pi pi-globe lang-switch-globe" aria-hidden="true"></i>
+      @for (l of langs; track l.code) {
+        <button type="button" role="radio" class="lang-switch-option" [class.is-active]="i18n.lang() === l.code"
+          [attr.aria-checked]="i18n.lang() === l.code" [attr.lang]="l.code"
+          [pTooltip]="l.label" tooltipPosition="bottom" (click)="setLang(l.code)">{{ l.short }}</button>
+      }
+    </div>
+
+    <!-- Language on phones: pill trigger + clay dropdown -->
+    <div class="lang-dropdown relative sm:hidden">
+      <button type="button" class="lang-dropdown-trigger" [class.is-open]="langMenuOpen()"
+        (click)="langMenuOpen.set(!langMenuOpen())" [attr.aria-label]="'topbar.language' | t"
+        aria-haspopup="listbox" [attr.aria-expanded]="langMenuOpen()">
+        <span class="lang-dropdown-code">{{ currentLang().short }}</span>
+        <i class="pi pi-chevron-down lang-dropdown-chevron"></i>
+      </button>
+
+      @if (langMenuOpen()) {
+        <div class="lang-dropdown-panel" role="listbox" [attr.aria-label]="'topbar.language' | t">
+          <p class="lang-dropdown-heading"><i class="pi pi-globe"></i>{{ 'topbar.language' | t }}</p>
+          @for (l of langs; track l.code) {
+            <button type="button" role="option" class="lang-dropdown-option" [class.is-active]="i18n.lang() === l.code"
+              [attr.aria-selected]="i18n.lang() === l.code" [attr.lang]="l.code" (click)="setLang(l.code)">
+              <span class="lang-dropdown-badge">{{ l.short }}</span>
+              <span class="flex-1 text-left">{{ l.label }}</span>
+              @if (i18n.lang() === l.code) {
+                <i class="pi pi-check text-[11px]"></i>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <button type="button" class="nav-tile flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-800 sm:h-10 sm:w-10"
+      (click)="theme.toggle()" [pTooltip]="(theme.isDark() ? 'topbar.lightMode' : 'topbar.darkMode') | t" tooltipPosition="bottom"
+      [attr.aria-label]="(theme.isDark() ? 'topbar.toLight' : 'topbar.toDark') | t">
+      <i [class]="theme.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+    </button>
+
+    <div class="mx-2 hidden h-6 w-px bg-slate-200 dark:bg-slate-700 sm:block"></div>
+
+    <button type="button" class="nav-tile flex h-9 items-center gap-2 rounded-xl p-1 dark:hover:bg-slate-800 sm:h-10 md:pr-2.5"
+      (click)="userMenuRef.toggle($event)" [attr.aria-label]="'topbar.userMenu' | t">
+      <span class="rounded-full bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-500 p-[2px]">
+        <p-avatar label="CM" shape="circle" styleClass="!h-7 !w-7 !bg-white !text-[11px] !font-bold !text-blue-700 dark:!bg-slate-900 dark:!text-blue-300" />
+      </span>
+      <span class="hidden text-sm font-medium text-slate-800 dark:text-slate-100 md:block">Community Manager</span>
+      <i class="pi pi-chevron-down hidden text-[10px] text-slate-400 md:block"></i>
+    </button>
+    <p-menu #userMenuRef [model]="userMenu()" [popup]="true" appendTo="body" />
+  </div>
+</header>
