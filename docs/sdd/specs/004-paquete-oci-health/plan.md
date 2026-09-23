@@ -1,43 +1,56 @@
-# Plan 004: Paquete OCI + transversal mínimo (health, docs, seguridad)
+# Plan 004: Paquete OCI SDK real + SSE + GETs + newsletter batch
 
-Derivado de: `spec.md RF-01..RF-07 (mínimo RF-01,RF-02,RF-03,RF-04,RF-05,RF-06; RF-07 SSE incluido básico)` + `constitution.md R1,R4-R6,Q3-Q4,Fase1`.
-Alcance semanal: guardar mensajes Discord y Telegram (vía sus bots) como `PaqueteDeActivos` en OCI, orquestación `bot→análisis→OCI` mensaje-por-mensaje, `health` + Swagger + seguridad básica.
+Derivado de: `spec.md RF-01..RF-09 (SSE requerido, RF-08 GETs, RF-09 newsletter)` + `constitution.md R1,R4-R6,Q3-Q4,Fase1`.
+Alcance semanal: solo `DISCORD #Listen` por ID → `Bot → LLM (002) → etiquetas (003) → OCI → SSE` `1:1 async`, `health` + Swagger + seguridad. Solo backend habla OCI; frontend vía SSE + GETs.
 
 ## 1. Arquitectura y componentes
 
 ```mermaid
 flowchart LR
-  ORQ[application: PackageRunUseCase] --> AP[ports/out: ArtifactStorePort]
-  AP -.implementa.-> OCI[infrastructure: OciObjectStorageAdapter]
-  ORQ --> ING[IngestUseCaseDiscord + IngestUseCaseTelegram] & ANA[AnalyzeService]
-  API[interfaces: PackageController, EventsController SSE] --> ORQ
+  LIS[#Listen JDA] --> ING[IngestUseCaseDiscord 1:1 async]
+  ING --> ANA[AnalyzeService Spring AI]
+  ANA -->|fallback abort| STOP[LOG + ⚠️ sin OCI/SSE]
+  ANA --> GEN[GenerateService vivo LINKEDIN/X/FAQ]
+  GEN -->|vacío abort| STOP
+  GEN --> ORQ[PackageRunUseCase put OCI]
+  ORQ --> AP[ports/out: ArtifactStorePort put/get/list]
+  AP -.implementa.-> OCI[OciObjectStorageAdapter SDK]
+  ORQ -->|201| SSE[EventsController SSE package.completed]
+  ORQ -->|OCI fail| LOG[LOG error sin SSE]
+  SCHED[NewsletterScheduler 5d] --> NL[GenerateNewsletterUseCase 15 aleatorios]
+  NL --> ORQ
+  API[PackageController + GETs + Analyze/GenerateController] --> ORQ
 ```
 
-* `domain`: `Activo{id,sourceCommentIds,channel,copy,promptVersion}`, `PaqueteDeActivos{batchId,generatedAt,source,assets,stats{received,analyzed,fallbackCount,assetsCount},promptVersion,packageUrl?}`. Esta semana `assets` puede ser vacío o con borrador mínimo si 003 no entra; el guardado persiste igual `<1MB application/json`.
-* `application`: `ports/in/PackageRunUseCase`, `ports/out/ArtifactStorePort`, `services/PackageRunService` (acumula por `batchId`, idempotencia `deduped:true`, `207` si hubo fallbacks).
-* `infrastructure`: `OciObjectStorageAdapter` tras `ArtifactStorePort`. Fase actual: `InMemoryArtifactStore` + `FileSystemArtifactStore` listo para OCI SDK sin tocar puertos; objeto `paquete-{batchId}.json`. Credenciales solo env `OCI_BUCKET,OCI_REGION,OCI_*_KEY`. `Content-Type: application/json`, cifrado lado OCI.
-* `interfaces`: `PackageController POST /api/v1/packages:run → 201 {batchId,assetsCount,packageUrl}/207` (disparo manual demo; el flujo real lo dispara el bot), `GET /api/v1/events text/event-stream {type,batchId,payload}` con `Last-Event-ID`, `GET /actuator/health → UP p95<100ms`, Swagger `/swagger-ui.html` con 4 endpoints (sin ingest).
+* `domain`: `PaqueteDeActivos{batchId=uuid 1:1 o newsletter-{fecha}, generatedAt, source:DISCORD, assets: vivo LINKEDIN/X/FAQ simple, stats, promptVersion, packageUrl?}`. Anónimo total. `<1MB application/json`.
+* `application`: `ports/in/PackageRunUseCase + GenerateNewsletterUseCase + ports/out/ArtifactStorePort(put/get/list)`, `services/PackageRunService` (vivo `1:1 async`: `LLM_FALLBACK`/vacío/`DRAFT_EMPTY` → abort sin guardar; OCI-fail → `LOG` sin SSE; éxito → `201 + SSE` con lo guardado) y `GenerateNewsletterService` (sorteo puro 15 aleatorios, `≥3 temas`, abort si `<15`/fallback). Idempotencia `deduped:true`.
+* `infrastructure`: `OciObjectStorageAdapter` SDK `putObject/getObject/listObjects` con keys `paquetes/paquete-{batchId}.json` y `paquetes/newsletter-{fecha}.json`, `Content-Type: application/json`. `OciConfig` env `OCI_BUCKET,OCI_REGION,NAMESPACE/AUTH` (valores dev cuenta), `NewsletterScheduler (@Scheduler cron=${NEWSLETTER_CRON:0 0 0 */5 * *}, enabled=true solo prod)` + `OciConfig` degradado `OCI_NOT_CONFIGURED`.
+* `interfaces`: `PackageController POST /packages:run + POST /packages:newsletter (manual) + GET /packages + GET /packages/{batchId}` + `Analyze/GenerateController` + `EventsController SSE GET /events {type,batchId,payload: lo guardado}` con `Last-Event-ID` + `GET /actuator/health → UP` + Swagger (6 + SSE, sin ingest).
 
 ## 2. Decisiones técnicas y trade-offs
 
-* Decisión: no añadir `oci-java-sdk-objectstorage` esta semana, usar puerto + adapter in-memory/filesystem con misma firma.
-  Alternativa: SDK sin bucket/keys reales.
-  Razón: sin `OCI_BUCKET/REGION` verificados el build demo se rompería; cambio a SDK sin tocar `domain/application` (P2). Deuda en §11.
+* Decisión: añadir `com.oracle.oci.sdk:oci-java-sdk-objectstorage` **esta semana** con `OciObjectStorageAdapter` real (`put/get/list`) tras `ArtifactStorePort`.
+  Alternativa descartada: `InMemory/FileSystem` placeholder.
+  Razón: pipeline funcional `#Listen→OCI→SSE/GETs` sin deuda; SDK en tabla constitucional → sin enmienda; tests mockean cliente.
 * Decisión: añadir `spring-boot-starter-actuator` + `springdoc-openapi-starter-webmvc-ui` ahora.
   Alternativa: health/Swagger manuales.
-  Razón: tabla cerrada los autoriza como `a añadir`, P3/Q4 los exigen. Resto actuadores cerrados.
-* Decisión: SSE en memoria con replay por `Last-Event-ID`, mismo CORS allowlist.
-  Alternativa: Redis Streams.
-  Razón: $0, demo sin recargar (spec 004 RF-07 <5s).
+  Razón: tabla cerrada `a añadir`, P3/Q4. Resto actuadores cerrados (`health,info` solo).
+* Decisión: SSE requerido con lo guardado + `GETs` recuperación (solo backend habla OCI).
+  Alternativa: solo REST sin SSE.
+  Razón: cada registro se envía por SSE; si frontend cae recupera por `GET /packages`. Fallos OCI/LLM solo `LOG`, sin SSE.
+* Decisión: newsletter batch `@Scheduler` cada 5 días prod (`NEWSLETTER_BATCH_SIZE=15`, sorteo aleatorio OCI, abort si `<15`/fallback) + `POST manual` para demo.
+  Alternativa: newsletter en vivo por mensaje.
+  Razón: `RF-03` exige N + `≥3 temas`, imposible `1:1`; batch separado sin bloquear vivo.
 
 ## 3. Estrategia de pruebas
 
-* Unit `PackageRunService` (idempotencia mismo `batchId` → 1 objeto + `deduped:true`, 207 con fallback).
-* Adapter test `<1MB`, `Content-Type`, URL `oci://{bucket}/paquetes/{batchId}.json`.
-* `webmvc-test`: `PackageControllerTest` 201/207, `EventsControllerTest` SSE recibe `asset.created/package.completed`, `HealthTest` UP.
-* Seguridad: CORS bloquea `Origin` no permitido, 400 formato problema, sin stacktraces.
+* Unit `PackageRunService` (vivo: `LLM_FALLBACK`/vacío → abort sin put; OCI-fail → `LOG` sin SSE; éxito → `201 + SSE`; mismo `batchId` → `deduped:true`).
+* Unit `GenerateNewsletterService` (sorteo 15 aleatorios puro; `<15` → abort; `≥3 temas`; fallback → abort).
+* Adapter `OciObjectStorageAdapterTest` mockeado: `put/get/list`, `<1MB` + `Content-Type`, keys `paquete-`/`newsletter-`, re-put → `deduped:true`, sin creds → `OCI_NOT_CONFIGURED`.
+* `webmvc-test`: `PackageControllerTest` (`:run`, `:newsletter`, `GETs` 200, SSE `package.completed`), `HealthTest` UP. Scheduler `enabled=false` en test.
+* Seguridad: CORS, 400 problema, sin stacktraces/PII.
 
 ## 4. Verificación
 
-* `./mvnw test -Dtest=*Package*,*Events*,*Health*`
-* `./mvnw spring-boot:run` → `GET /actuator/health`, `/swagger-ui.html` con 4 endpoints, mensaje Discord o Telegram vía su bot → paquete `201` interno.
+* `./mvnw test -Dtest=*Package*,*Newsletter*,*Events*,*Health*`
+* `./mvnw spring-boot:run` → `#Listen` → `201 + ✅ + SSE`; fallback/vacío/OCI-fail → `LOG + ⚠️` sin SSE; `GET /packages` recupera; `POST /packages:newsletter` con ≥15 genera newsletter. Telegram fuera.
