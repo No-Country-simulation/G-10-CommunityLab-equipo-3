@@ -108,7 +108,7 @@ Placeholder orientativo:
 
 ## 🔀 Flujo de trabajo Git
 
-* Rama principal: `main` (protegida)
+* Rama principal: `main` (protegida).
 * Rama desarrollo: `Frontend`, `Backend`
 * Ramas de trabajo: `feature/nombre-tarea`, `fix/nombre-fix`, `docs/...`
 * Commits convencionales: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`
