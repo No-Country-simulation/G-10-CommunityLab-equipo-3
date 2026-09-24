@@ -136,7 +136,7 @@ git push origin feature/mi-tarea
 * [x] Primer commit — README inicial
 * [ ] Definir alcance y MVP
 * [ ] Definir arquitectura y modelo de datos
-* [x] Inicializar `frontend/` (Angular)
+* [x] Inicializar `frontend/` (Angular).
 * [x] Inicializar `backend/` (Spring Boot)
 * [ ] Definir enlaces y comandos de instalación.
 
