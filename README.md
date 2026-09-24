@@ -138,7 +138,7 @@ git push origin feature/mi-tarea
 * [ ] Definir arquitectura y modelo de datos
 * [x] Inicializar `frontend/` (Angular)
 * [x] Inicializar `backend/` (Spring Boot)
-* [ ] Definir enlaces y comandos de instalación
+* [ ] Definir enlaces y comandos de instalación.
 
 ## 📄 Licencia
 
