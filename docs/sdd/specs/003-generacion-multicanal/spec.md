@@ -1,6 +1,6 @@
 # Especificación 003: Generación multicanal (LinkedIn, X, Newsletter, FAQ)
 
-> Respeta: `constitution.md` v1.0-final. Consume `ComentarioEnriquecido[]` de 002. Solo QUÉ/POR QUÉ.
+> Respeta: `constitution.md` v1.2-redis-buffer. Consume `EnrichedComment[]` de 002 por mensaje (LLM per-msg; tras 003 hay fork `SSE inmediato + RPUSH Redis`, ver 004). Solo QUÉ/POR QUÉ.
 
 ## 1. Problema y Objetivo
 
@@ -29,8 +29,8 @@ El análisis sin redacción no sirve a Community Management. Objetivo 003: conve
 
 ## 4. Dominio y Glosario
 
-- **Activo:** `{id, sourceCommentIds[], channel: LINKEDIN|X|NEWSLETTER|FAQ, title?, copy, hashtags?, cta?, promptVersion}`.
-- **PaqueteDeActivos (anticipa 004):** `{batchId, generatedAt, assets: Activo[], stats}`.
+- **Asset:** `{id, sourceCommentIds[], channel: LINKEDIN|X|NEWSLETTER|FAQ, title?, copy, hashtags?, cta?, promptVersion}`.
+- **AssetPackage (anticipa 004):** `{batchId, generatedAt, assets: Asset[], stats}`.
 - Ejemplo LinkedIn: `{copy:"De la comunidad al primer empleo... 🚀", hashtags:["#ONE","#EmpleoTech"], cta:"Comparte tu historia en #logros"}`.
 
 ## 5. Fuera de Alcance
