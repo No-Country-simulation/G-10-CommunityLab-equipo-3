@@ -2,9 +2,9 @@
 
 > Requiere `TASK-002-00` (Spring AI + BOM) hecho. No añade dependencia nueva. Telegram fuera.
 
-- [ ] **TASK-003-01**: Crear `domain` `Channel, Activo` + `HallucinationGuard` puro (lista negra empresa/salario/fecha/métrica) + validación longitudes por canal.
+- [ ] **TASK-003-01**: Crear `domain` `Channel, Asset` + `HallucinationGuard` puro (lista negra empresa/salario/fecha/métrica) + validación longitudes por canal.
   - *Derivado de:* `spec.md RF-01,RF-02,RF-05 + plan.md §1`
-  - *Verificación:* `./mvnw test -Dtest=HallucinationGuardTest,ActivoTest`
+  - *Verificación:* `./mvnw test -Dtest=HallucinationGuardTest,AssetTest`
 - [ ] **TASK-003-02**: Crear `application` `ChannelPolicy` puro (LinkedIn `80..600+2..5 tags+cta`, X `<=280+1..2 tags`, Newsletter `100..400 palabras+3..5 destacados`, FAQ `50..250 palabras`) + `FaqGrouping` (mismo `topics` → 1 tip con N ids).
   - *Derivado de:* `spec.md RF-01..RF-04 + plan.md §1`
   - *Verificación:* `./mvnw test -Dtest=ChannelPolicyTest,FaqGroupingTest`

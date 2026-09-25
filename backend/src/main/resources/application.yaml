@@ -1,3 +1,5 @@
 spring:
   application:
     name: communityLab
+  profiles:
+    active: dev

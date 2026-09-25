@@ -1,0 +1,5 @@
+# Test-only values: fail-fast requires a token at startup, but tests must never
+# hit the real Discord gateway (the JDA bean is mocked in CommunityLabApplicationTests).
+discord:
+  token: test-token
+  channel-id: test-channel
