@@ -12,11 +12,11 @@ flowchart LR
   UC --> POL[application: RelevancePolicy negocio puro]
 ```
 
-* `domain`: `ComentarioEnriquecido = Comentario + {type clasificado, sentiment, topics[1..5], relevance 0..100, language, flag?}`, `Sentiment{POSITIVO,NEUTRAL,NEGATIVO}`, `Language{es,en,pt,other}`. Entrada siempre `OTRO` (001 Discord esta semana; Telegram deferrado, fuera de alcance semanal). La IA clasifica a `TESTIMONIO|LOGRO|DUDA|OTRO`. Si `truncated:true`, no penalizar por corte. Reglas negocio puras en `RelevancePolicy`: `LOGRO/TESTIMONIO positivo > DUDA`, `<15 chars → irrelevante`.
+* `domain`: `EnrichedComment = Comment + {type clasificado, sentiment, topics[1..5], relevance 0..100, language, flag?}`, `Sentiment{POSITIVO,NEUTRAL,NEGATIVO}`, `Language{es,en,pt,other}`. Entrada siempre `OTRO` (001 Discord esta semana; Telegram deferrado, fuera de alcance semanal). La IA clasifica a `TESTIMONIO|LOGRO|DUDA|OTRO`. Si `truncated:true`, no penalizar por corte. Reglas negocio puras en `RelevancePolicy`: `LOGRO/TESTIMONIO positivo > DUDA`, `<15 chars → irrelevante`.
 * `application`: `ports/in/AnalyzeUseCase`, `ports/out/AnalyzePort`, `services/AnalyzeService` (invocado directo tras `001` en background; si `LLM_FALLBACK` → `PackageRunService` **aborta sin 003/OCI/SSE**, solo `LOG + ⚠️`).
 * `infrastructure`: `SpringAiOpenAiAdapter` tras `AnalyzePort` con **Spring AI real esta semana**: `ChatClient` (OpenAI, `spring-ai-starter-model-openai` + BOM) + structured-output (`BeanOutputConverter` contra schema) + `timeout 15s + 1 reintento + fallback LLM_FALLBACK`, `promptVersion:v1`, temperatura `0.1-0.2`. Config `spring.ai.openai.api-key=${OPENAI_API_KEY}`, `spring.ai.openai.chat.options.model=${OPENAI_MODEL:gpt-4o-mini}`, solo en `infrastructure/config`. Anónimo total: solo `text+type` al LLM, nunca `author/ids/channel`. Key solo por env, nunca en logs/respuestas. Sin `OPENAI_API_KEY` → degradado `LLM_NOT_CONFIGURED` con abort sin tumbar health.
 
-Contrato interno: entrada `Comentario` de `#Listen` (`type=OTRO`, quizá `truncated:true`), salida `ComentarioEnriquecido` o `LLM_FALLBACK → abort`. Secuencia: `Bot #Listen → LLM (002) → etiquetas (003) → OCI + SSE (004)`.
+Contrato interno: entrada `Comment` de `#Listen` (`type=OTRO`, quizá `truncated:true`), salida `EnrichedComment` o `LLM_FALLBACK → abort`. Secuencia: `Bot #Listen → LLM (002) → etiquetas (003) → OCI + SSE (004)`.
 
 ## 2. Decisiones técnicas y trade-offs
 

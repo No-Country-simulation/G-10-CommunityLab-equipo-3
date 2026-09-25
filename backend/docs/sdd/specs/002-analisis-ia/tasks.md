@@ -3,7 +3,7 @@
 - [ ] **TASK-002-00**: Añadir dependencia `spring-ai-starter-model-openai` + BOM `spring-ai-bom` (verificar compatibilidad Boot `4.1.1`) + config `spring.ai.openai.api-key=${OPENAI_API_KEY}`, `model=${OPENAI_MODEL:gpt-4o-mini}` solo en `infrastructure/config`. Sin key → degradado `LLM_NOT_CONFIGURED`.
   - *Derivado de:* `spec.md RF-05,RNF-02 + plan.md §2`
   - *Verificación:* `./mvnw test` compila con Spring AI; arranque sin key no tumba `health`
-- [ ] **TASK-002-01**: Crear `domain` `Sentiment, Language, ComentarioEnriquecido` + `RelevancePolicy` pura.
+- [ ] **TASK-002-01**: Crear `domain` `Sentiment, Language, EnrichedComment` + `RelevancePolicy` pura.
   - *Derivado de:* `spec.md RF-01,RF-03 + plan.md §1`
   - *Verificación:* `./mvnw test -Dtest=RelevancePolicyTest`
 - [ ] **TASK-002-02**: Crear `application` `ports/in/AnalyzeUseCase, ports/out/AnalyzePort, services/AnalyzeService` tolerante a fallos.

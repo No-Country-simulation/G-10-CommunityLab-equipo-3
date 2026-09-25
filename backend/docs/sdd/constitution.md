@@ -26,6 +26,7 @@
 | Bot Discord | JDA (Java Discord API) | Ingesta Discord: el backend es el bot (Gateway, intents `MESSAGE_CONTENT`/`GUILD_MESSAGES`). Solo en `infrastructure/` tras `IngestUseCaseDiscord`. Token solo por env `DISCORD_BOT_TOKEN` |
 | Bot Telegram | TelegramBots long polling | Ingesta Telegram: el backend es el bot (long polling, sin URL pública; webhook en Fase >1). Solo en `infrastructure/` tras `IngestUseCaseTelegram`. Token/username solo por env `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` |
 | Storage | OCI Object Storage SDK (Always Free) | Único almacenamiento persistente Fase 1, solo vía `ArtifactStorePort` en `infrastructure/` |
+| Buffer | spring-data-redis + Redis (Docker local / OCI Cache prod) | Buffer volátil Fase 1, solo vía `BufferPort` en `infrastructure/`. Solo Java (`RedisTemplate/ListOps/SetOps`), sin Lua. Flush por bytes `REDIS_BUFFER_MAX_BYTES=921600 (900KB)` |
 | Docs API | springdoc-openapi                    | Swagger UI obligatorio |
 | Observabilidad mínima | Actuator `health,info`               | `GET /actuator/health -> {"status":"UP"}` público; resto de endpoints cerrados |
 | Secretos | Env local / GitHub Secrets           | Nunca commiteados (R4) |
@@ -38,16 +39,16 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 
 - **R1 — Paquetes fijos:** base `com.nocountry.simulation.communitylab`:
   ```text
-  domain/         # POJOs/records puros: Comentario, Activo, PaqueteDeActivos, Relevancia. Sin Spring/JPA.
+  domain/         # POJOs/records puros: Comment, Asset, AssetPackage, Relevance. Sin Spring/JPA.
   application/    # Use cases + ports + commands + dtos. Sin @Controller, sin @Entity, sin SDKs.
-  infrastructure/ # Adapters: Spring AI, OCI SDK, JDA (bot Discord), TelegramBots long polling (bot Telegram), CsvParser, RestClient, config. Implementa ports.
+  infrastructure/ # Adapters: Spring AI, OCI SDK, Redis buffer (spring-data-redis), JDA (bot Discord), TelegramBots long polling (bot Telegram), CsvParser, RestClient, config. Implementa ports.
   interfaces/     # Controllers, mappers HTTP<->DTO, GlobalExceptionHandler.
   ```
 - **R2 — Prohibido en `interfaces/`:** lógica de negocio, acceso a storage, llamadas a SDKs. Solo delega a `application`.
 - **R3 — Prohibido en `domain/`:** anotaciones Spring, JPA, Lombok con lógica. Solo POJOs + validación pura.
 - **R4 — Secretos nunca en git:** prohibido commitear `.env`, `*.env`, `application-local.yaml`, `*.pem`, `*.key`, `token*.json`. Lectura vía `${VAR}` en `application.yaml`. Cubierto en `.gitignore`.
 - **R5 — Config por perfiles:** `application.yaml` base sin credenciales (hoy solo `spring.application.name`, mantener). `application-local.yaml` dev, `application-prod.yaml` prod con env: `OPENAI_API_KEY` (+ `OPENAI_MODEL` opcional), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_BOT_USERNAME` opcional).
-- **R6 — Presupuesto Fase 1:** ingesta (sin LLM) `p95 < 300ms` local; pipeline con LLM documenta latencia externa aparte; arranque local `< 15s`; objeto OCI `< 1MB` por paquete.
+- **R6 — Presupuesto Fase 1:** ingesta (sin LLM) `p95 < 300ms` local; pipeline con LLM documenta latencia externa aparte; arranque local `< 15s`; objeto OCI `< 1MB` por paquete; buffer Redis flush por `REDIS_BUFFER_MAX_BYTES=921600 (900KB)` para dejar margen de envelope bajo el 1MB.
 - **R7 — Ramas y sync:** trabajo en `backend`. Sync a `main` solo vía workflow `sync backend to main` (`subtree` a `backend/`). Prohibido push directo a `main`.
 - **R8 — Fuentes y canales Fase 1:** fuentes aceptadas `DISCORD`, `TELEGRAM` únicamente. Canales de salida `LINKEDIN`, `X`, `NEWSLETTER`, `FAQ` únicamente. Otra fuente/canal requiere enmienda.
 
@@ -61,7 +62,7 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 
 ## 5. Fases de Producto (ratificado)
 
-- **Fase 1 (MVP Hackathon, actual):** ingesta Discord vía bot JDA + ingesta Telegram vía bot TelegramBots long polling (el backend es ambos bots) + análisis IA + generación multicanal + guardado OCI + Actuator + Swagger + CORS. **Toda la integración AI entra aquí.** Webhook Telegram en Fase >1.
+- **Fase 1 (MVP Hackathon, actual):** ingesta Discord vía bot JDA + ingesta Telegram vía bot TelegramBots long polling (el backend es ambos bots) + análisis IA + generación multicanal + buffer Redis por tamaño + guardado OCI batch + Actuator + Swagger + CORS. **Toda la integración AI entra aquí.** Webhook Telegram en Fase >1.
 - **Fase >1 (explícitamente fuera):** autenticación (login/JWT/sesiones/roles), persistencia de usuarios, dashboard, webhook Telegram, facturación, multi-tenant. Ningún `spec` Fase 1 puede incluirlo; irá en `specs/00X-*` futuros con enmienda constitucional.
 
 ## 6. Gobierno SDD y Trazabilidad
@@ -85,3 +86,4 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 - `v1.0-propuesta`: P/R/Q verificables, stack versionado contra `pom.xml`, paquetes fijos, gobierno SDD.
 - `v1.0-final (esta)`: ratifica D1 sin JPA, D2 seguridad básica, D3 Fase 1 = toda AI / Fase >1 = auth+usuarios, D4 Actuator sí, D5 negocio communityLab + R8 fuentes/canales.
 - `v1.1-bots`: JDA (Discord) + TelegramBots long polling (Telegram) en alcance Fase 1; REST de ingesta eliminado; `type=OTRO` lo clasifica la IA; truncado a 2000 + flag; sin rate-limit; webhook Telegram en Fase >1.
+- `v1.2-redis-buffer`: `id=messageId` nativo Discord (sin uuid por mensaje) + `batchId=uuid` lote abierto en Redis; buffer `LIST+SET+bytes` solo-Java (sin Lua) con flush por `900KB`; fork post-LLM `SSE inmediato (asset.created, persisted:false) + buffer para OCI batch (package.completed)`; LLM por mensaje, OCI en batch.
