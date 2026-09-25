@@ -1,0 +1,6 @@
+discord:
+  token: ${DISCORD_BOT_TOKEN:}
+  channel-id: ${DISCORD_LISTEN_CHANNEL_ID:}
+logging:
+  level:
+    com.nocountry.simulation.communitylab.infrastructure.adapters.in: DEBUG

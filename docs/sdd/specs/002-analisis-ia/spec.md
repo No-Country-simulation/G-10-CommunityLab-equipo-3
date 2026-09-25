@@ -1,14 +1,14 @@
 # Especificación 002: Análisis con IA (sentimiento, temas, relevancia)
 
-> Respeta: `constitution.md` v1.0-final. Consume `Comentario[]` de 001. Solo QUÉ/POR QUÉ.
+> Respeta: `constitution.md` v1.2-redis-buffer. Consume `Comment[]` de 001 por mensaje (LLM per-msg, sin cambios por buffer Redis). Solo QUÉ/POR QUÉ.
 
 ## 1. Problema y Objetivo
 
-El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer cada `Comentario` con `sentimiento, temas[], relevancia (0-100)` usando LLMs vía Spring AI, para priorizar qué merece convertirse en activo de marketing.
+El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer cada `Comment` con `sentimiento, temas[], relevancia (0-100)` usando LLMs vía Spring AI, para priorizar qué merece convertirse en activo de marketing.
 
 ## 2. Requerimientos Funcionales
 
-- **RF-01 — Enriquecimiento por comentario:** para cada `Comentario` válido, calcular `type: TESTIMONIO|LOGRO|DUDA|OTRO`, `sentiment: POSITIVO|NEUTRAL|NEGATIVO`, `topics: string[1..5]`, `relevance: 0..100`, `language: es|en|pt|other`. La entrada llega siempre `type=OTRO` (Discord JDA o Telegram long polling, 001); la IA la clasifica aquí. Si `truncated:true`, no se penaliza relevancia por el corte.
+- **RF-01 — Enriquecimiento por comentario:** para cada `Comment` válido, calcular `type: TESTIMONIO|LOGRO|DUDA|OTRO`, `sentiment: POSITIVO|NEUTRAL|NEGATIVO`, `topics: string[1..5]`, `relevance: 0..100`, `language: es|en|pt|other`. La entrada llega siempre `type=OTRO` (Discord JDA o Telegram long polling, 001); la IA la clasifica aquí. Si `truncated:true`, no se penaliza relevancia por el corte.
   - *Criterio:* **Dado** "Conseguí empleo como dev Java, gracias comunidad!" con `type=OTRO` **Cuando** se analiza, **Entonces** `type=LOGRO`, `sentiment=POSITIVO`, `relevance >= 70`, `topics` contiene `empleo` o `contratación`.
 - **RF-02 — Salida estructurada obligatoria:** el LLM debe devolver JSON validable contra schema, nunca texto libre.
   - *Criterio:* **Dado** cualquier comentario válido, **Cuando** se analiza, **Entonces** la salida parsea sin `repair` manual en ≥99% de casos; si falla, se reintenta 1 vez y luego se marca `relevance=0, topics=[], sentiment=NEUTRAL` con `flag=LLM_FALLBACK`.
@@ -27,8 +27,8 @@ El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer
 
 ## 4. Dominio y Glosario
 
-- **ComentarioEnriquecido = Comentario + {sentiment, topics[], relevance, language, flag?}**.
-- **Relevancia:** 0-100, prioriza qué se convierte en activo. Umbral sugerido publicación: `>=60` (ajustable en 003).
+- **EnrichedComment = Comment + {sentiment, topics[], relevance, language, flag?}**.
+- **Relevance:** 0-100, prioriza qué se convierte en activo. Umbral sugerido publicación: `>=60` (ajustable en 003).
 - **Structured Output:** JSON con schema fijo exigido al LLM.
 
 ## 5. Fuera de Alcance

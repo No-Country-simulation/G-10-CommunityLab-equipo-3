@@ -1,7 +1,7 @@
 # Plan 003: Generación multicanal con Spring AI (vivo unitario + batch newsletter)
 
 Derivado de: `spec.md RF-01..RF-06 + RNF-01..RNF-03` + `constitution.md P1-P2,R1,R4-R6,R8,Q1-Q3,Fase1`.
-Consume: `ComentarioEnriquecido` de 002 (`#Listen` only). Proveedor: **OpenAI único vía Spring AI** (mismo `spring-ai-starter-model-openai` de 002). Vivo: solo `LINKEDIN/X/FAQ simple` por mensaje; `Newsletter/FAQ consolidado` va por job batch (004).
+Consume: `EnrichedComment` de 002 (`#Listen` only). Proveedor: **OpenAI único vía Spring AI** (mismo `spring-ai-starter-model-openai` de 002). Vivo: solo `LINKEDIN/X/FAQ simple` por mensaje; `Newsletter/FAQ consolidado` va por job batch (004).
 
 ## 1. Arquitectura y componentes (hexagonal estricto)
 
@@ -14,12 +14,12 @@ flowchart LR
   UC --> FR[application: FaqGrouping puro]
 ```
 
-* `domain/`: `Activo{id, sourceCommentIds[], channel: LINKEDIN|X|NEWSLETTER|FAQ, title?, copy, hashtags?, cta?, promptVersion}`, `Channel{LINKEDIN,X,NEWSLETTER,FAQ}`, `HallucinationGuard` puro (lista negra: si fuente no contiene empresa/salario/fecha/métrica, la salida tampoco; verificación por `contains` normalizado, sin LLM). Sin Spring/JPA/Lombok-lógica (R3).
+* `domain/`: `Asset{id, sourceCommentIds[], channel: LINKEDIN|X|NEWSLETTER|FAQ, title?, copy, hashtags?, cta?, promptVersion}`, `Channel{LINKEDIN,X,NEWSLETTER,FAQ}`, `HallucinationGuard` puro (lista negra: si fuente no contiene empresa/salario/fecha/métrica, la salida tampoco; verificación por `contains` normalizado, sin LLM). Sin Spring/JPA/Lombok-lógica (R3).
 * `application/`: `ports/in/GenerateUseCase`, `ports/out/GeneratePort`, `services/GenerateService` (vivo por mensaje: filtra `relevance<60` → sin LinkedIn/X; `DUDA` solo FAQ simple `fuentes:[ese id]`; si `assets[]` vacío o `DRAFT_EMPTY` → **no guardar, abort sin OCI/SSE**, solo `LOG + ⚠️`). `ChannelPolicy` puro + `FaqGrouping` puro (consolidado solo batch). Sin `@Controller,@Entity,SDKs`.
 * `infrastructure/`: `SpringAiGenerateAdapter` tras `GeneratePort` con Spring AI real: `ChatClient` por canal vivo (`LINKEDIN/X/FAQ simple`, prompts `v1`, temp `0.3-0.5` redacción / `0.1` factual) + prompt `newsletter` batch, structured-output + `timeout 15s + 1 reintento + fallback DRAFT_EMPTY`, nunca `500`. Solo `text+topics+type` al LLM, nunca `author/ids/channel`.
 * `interfaces/`: `GenerateController POST /api/v1/generate → 200 {assets,promptVersion} / 207` (se expone en 004). Sin lógica.
 
-Contrato interno: entrada `ComentarioEnriquecido` unitario → salida `Activo[]` (`LINKEDIN/X/FAQ simple`) o vacío → abort. `Newsletter` (`10 msgs, ≥3 temas`) y `FAQ consolidado` (`3 dudas mismo topic`) solo por job batch con N paquetes OCI, no en vivo.
+Contrato interno: entrada `EnrichedComment` unitario → salida `Asset[]` (`LINKEDIN/X/FAQ simple`) o vacío → abort. `Newsletter` (`10 msgs, ≥3 temas`) y `FAQ consolidado` (`3 dudas mismo topic`) solo por job batch con N paquetes OCI, no en vivo.
 
 ## 2. Decisiones técnicas y trade-offs
 
