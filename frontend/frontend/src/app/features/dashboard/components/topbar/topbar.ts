@@ -16,6 +16,8 @@ import { ThemeService } from '../../../../core/theme.service';
   imports: [AvatarModule, MenuModule, TooltipModule, TranslatePipe, RouterLink],
   templateUrl: './topbar.html',
   host: {
+    // No box of its own: the sticky shell must be a child of the tall page column to stay pinned
+    class: 'contents',
     '(document:click)': 'closeLangMenuOutside($event)',
     '(document:keydown.escape)': 'langMenuOpen.set(false)',
   },

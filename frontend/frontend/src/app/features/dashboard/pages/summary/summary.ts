@@ -8,10 +8,11 @@ import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translat
 import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { StatCard, StatItem } from '../../../../shared/stat-card/stat-card';
+import { Bear } from '../../../../shared/bear/bear';
 
 @Component({
   selector: 'app-summary',
-  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe],
+  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, Bear],
   templateUrl: './summary.html',
   styleUrl: './summary.css',
 })
@@ -29,7 +30,7 @@ export class Summary {
       title: 'step.ingest',
       text: 'summary.step.ingest',
       icon: 'pi pi-inbox',
-      link: '/ingest',
+      link: '/app/ingest',
       color: '#d97706',
       colorTo: '#b45309',
     },
@@ -37,7 +38,7 @@ export class Summary {
       title: 'step.analysis',
       text: 'summary.step.analysis',
       icon: 'pi pi-sparkles',
-      link: '/ingest',
+      link: '/app/ingest',
       color: '#8b5cf6',
       colorTo: '#6d28d9',
     },
@@ -45,7 +46,7 @@ export class Summary {
       title: 'step.orchestration',
       text: 'summary.step.orchestration',
       icon: 'pi pi-sitemap',
-      link: '/content',
+      link: '/app/content',
       color: '#10b981',
       colorTo: '#047857',
     },
@@ -53,7 +54,7 @@ export class Summary {
       title: 'step.storage',
       text: 'summary.step.storage',
       icon: 'pi pi-cloud-upload',
-      link: '/storage',
+      link: '/app/storage',
       color: '#e0654f',
       colorTo: '#c74634',
     },
@@ -71,10 +72,10 @@ export class Summary {
     const objects = this.store.objects();
     const t = (key: string) => this.i18n.t(key);
     return [
-      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/ingest' },
-      { label: t('summary.stat.generated'), value: this.store.assets().length, icon: 'pi pi-file-edit', link: '/content' },
-      { label: t('summary.stat.pending'), value: this.store.pendingReview(), icon: 'pi pi-eye', link: '/content' },
-      { label: t('summary.stat.packages'), value: objects.length, icon: 'pi pi-cloud', link: '/storage' },
+      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/ingest' },
+      { label: t('summary.stat.generated'), value: this.store.assets().length, icon: 'pi pi-file-edit', link: '/app/content' },
+      { label: t('summary.stat.pending'), value: this.store.pendingReview(), icon: 'pi pi-eye', link: '/app/content' },
+      { label: t('summary.stat.packages'), value: objects.length, icon: 'pi pi-cloud', link: '/app/storage' },
     ];
   });
 

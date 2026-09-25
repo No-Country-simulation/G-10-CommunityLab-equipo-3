@@ -41,10 +41,10 @@ export class Sidebar {
 
   /** Mirrors the challenge flow: ingest + analyze → curate → store in OCI. */
   protected readonly items: NavItem[] = [
-    { label: 'nav.summary', path: '/', emoji: PAGE_ICON.summary },
-    { label: 'nav.ingest', path: '/ingest', emoji: PAGE_ICON.ingest },
-    { label: 'nav.content', path: '/content', emoji: PAGE_ICON.content, badge: this.store.pendingReview },
-    { label: 'nav.storage', path: '/storage', emoji: PAGE_ICON.storage },
+    { label: 'nav.summary', path: '/app', emoji: PAGE_ICON.summary },
+    { label: 'nav.ingest', path: '/app/ingest', emoji: PAGE_ICON.ingest },
+    { label: 'nav.content', path: '/app/content', emoji: PAGE_ICON.content, badge: this.store.pendingReview },
+    { label: 'nav.storage', path: '/app/storage', emoji: PAGE_ICON.storage },
   ];
 
   /** Same behavior as the CommuPulse server card: each click flips Discord ↔ Telegram. */
@@ -86,6 +86,6 @@ export class Sidebar {
 
   private indexFor(url: string): number {
     const path = url.split(/[?#]/)[0] || '/';
-    return this.items.findIndex((it) => (it.path === '/' ? path === '/' : path.startsWith(it.path)));
+    return this.items.findIndex((it) => (it.path === '/app' ? path === '/app' : path.startsWith(it.path)));
   }
 }
