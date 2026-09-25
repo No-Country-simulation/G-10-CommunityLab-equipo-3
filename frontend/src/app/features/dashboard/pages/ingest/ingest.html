@@ -278,7 +278,7 @@
           </dl>
           <div class="flex gap-2 border-t border-slate-100 p-4 dark:border-slate-800">
             <p-button [label]="'ingest.oci.copyUrl' | t" icon="pi pi-copy" size="small" severity="secondary" [outlined]="true" (onClick)="copy(r.storage.url, 'toast.copied.url')" />
-            <p-button [label]="'common.viewBucket' | t" icon="pi pi-arrow-right" size="small" [text]="true" routerLink="/storage" />
+            <p-button [label]="'common.viewBucket' | t" icon="pi pi-arrow-right" size="small" [text]="true" routerLink="/app/storage" />
           </div>
         </div>
       </div>
@@ -290,7 +290,7 @@
             <h2 class="card-title">{{ 'ingest.per.title' | t }}</h2>
             <p class="card-subtitle">{{ 'ingest.per.subtitle' | t }}</p>
           </div>
-          <p-button [label]="'common.goCuration' | t" icon="pi pi-arrow-right" iconPos="right" size="small" routerLink="/content" />
+          <p-button [label]="'common.goCuration' | t" icon="pi pi-arrow-right" iconPos="right" size="small" routerLink="/app/content" />
         </div>
 
         <div class="divide-y divide-slate-100 dark:divide-slate-800">

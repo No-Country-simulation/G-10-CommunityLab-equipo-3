@@ -1,0 +1,351 @@
+<!-- ═════════ Navbar ═════════ -->
+<header class="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-5 sm:pt-4">
+  <nav class="landing-nav mx-auto flex h-16 max-w-6xl items-center gap-3 rounded-[24px] border px-3 sm:h-[70px] sm:px-5"
+    [class.is-scrolled]="scrolled() || menuOpen()" [attr.aria-label]="'sidebar.navAria' | t">
+    <a href="#inicio" (click)="scrollTo('inicio', $event)" class="flex shrink-0 items-center gap-2.5">
+      <img src="image/logo/oso-head.png" alt="" width="36" height="36"
+        class="h-9 w-9 rounded-xl border border-amber-500/30 bg-amber-100 object-cover" />
+      <span class="font-display text-lg font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></span>
+    </a>
+
+    <ul class="mx-auto hidden items-center gap-1 lg:flex">
+      @for (s of sections; track s.id) {
+        <li>
+          <a [href]="'#' + s.id" (click)="scrollTo(s.id, $event)" class="landing-link" [class.is-active]="active() === s.id">{{ s.key | t }}</a>
+        </li>
+      }
+    </ul>
+
+    <div class="ml-auto flex items-center gap-2 lg:ml-0">
+      <div class="lang-switch hidden sm:inline-flex" role="radiogroup" [attr.aria-label]="'topbar.language' | t">
+        <i class="pi pi-globe lang-switch-globe" aria-hidden="true"></i>
+        @for (l of langs; track l.code) {
+          <button type="button" role="radio" class="lang-switch-option" [class.is-active]="i18n.lang() === l.code"
+            [attr.aria-checked]="i18n.lang() === l.code" [attr.lang]="l.code" [attr.title]="l.label" (click)="setLang(l.code)">{{ l.short }}</button>
+        }
+      </div>
+      <button type="button" class="nav-tile hidden h-10 w-10 items-center justify-center rounded-xl text-stone-500 hover:text-amber-600 dark:text-stone-400 dark:hover:bg-stone-800 sm:flex"
+        (click)="theme.toggle()" [attr.aria-label]="(theme.isDark() ? 'topbar.toLight' : 'topbar.toDark') | t">
+        <i [class]="theme.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+      </button>
+      <a routerLink="/app" class="landing-btn landing-btn-primary hidden sm:inline-flex">
+        {{ 'landing.nav.open' | t }} <i class="pi pi-arrow-right text-xs"></i>
+      </a>
+      <button type="button" class="nav-tile flex h-10 w-10 items-center justify-center rounded-xl text-stone-600 dark:text-stone-300 lg:hidden"
+        (click)="menuOpen.set(!menuOpen())" [attr.aria-expanded]="menuOpen()"
+        [attr.aria-label]="(menuOpen() ? 'landing.nav.close' : 'landing.nav.menu') | t">
+        <i [class]="menuOpen() ? 'pi pi-times' : 'pi pi-bars'"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile menu -->
+  @if (menuOpen()) {
+    <div class="landing-nav is-scrolled animate-slide-in mx-auto mt-2 max-w-6xl rounded-[24px] border p-3 lg:hidden">
+      <ul class="space-y-1">
+        @for (s of sections; track s.id) {
+          <li>
+            <a [href]="'#' + s.id" (click)="scrollTo(s.id, $event)" class="landing-link block w-full" [class.is-active]="active() === s.id">{{ s.key | t }}</a>
+          </li>
+        }
+      </ul>
+      <div class="mt-3 flex items-center gap-2 border-t border-clay-border pt-3 dark:border-stone-800">
+        @for (l of langs; track l.code) {
+          <button type="button" class="lang-switch-option" [class.is-active]="i18n.lang() === l.code" (click)="setLang(l.code)">{{ l.short }}</button>
+        }
+        <button type="button" class="nav-tile ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-stone-500 dark:text-stone-400"
+          (click)="theme.toggle()" [attr.aria-label]="(theme.isDark() ? 'topbar.toLight' : 'topbar.toDark') | t">
+          <i [class]="theme.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+        </button>
+      </div>
+      <a routerLink="/app" class="landing-btn landing-btn-primary mt-3 w-full justify-center">
+        {{ 'landing.nav.open' | t }} <i class="pi pi-arrow-right text-xs"></i>
+      </a>
+    </div>
+  }
+</header>
+
+<main class="overflow-x-hidden">
+  <!-- ═════════ Hero ═════════ -->
+  <section id="inicio" class="relative px-4 pb-16 pt-32 sm:px-6 sm:pt-40 lg:pb-24">
+    <div class="landing-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-[640px]" aria-hidden="true"></div>
+    <div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-10">
+      <div appReveal>
+        <span class="landing-badge"><i class="pi pi-users text-[11px]"></i> {{ 'landing.hero.badge' | t }}</span>
+        <h1 class="mt-6 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-espresso dark:text-white sm:text-5xl lg:text-[3.6rem]">
+          {{ 'landing.hero.title1' | t }}
+          <span class="landing-highlight">{{ 'landing.hero.highlight' | t }}</span>
+          {{ 'landing.hero.title2' | t }}
+        </h1>
+        <p class="mt-6 max-w-xl text-base leading-relaxed text-stone-600 dark:text-stone-300 sm:text-lg">{{ 'landing.hero.lead' | t }}</p>
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a routerLink="/app" class="landing-btn landing-btn-primary landing-btn-lg">
+            {{ 'landing.hero.cta' | t }} <i class="pi pi-arrow-right text-sm"></i>
+          </a>
+          <a href="#como-funciona" (click)="scrollTo('como-funciona', $event)" class="landing-btn landing-btn-ghost landing-btn-lg">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+              <i class="pi pi-arrow-down text-[10px]"></i>
+            </span>
+            {{ 'landing.hero.secondary' | t }}
+          </a>
+        </div>
+        <p class="mt-8 text-sm font-semibold text-stone-500 dark:text-stone-400">
+          <i class="pi pi-sparkles mr-1.5 text-amber-500"></i>{{ 'brand.tagline' | t }}
+        </p>
+      </div>
+
+      <!-- Mascot card with floating chips -->
+      <div class="relative mx-auto w-full max-w-md lg:max-w-none" appReveal="120">
+        <div class="landing-mascot relative overflow-hidden rounded-clay">
+          <app-bear pose="laptop" fallback="image/logo/osoLogo.png" [eager]="true" [alt]="'landing.hero.alt' | t" [width]="733" [height]="885"
+            imgClass="landing-float relative z-10 mx-auto h-[360px] w-auto object-contain drop-shadow-[0_24px_36px_rgb(28_25_23/0.35)] sm:h-[440px]" />
+        </div>
+        <div class="landing-chip absolute -left-2 top-8 sm:-left-8">
+          <span class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300"><i class="pi pi-sparkles text-xs"></i></span>
+          {{ 'landing.hero.chip.analysis' | t }}
+        </div>
+        <div class="landing-chip absolute -right-2 top-[24%] sm:-right-6">
+          <span class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[#5865f2] dark:bg-indigo-500/15"><i class="pi pi-discord text-xs"></i></span>
+          {{ 'landing.hero.chip.sources' | t }}
+        </div>
+        <div class="landing-chip absolute -bottom-4 left-6 sm:left-10">
+          <span class="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-[#c74634] dark:bg-orange-500/15 dark:text-orange-300"><i class="pi pi-cloud text-xs"></i></span>
+          {{ 'landing.hero.chip.oci' | t }}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ Features ═════════ -->
+  <section id="funciones" class="px-4 py-16 sm:px-6 lg:py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mx-auto max-w-2xl text-center" appReveal>
+        <p class="landing-eyebrow">{{ 'landing.features.eyebrow' | t }}</p>
+        <h2 class="landing-h2">{{ 'landing.features.title1' | t }} <span class="text-amber-600 dark:text-amber-400">{{ 'landing.features.highlight' | t }}</span></h2>
+        <p class="mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300">{{ 'landing.features.lead' | t }}</p>
+      </div>
+      <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        @for (f of features; track f.title; let i = $index) {
+          <a [routerLink]="f.link" class="landing-card group flex flex-col p-6" [appReveal]="i * 80">
+            <span class="flex h-12 w-12 items-center justify-center rounded-2xl text-white transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105"
+              [style.background-image]="'linear-gradient(135deg, ' + f.color + ', ' + f.color + 'cc)'"
+              [style.box-shadow]="'0 10px 20px -8px ' + f.color">
+              <i [class]="f.icon"></i>
+            </span>
+            <h3 class="mt-5 font-display text-lg font-bold text-espresso dark:text-white">{{ f.title | t }}</h3>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-stone-600 dark:text-stone-400">{{ f.text | t }}</p>
+            <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 dark:text-amber-400">
+              {{ 'landing.features.more' | t }} <i class="pi pi-arrow-right text-xs transition-transform group-hover:translate-x-1"></i>
+            </span>
+          </a>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ How it works ═════════ -->
+  <section id="como-funciona" class="landing-band px-4 py-16 sm:px-6 lg:py-24">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <div class="relative mx-auto w-full max-w-sm" appReveal>
+        <div class="landing-mascot landing-mascot-soft relative flex aspect-[4/5] items-end justify-center overflow-hidden rounded-clay p-6">
+          <!-- Chat bubbles: what Kora listens to -->
+          <span class="landing-bubble left-5 top-8">🎉 ¡Me contrataron!</span>
+          <span class="landing-bubble right-4 top-24">¿Cómo uso LangGraph?</span>
+          <span class="landing-bubble left-8 top-40">🙌 Gracias, comunidad</span>
+          <app-bear pose="mensajes" [alt]="'landing.how.alt' | t" imgClass="relative z-10 h-[62%] w-auto object-contain" />
+        </div>
+      </div>
+
+      <div>
+        <div appReveal>
+          <p class="landing-eyebrow">{{ 'landing.how.eyebrow' | t }}</p>
+          <h2 class="landing-h2">{{ 'landing.how.title1' | t }} <span class="text-amber-600 dark:text-amber-400">{{ 'landing.how.highlight' | t }}</span></h2>
+          <p class="mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300">{{ 'landing.how.lead' | t }}</p>
+        </div>
+        <ol class="mt-8 space-y-3">
+          @for (s of steps; track s.title; let i = $index) {
+            <li class="landing-card flex gap-4 p-5" [appReveal]="i * 90">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-700 font-display text-sm font-bold text-white shadow-btn">{{ i + 1 }}</span>
+              <div>
+                <h3 class="font-display text-base font-bold text-espresso dark:text-white">{{ s.title | t }}</h3>
+                <p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-400">{{ s.text | t }}</p>
+              </div>
+            </li>
+          }
+        </ol>
+        <div class="mt-8 flex flex-wrap gap-3" appReveal>
+          <a routerLink="/app/ingest" class="landing-btn landing-btn-primary">{{ 'landing.how.cta' | t }} <i class="pi pi-arrow-right text-xs"></i></a>
+          <a routerLink="/app/content" class="landing-btn landing-btn-outline">{{ 'landing.how.secondary' | t }}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ Example from the brief ═════════ -->
+  <section id="ejemplo" class="px-4 py-16 sm:px-6 lg:py-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mx-auto max-w-2xl text-center" appReveal>
+        <p class="landing-eyebrow">{{ 'landing.example.eyebrow' | t }}</p>
+        <h2 class="landing-h2">{{ 'landing.example.title1' | t }} <span class="text-amber-600 dark:text-amber-400">{{ 'landing.example.highlight' | t }}</span></h2>
+        <p class="mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300">{{ 'landing.example.lead' | t }}</p>
+      </div>
+
+      <div class="mt-12 grid items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
+        <!-- Input -->
+        <div class="landing-card p-6" appReveal>
+          <p class="text-xs font-bold uppercase tracking-wider text-stone-400">{{ 'landing.example.in' | t }}</p>
+          <div class="mt-4 space-y-3">
+            <div class="flex gap-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[#5865f2] dark:bg-indigo-500/15"><i class="pi pi-discord text-sm"></i></span>
+              <div class="rounded-2xl rounded-tl-md bg-stone-100 px-4 py-3 dark:bg-stone-800">
+                <p class="text-xs font-semibold text-stone-500 dark:text-stone-400">Mariana · #logros</p>
+                <p class="mt-1 text-sm text-stone-800 dark:text-stone-100">{{ 'landing.example.msg1' | t }}</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#229ed9]/10 text-[#229ed9] dark:bg-[#229ed9]/20"><i class="pi pi-telegram text-sm"></i></span>
+              <div class="rounded-2xl rounded-tl-md bg-stone-100 px-4 py-3 dark:bg-stone-800">
+                <p class="text-xs font-semibold text-stone-500 dark:text-stone-400">Lucas · #ayuda-ia</p>
+                <p class="mt-1 text-sm text-stone-800 dark:text-stone-100">{{ 'landing.example.msg2' | t }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Engine -->
+        <div class="flex items-center justify-center" appReveal="120">
+          <div class="flex flex-col items-center gap-2 text-center">
+            <span class="flex h-16 w-16 items-center justify-center rounded-full border border-amber-500/30 bg-amber-100 shadow-btn">
+              <img src="image/logo/oso-head.png" alt="" width="48" height="48" class="h-12 w-12 rounded-full object-cover" />
+            </span>
+            <i class="pi pi-arrow-down text-amber-500 lg:hidden"></i>
+            <i class="pi pi-arrow-right hidden text-amber-500 lg:block"></i>
+            <span class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{{ 'landing.example.summary' | t }}</span>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="landing-card p-6" appReveal="200">
+          <p class="text-xs font-bold uppercase tracking-wider text-stone-400">{{ 'landing.example.out' | t }}</p>
+          <ul class="mt-4 space-y-2.5">
+            @for (o of outputs; track o.key) {
+              <li class="flex items-center gap-3 rounded-2xl border border-clay-border bg-white/60 p-3 dark:border-stone-800 dark:bg-stone-900/40">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" [class]="o.tint"><i [class]="o.icon" class="text-sm"></i></span>
+                <span class="text-sm font-medium text-stone-800 dark:text-stone-100">{{ o.key | t }}</span>
+                <i class="pi pi-check-circle ml-auto text-emerald-500"></i>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ Platform ═════════ -->
+  <section id="plataforma" class="landing-band px-4 py-16 sm:px-6 lg:py-24">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+      <div appReveal>
+        <span class="landing-badge landing-badge-green"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> {{ 'landing.platform.eyebrow' | t }}</span>
+        <h2 class="landing-h2 mt-5">{{ 'landing.platform.title1' | t }} <span class="block text-amber-600 dark:text-amber-400">{{ 'landing.platform.highlight' | t }}</span></h2>
+        <p class="mt-4 max-w-xl text-base leading-relaxed text-stone-600 dark:text-stone-300">{{ 'landing.platform.lead' | t }}</p>
+
+        <dl class="landing-card mt-8 grid grid-cols-2 gap-5 p-6 sm:grid-cols-4">
+          @for (s of stats; track s.key) {
+            <div>
+              <dt class="font-display text-3xl font-extrabold text-amber-600 dark:text-amber-400">{{ s.value }}</dt>
+              <dd class="mt-1 text-xs leading-snug text-stone-500 dark:text-stone-400">{{ s.key | t }}</dd>
+            </div>
+          }
+        </dl>
+
+        <p class="mt-6 text-sm italic text-stone-500 dark:text-stone-400">{{ 'landing.platform.slogan' | t }} «{{ 'brand.tagline' | t }}»</p>
+        <a routerLink="/app" class="landing-btn landing-btn-dark mt-6">{{ 'landing.platform.cta' | t }} <i class="pi pi-arrow-right text-xs"></i></a>
+      </div>
+
+      <div class="relative mx-auto mb-10 w-full max-w-md sm:mb-0" appReveal="120">
+        <!-- Kora approving content at its desk; the image is cropped on the right and bottom, so it sits flush there -->
+        <div class="landing-mascot relative flex aspect-[4/5] items-end justify-end overflow-hidden rounded-clay">
+          <app-bear pose="curaduria" [alt]="'landing.platform.alt' | t" [width]="787" [height]="960"
+            imgClass="relative z-10 h-[94%] w-auto object-contain object-right-bottom" />
+        </div>
+
+        <!-- A taste of the dashboard, floating over the scene -->
+        <div class="landing-card absolute -bottom-10 -left-3 z-20 w-[78%] p-4 sm:-left-10">
+          <div class="flex items-center gap-2.5">
+            <img src="image/logo/oso-head.png" alt="" width="32" height="32" class="h-8 w-8 rounded-lg border border-amber-500/30 bg-amber-100 object-cover" />
+            <p class="font-display text-sm font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></p>
+            <span class="ml-auto rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{{ 'sidebar.mode.demo' | t }}</span>
+          </div>
+          <ul class="mt-3 space-y-2">
+            @for (f of features; track f.title) {
+              <li class="flex items-center gap-2.5">
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white"
+                  [style.background-image]="'linear-gradient(135deg, ' + f.color + ', ' + f.color + 'cc)'"><i [class]="f.icon" class="text-[11px]"></i></span>
+                <span class="flex-1 truncate text-xs font-semibold text-stone-800 dark:text-stone-100">{{ f.title | t }}</span>
+                <span class="h-1.5 w-10 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+                  <span class="animate-grow-x block h-full rounded-full" [style.background-color]="f.color"></span>
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ CTA ═════════ -->
+  <section class="px-4 py-16 sm:px-6 lg:py-24">
+    <div class="landing-cta mx-auto flex max-w-6xl flex-col items-start gap-6 overflow-hidden rounded-clay p-8 sm:p-12 md:flex-row md:items-center" appReveal>
+      <div class="flex-1">
+        <h2 class="font-display text-3xl font-extrabold text-white sm:text-4xl">{{ 'landing.cta.title' | t }}</h2>
+        <p class="mt-3 max-w-xl text-base text-amber-50/90">{{ 'landing.cta.text' | t }}</p>
+      </div>
+      <app-bear pose="saludo" [alt]="'landing.cta.bearAlt' | t"
+        imgClass="-mb-12 hidden h-44 w-auto self-end drop-shadow-[0_18px_28px_rgb(0_0_0/0.35)] md:block lg:-mb-12 lg:h-52" />
+      <a routerLink="/app" class="landing-btn landing-btn-light landing-btn-lg">{{ 'landing.cta.button' | t }} <i class="pi pi-arrow-right text-sm"></i></a>
+    </div>
+  </section>
+</main>
+
+<!-- ═════════ Footer ═════════ -->
+<footer class="landing-band border-t border-clay-border px-4 pt-14 dark:border-stone-800 sm:px-6">
+  <div class="mx-auto grid max-w-6xl gap-10 pb-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <img src="image/logo/oso-head.png" alt="" width="36" height="36" class="h-9 w-9 rounded-xl border border-amber-500/30 bg-amber-100 object-cover" />
+        <span class="font-display text-lg font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></span>
+      </div>
+      <p class="mt-4 max-w-xs text-sm leading-relaxed text-stone-500 dark:text-stone-400">{{ 'landing.footer.about' | t }}</p>
+    </div>
+    <div>
+      <p class="landing-footer-title">{{ 'landing.footer.product' | t }}</p>
+      <ul class="landing-footer-list">
+        <li><a routerLink="/app">{{ 'nav.summary' | t }}</a></li>
+        <li><a routerLink="/app/ingest">{{ 'nav.ingest' | t }}</a></li>
+        <li><a routerLink="/app/content">{{ 'nav.content' | t }}</a></li>
+        <li><a routerLink="/app/storage">{{ 'nav.storage' | t }}</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="landing-footer-title">{{ 'landing.footer.sections' | t }}</p>
+      <ul class="landing-footer-list">
+        @for (s of sections.slice(1); track s.id) {
+          <li><a [href]="'#' + s.id" (click)="scrollTo(s.id, $event)">{{ s.key | t }}</a></li>
+        }
+      </ul>
+    </div>
+    <div>
+      <p class="landing-footer-title">{{ 'landing.footer.project' | t }}</p>
+      <ul class="landing-footer-list">
+        <li>{{ 'landing.footer.challenge' | t }}</li>
+        <li>{{ 'landing.footer.team' | t }}</li>
+        <li>{{ 'landing.footer.program' | t }}</li>
+        <li><a href="https://github.com/No-Country-simulation/G-10-CommunityLab-equipo-3" target="_blank" rel="noopener">
+          <i class="pi pi-github mr-1.5 text-xs"></i>{{ 'landing.footer.repo' | t }}</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="-mx-4 bg-espresso px-4 py-5 text-center text-xs text-stone-400 sm:-mx-6">
+    {{ 'landing.footer.rights' | t }} <span class="font-semibold text-amber-400">«{{ 'brand.tagline' | t }}»</span>
+  </div>
+</footer>

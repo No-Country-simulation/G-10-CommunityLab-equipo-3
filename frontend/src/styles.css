@@ -1097,3 +1097,179 @@ html:not(.dark) .p-toast-message {
 .dark .breadcrumb-current {
   color: #e7e5e4;
 }
+
+/* ══ Landing page ════════════════════════════════════════════════════
+   Same clay language as the dashboard: canvas background, white cards with
+   32px radius, amber as the brand color, espresso text, Outfit for titles. */
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@layer components {
+  .landing-nav {
+    @apply border-transparent transition-all duration-300;
+  }
+
+  .landing-nav.is-scrolled {
+    @apply border-clay-subtle bg-white/90 shadow-clay backdrop-blur-xl dark:border-stone-800 dark:bg-espresso-card/90;
+  }
+
+  .landing-link {
+    @apply rounded-full px-3.5 py-2 text-sm font-semibold text-stone-600 transition-colors hover:bg-white/80 hover:text-espresso dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white;
+  }
+
+  .landing-link.is-active {
+    @apply bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300;
+  }
+
+  .landing-btn {
+    @apply inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition duration-200 hover:-translate-y-0.5;
+  }
+
+  .landing-btn-lg {
+    @apply px-6 py-3.5 text-base;
+  }
+
+  .landing-btn-primary {
+    @apply bg-gradient-to-b from-amber-500 to-amber-700 text-white shadow-btn hover:shadow-[0_12px_24px_rgb(217_119_6/0.4)];
+  }
+
+  .landing-btn-ghost {
+    @apply px-2 text-espresso hover:translate-y-0 hover:text-amber-700 dark:text-stone-100 dark:hover:text-amber-300;
+  }
+
+  .landing-btn-outline {
+    @apply border-2 border-amber-500/40 text-amber-700 hover:border-amber-500 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/10;
+  }
+
+  .landing-btn-dark {
+    @apply bg-espresso text-white shadow-[0_10px_22px_-8px_rgb(28_25_23/0.6)] hover:bg-stone-800 dark:bg-white dark:text-espresso;
+  }
+
+  .landing-btn-light {
+    @apply shrink-0 bg-white text-amber-800 shadow-[0_12px_24px_-8px_rgb(0_0_0/0.35)] hover:bg-amber-50;
+  }
+
+  .landing-badge {
+    @apply inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-100/70 px-3.5 py-1.5 text-xs font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300;
+  }
+
+  .landing-badge-green {
+    @apply border-emerald-300/60 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300;
+  }
+
+  .landing-highlight {
+    @apply bg-gradient-to-r from-amber-500 to-amber-700 bg-clip-text text-transparent dark:from-amber-300 dark:to-amber-500;
+  }
+
+  .landing-eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-400;
+  }
+
+  .landing-h2 {
+    @apply mt-3 font-display text-3xl font-extrabold tracking-tight text-espresso dark:text-white sm:text-4xl;
+  }
+
+  .landing-card {
+    @apply rounded-[28px] border border-clay-border bg-white shadow-clay transition duration-300 dark:border-stone-800 dark:bg-espresso-card dark:shadow-none;
+  }
+
+  a.landing-card {
+    @apply hover:-translate-y-1 hover:shadow-clay-hover;
+  }
+
+  .landing-band {
+    @apply bg-[#efe9df]/60 dark:bg-stone-900/40;
+  }
+
+  .landing-mascot {
+    @apply border border-clay-border shadow-clay dark:border-stone-800;
+    background:
+      radial-gradient(circle at 50% 38%, rgb(251 191 36 / 0.35), transparent 58%),
+      linear-gradient(160deg, #fbf3e4 0%, #f1e6d3 100%);
+  }
+
+  .dark .landing-mascot {
+    background:
+      radial-gradient(circle at 50% 38%, rgb(217 119 6 / 0.28), transparent 58%),
+      linear-gradient(160deg, #292524 0%, #1c1917 100%);
+  }
+
+  .landing-mascot-soft {
+    background:
+      radial-gradient(circle at 50% 70%, rgb(251 191 36 / 0.3), transparent 60%),
+      linear-gradient(180deg, #fbf7f0 0%, #f3ead9 100%);
+  }
+
+  .landing-chip {
+    @apply z-20 flex items-center gap-2 rounded-full border border-clay-border bg-white/95 px-3.5 py-2 text-xs font-semibold text-stone-700 shadow-clay backdrop-blur dark:border-stone-700 dark:bg-espresso-card/95 dark:text-stone-200;
+    animation: landing-float 6s ease-in-out infinite;
+  }
+
+  .landing-chip:nth-of-type(2) { animation-delay: -2s; }
+  .landing-chip:nth-of-type(3) { animation-delay: -4s; }
+
+  .landing-bubble {
+    @apply absolute z-20 rounded-2xl rounded-bl-md border border-clay-border bg-white px-3 py-2 text-xs font-semibold text-stone-700 shadow-clay dark:border-stone-700 dark:bg-espresso-card dark:text-stone-200;
+    animation: landing-float 5s ease-in-out infinite;
+  }
+
+  .landing-bubble:nth-child(2) { animation-delay: -1.6s; }
+  .landing-bubble:nth-child(3) { animation-delay: -3.2s; }
+
+  .landing-float {
+    animation: landing-float 7s ease-in-out infinite;
+  }
+
+  .landing-glow {
+    background:
+      radial-gradient(700px 360px at 18% 20%, rgb(251 191 36 / 0.22), transparent 70%),
+      radial-gradient(600px 340px at 85% 30%, rgb(217 119 6 / 0.14), transparent 70%);
+  }
+
+  .landing-cta {
+    background:
+      radial-gradient(600px 300px at 90% 0%, rgb(251 191 36 / 0.25), transparent 70%),
+      linear-gradient(120deg, #d97706 0%, #b45309 45%, #1c1917 100%);
+    box-shadow: 0 30px 60px -24px rgb(180 83 9 / 0.55);
+  }
+
+  .landing-footer-title {
+    @apply mb-4 font-display text-sm font-bold text-espresso dark:text-white;
+  }
+
+  .landing-footer-list {
+    @apply space-y-2.5 text-sm text-stone-500 dark:text-stone-400;
+  }
+
+  .landing-footer-list a {
+    @apply transition-colors hover:text-amber-700 dark:hover:text-amber-300;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .landing-chip,
+  .landing-bubble,
+  .landing-float {
+    animation: none;
+  }
+}

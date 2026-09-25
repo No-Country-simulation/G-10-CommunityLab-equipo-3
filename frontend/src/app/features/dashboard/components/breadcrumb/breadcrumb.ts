@@ -13,7 +13,7 @@ import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
     <nav class="breadcrumb" [attr.aria-label]="'breadcrumb.aria' | t">
       <ol>
         <li>
-          <a routerLink="/" class="breadcrumb-link">
+          <a routerLink="/app" class="breadcrumb-link">
             <i class="pi pi-home text-[11px]" aria-hidden="true"></i>{{ 'breadcrumb.home' | t }}
           </a>
         </li>
