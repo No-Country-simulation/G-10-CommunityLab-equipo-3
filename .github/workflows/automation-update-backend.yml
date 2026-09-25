@@ -35,9 +35,9 @@ jobs:
             echo "La rama origin/backend existe. Ejecutando subtree..."
 
             if [ -d "backend" ]; then
-              git subtree pull --prefix=backend origin backend --squash -m "sync: Update backend from branch backend"
+              git subtree pull --prefix=backend origin backend -m "sync: Update backend from branch backend"
             else
-              git subtree add --prefix=backend origin backend --squash -m "sync: Add backend subtree from branch backend"
+              git subtree add --prefix=backend origin backend -m "sync: Add backend subtree from branch backend"
             fi
 
             # Subir la rama puente al remoto
