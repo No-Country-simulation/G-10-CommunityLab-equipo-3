@@ -5,7 +5,7 @@ import { filter, map, startWith } from 'rxjs';
 import { PAGE_ICON } from './page-icons';
 
 export interface PageInfo {
-  /** Route path, e.g. '/ingest' */
+  /** Route path, e.g. '/app/ingest' */
   path: string;
   /** i18n key of the page title (route data `titleKey`) */
   titleKey: string;
@@ -13,7 +13,7 @@ export interface PageInfo {
   icon: string;
 }
 
-const HOME: PageInfo = { path: '/', titleKey: 'nav.summary', icon: PAGE_ICON.summary };
+const HOME: PageInfo = { path: '/app', titleKey: 'nav.summary', icon: PAGE_ICON.summary };
 
 /** The routed page currently on screen; shared by the breadcrumb and the browser tab title. */
 @Injectable({ providedIn: 'root' })
@@ -32,7 +32,7 @@ export class CurrentPage {
   private read(): PageInfo {
     let r = this.router.routerState.snapshot.root;
     while (r.firstChild) r = r.firstChild;
-    const path = '/' + (r.routeConfig?.path ?? '');
+    const path = '/app' + (r.routeConfig?.path ? '/' + r.routeConfig.path : '');
     return {
       path,
       titleKey: (r.data['titleKey'] as string | undefined) ?? HOME.titleKey,

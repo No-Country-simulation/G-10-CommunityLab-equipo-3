@@ -1,11 +1,14 @@
-<header class="sticky top-0 z-20 mx-3 mt-3 flex h-16 items-center gap-2 rounded-[24px] border border-clay-subtle bg-white/90 px-2.5 shadow-[0_10px_24px_-6px_rgb(28_25_23/0.05),0_2px_6px_rgb(28_25_23/0.02)] backdrop-blur-xl dark:border-stone-800 dark:bg-espresso-card/90 sm:h-[74px] sm:gap-3 sm:rounded-clay sm:px-7 lg:top-4 lg:ml-0 lg:mr-4 lg:mt-4">
+<!-- Fixed shell: same offset before and after scrolling, and a strip of page background above the bar
+     so content never shows through while scrolling -->
+<div class="topbar-shell sticky top-0 z-20 px-3 pt-3 lg:pl-0 lg:pr-4 lg:pt-4">
+<header class="topbar flex h-16 items-center gap-2 rounded-[24px] border border-clay-subtle bg-white px-2.5 shadow-[0_10px_24px_-6px_rgb(28_25_23/0.05),0_2px_6px_rgb(28_25_23/0.02)] dark:border-stone-800 dark:bg-espresso-card sm:h-[74px] sm:gap-3 sm:rounded-clay sm:px-7">
   <button type="button" class="nav-tile flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 sm:h-10 sm:w-10 lg:hidden"
     (click)="toggleSidebar.emit()" [attr.aria-label]="'topbar.openMenu' | t">
     <i class="pi pi-bars"></i>
   </button>
 
   <!-- Brand on phones/tablets, where the sidebar is hidden (the page name lives in the breadcrumb) -->
-  <a routerLink="/" class="flex min-w-0 items-center gap-2 lg:hidden">
+  <a routerLink="/app" class="flex min-w-0 items-center gap-2 lg:hidden">
     <img src="image/logo/oso-head.png" alt="" width="32" height="32"
       class="h-8 w-8 shrink-0 rounded-[10px] border border-amber-500/30 bg-amber-100 object-cover" />
     <span class="font-display text-base font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></span>
@@ -67,3 +70,4 @@
     <p-menu #userMenuRef [model]="userMenu()" [popup]="true" appendTo="body" />
   </div>
 </header>
+</div>

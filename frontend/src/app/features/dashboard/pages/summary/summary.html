@@ -4,14 +4,14 @@
     <h1 class="page-title">{{ 'nav.summary' | t }}</h1>
     <p class="page-subtitle">{{ 'brand.tagline' | t }}</p>
   </div>
-  <p-button [label]="'summary.process' | t" icon="pi pi-sparkles" routerLink="/ingest" />
+  <p-button [label]="'summary.process' | t" icon="pi pi-sparkles" routerLink="/app/ingest" />
 </div>
 
 <!-- Welcome card with the Kora mascot (spectacled bear) -->
 @let pendingCount = store.pendingReview();
 <section class="hero-welcome mb-6 flex flex-col items-center gap-3 overflow-hidden rounded-3xl p-5 text-center sm:flex-row sm:gap-6 sm:pr-7 sm:text-left">
-  <img src="image/logo/oso-full.png" [alt]="'summary.hero.alt' | t" width="100" height="120"
-    class="hero-bear h-24 w-20 shrink-0 object-contain sm:h-28 sm:w-24" />
+  <app-bear pose="saludo" [alt]="'summary.hero.alt' | t" [width]="100" [height]="120"
+    imgClass="hero-bear h-24 w-20 shrink-0 object-contain sm:h-28 sm:w-24" />
   <div class="min-w-0 flex-1">
     <p class="font-display text-lg font-extrabold text-espresso dark:text-white sm:text-xl">{{ greetingKey | t }} 👋</p>
     <p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
@@ -20,7 +20,7 @@
   </div>
   @if (pendingCount) {
     <p-button [label]="'summary.hero.cta' | t" icon="pi pi-arrow-right" iconPos="right" size="small" [outlined]="true"
-      routerLink="/content" />
+      routerLink="/app/content" />
   }
 </section>
 
@@ -31,7 +31,7 @@
       <h2 class="card-title">{{ 'summary.how.title' | t }}</h2>
       <p class="card-subtitle">{{ 'summary.how.subtitle' | t }}</p>
     </div>
-    <a routerLink="/ingest" class="group inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+    <a routerLink="/app/ingest" class="group inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
       {{ 'summary.how.try' | t }} <i class="pi pi-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5"></i>
     </a>
   </div>
@@ -80,7 +80,7 @@
   <div class="card overflow-hidden xl:col-span-3">
     <div class="card-header">
       <h2 class="card-title">{{ 'summary.pending.title' | t }}</h2>
-      <a routerLink="/content" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ 'common.goCuration' | t }}</a>
+      <a routerLink="/app/content" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ 'common.goCuration' | t }}</a>
     </div>
     <ul class="divide-y divide-slate-100 dark:divide-slate-800">
       @for (a of pending(); track a.id; let i = $index) {
@@ -109,12 +109,12 @@
   <div class="card overflow-hidden xl:col-span-2">
     <div class="card-header">
       <h2 class="card-title">{{ 'summary.latest.title' | t }}</h2>
-      <a routerLink="/storage" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ 'common.viewBucket' | t }}</a>
+      <a routerLink="/app/storage" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ 'common.viewBucket' | t }}</a>
     </div>
     <ul class="divide-y divide-slate-100 dark:divide-slate-800">
       @for (o of latestObjects(); track o.objectName; let i = $index) {
         <li>
-          <a routerLink="/storage" class="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40">
+          <a routerLink="/app/storage" class="group flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40">
           <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#c74634] transition-transform group-hover:scale-110 dark:bg-orange-500/10 dark:text-orange-300">
             <i class="pi pi-file text-sm"></i>
           </div>
