@@ -6,6 +6,7 @@ public record MessageContent(String value, boolean truncated) {
 
     public static final int MAX_LENGTH = 2000;
 
+    // This method is for normalizing the message content if > 2000 characters is truncated
     public static MessageContent normalize(String message) {
         // Filter 1 -> Validate content of message
         if (message == null) {

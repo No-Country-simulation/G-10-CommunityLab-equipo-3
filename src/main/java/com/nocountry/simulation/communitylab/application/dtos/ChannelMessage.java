@@ -5,7 +5,9 @@ import com.nocountry.simulation.communitylab.domain.enums.Source;
 
 import java.time.Instant;
 
+// This dto is used to represent a message in to Output to layer infrastructure
 public record ChannelMessage(
+        String batchId,
         String messageId,
         String channelId,
         String authorId,
@@ -15,8 +17,9 @@ public record ChannelMessage(
         boolean truncated,
         Source source) {
 
-    public static ChannelMessage from(Comment comment) {
+    public static ChannelMessage from(Comment comment, String batchId) {
         return new ChannelMessage(
+                batchId,
                 comment.messageId(),
                 comment.channelId(),
                 comment.authorId(),

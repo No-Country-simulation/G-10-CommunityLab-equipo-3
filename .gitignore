@@ -42,3 +42,6 @@ application-local.yml
 *.key
 token*.json
 .oci/
+
+### Local runtime data (never commit) ###
+redis-data/
