@@ -6,7 +6,6 @@ import com.nocountry.simulation.communitylab.domain.enums.Source;
 import java.time.Instant;
 
 public record ChannelMessage(
-        String batchId,
         String messageId,
         String channelId,
         String authorId,
@@ -16,9 +15,8 @@ public record ChannelMessage(
         boolean truncated,
         Source source) {
 
-    public static ChannelMessage from(Comment comment, String batchId) {
+    public static ChannelMessage from(Comment comment) {
         return new ChannelMessage(
-                batchId,
                 comment.messageId(),
                 comment.channelId(),
                 comment.authorId(),

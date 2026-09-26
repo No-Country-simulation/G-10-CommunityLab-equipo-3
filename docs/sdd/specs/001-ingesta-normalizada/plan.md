@@ -49,9 +49,6 @@ Contrato interno: evento válido en `#Listen` → `Comment` con `{id=messageId n
 * Decisión: `type=OTRO` fijo a la entrada; la IA clasifica en 002.
   Alternativa descartada: inferir por canal/prefijo en 001.
   Razón: el contenido manda y la clasificación es negocio de IA, no de parsing.
-* Decisión: adelantar a 001 solo el append Redis (`spring-data-redis`, solo Java sin Lua) con reemplazo total del in-memory; flush/export OCI queda en 004.
-  Alternativa descartada: mantener in-memory hasta 004 / implementar flush ya en 001.
-  Razón: el `batchId` necesita almacenamiento real desde el inicio (sin guardado sería decorativo); el flush por tamaño es responsabilidad de empaquetado (004). Sin enmienda (Redis ya está en la tabla constitucional §2 Buffer).
 
 ## 3. Estrategia de pruebas
 
