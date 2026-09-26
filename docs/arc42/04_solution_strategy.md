@@ -13,8 +13,10 @@ Fase >1): se eligieron frente al endpoint REST y frente a RestClient sin SDK por
 Una sola integración contra el contrato API de OpenAI,
 con modelos intercambiables por env (`OPENAI_MODEL`), porque un único contrato simplifica el MVP y el
 riesgo de caída queda cubierto solo por fallback tipado. API consumida únicamente por el dashboard
-frontend (público en Fase 1), con seguridad básica por estándar profesional aunque ningún stakeholder
-la exige (QG-3). Observabilidad = contrato de errores tipados hacia el frontend más `/health` (QG-4):
-todo fallo se retorna clasificado, nunca como `500` opaco. Tiempo real hacia el dashboard por SSE
+externo vía GET (paquetes + SSE) en Fase 1 —sin endpoint de ingesta ni POSTs—, con seguridad básica
+por estándar profesional aunque ningún stakeholder la exige (QG-3). Observabilidad = contrato de errores tipados hacia el frontend más `/health` (QG-4):
+todo fallo se retorna clasificado, nunca como `500` opaco (taxonomía en §08). Tiempo real hacia el dashboard por SSE
 (`GET /api/v1/events`): el frontend escucha `asset.created`/`package.completed` con reconexión por
-`Last-Event-ID`.
+`Last-Event-ID`. Buffer Redis append-only por tamaño (`900KB`, solo-Java sin Lua, degradado sin tumbar
+ingesta): en local corre en Docker, en producción dentro de la misma VM del backend; el lote
+(`batchId` = uuid del lote abierto) se cierra por bytes y va a OCI como 1 objeto `<1MB`.
