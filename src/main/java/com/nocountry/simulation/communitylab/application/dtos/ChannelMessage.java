@@ -5,6 +5,7 @@ import com.nocountry.simulation.communitylab.domain.enums.Source;
 
 import java.time.Instant;
 
+// This dto is used to represent a message in to Output to layer infrastructure
 public record ChannelMessage(
         String batchId,
         String messageId,

@@ -16,9 +16,13 @@ import org.junit.jupiter.api.Timeout;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.nocountry.simulation.communitylab.application.command.IngestDiscordCommand;
+import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Tests for the Discord use case.
@@ -34,11 +38,23 @@ class IngestDiscordServiceTest {
 
     private IngestDiscordService useCase;
     private ApplicationEventPublisher events;
+    private List<ChannelMessage> appended;
 
     @BeforeEach
     void setUp() {
         // Given un BufferPort fake con lote abierto estable (no Redis real en 001)
-        BufferPort fakeBuffer = () -> FIXED_BATCH_ID;
+        appended = new ArrayList<>();
+        BufferPort fakeBuffer = new BufferPort() {
+            @Override
+            public String getCurrentBatchId() {
+                return FIXED_BATCH_ID;
+            }
+
+            @Override
+            public void appendToBatch(ChannelMessage channelMessage) {
+                appended.add(channelMessage);
+            }
+        };
         events = mock(ApplicationEventPublisher.class);
         useCase = new IngestDiscordService(fakeBuffer, events);
     }
@@ -71,6 +87,10 @@ class IngestDiscordServiceTest {
         verify(events).publishEvent(published.capture());
         assertThat(published.getValue().message().messageId()).isEqualTo("msg-1");
         assertThat(published.getValue().message().batchId()).isEqualTo(FIXED_BATCH_ID);
+        // Then buffered once for Redis append (TASK-001-06, solo append)
+        assertThat(appended).hasSize(1);
+        assertThat(appended.get(0).messageId()).isEqualTo("msg-1");
+        assertThat(appended.get(0).batchId()).isEqualTo(FIXED_BATCH_ID);
     }
 
     @Test
@@ -88,6 +108,8 @@ class IngestDiscordServiceTest {
         // When ingested then discarded silently without triggering 002
         assertThat(useCase.ingest(command)).isEmpty();
         verifyNoInteractions(events);
+        // Then nothing buffered on invalid input
+        assertThat(appended).isEmpty();
     }
 
     @Test
@@ -111,6 +133,9 @@ class IngestDiscordServiceTest {
         assertThat(result.get().content()).hasSize(2000);
         assertThat(result.get().truncated()).isTrue();
         assertThat(result.get().batchId()).isEqualTo(FIXED_BATCH_ID);
+        // Then truncated payload is what gets buffered
+        assertThat(appended).hasSize(1);
+        assertThat(appended.get(0).content()).hasSize(2000);
     }
 
     @Test

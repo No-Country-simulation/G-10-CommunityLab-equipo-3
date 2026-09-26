@@ -34,12 +34,18 @@ public class IngestDiscordService implements IngestUseCaseDiscord {
                     command.content(),
                     command.sentTime(),
                     Source.DISCORD);
+
             String batchId = bufferPort.getCurrentBatchId();
+
             // Why: no PII in logs, only ids + source.
             log.debug("Ingested discord message messageId={} batchId={} source={}",
                     comment.messageId(), batchId, comment.source());
 
             ChannelMessage message = ChannelMessage.from(comment, batchId);
+
+            // Added message to buffer
+            bufferPort.appendToBatch(message);
+
             // Why: sync publish is in-memory and keeps p95<300ms; the heavy
             // LLM work runs later in the 002 @Async @EventListener consumer.
             events.publishEvent(new IngestAcceptedEvent(message));
