@@ -1,6 +1,6 @@
 # Tasks 001: Ingesta Discord `#Listen` por ID vía bot JDA (Telegram deferrado)
 
-- [ ] **TASK-001-01**: Crear `domain` `entity/Comment{messageId nativo, channelId informativo}` + VO `MessageContent` + `Source, MessageType` (reservado 002). Validación en factory `Comment.create` (1..2000 chars + flag, ids/`sentTime`/`source` requeridos). `id=messageId` sin uuid; sin `batchId` en dominio (es `uuid` lote abierto Redis asignado en application, ver 004) ni `type` en 001 (lo clasifica la IA en 002).
+- [x] **TASK-001-01**: Crear `domain` `entity/Comment{messageId nativo, channelId informativo}` + VO `MessageContent` + `Source, MessageType` (reservado 002). Validación en factory `Comment.create` (1..2000 chars + flag, ids/`sentTime`/`source` requeridos). `id=messageId` sin uuid; sin `batchId` en dominio (es `uuid` lote abierto Redis asignado en application, ver 004) ni `type` en 001 (lo clasifica la IA en 002).
   - *Derivado de:* `spec.md RF-02,RF-04,RF-05 + plan.md §1`
   - *Verificación:* `./mvnw test -Dtest=CommentTest`
 - [ ] **TASK-001-02**: Crear `application` `IngestDiscordCommand, ChannelMessage, ports/in/IngestUseCaseDiscord, services/IngestDiscordService` con `id=messageId + batchId=lote abierto vía BufferPort.getCurrentBatchId()` + retorno `<300ms` + disparo async a `002`.
