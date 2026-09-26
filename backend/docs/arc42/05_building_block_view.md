@@ -26,9 +26,19 @@ Notas de lectura: el "Frontend" es el dashboard público, único consumidor de l
 Backend→Proveedor (el backend invoca al LLM). La "suscripción persistente" Backend→Frontend es el
 stream SSE `GET /api/v1/events` (ver §06, secuencia 5).
 
-## Nivel 2 (pendiente)
+## Nivel 2 (implementado 001 + buffer + seguridad; 002–004 según plan)
 
-> [!TODO] Descomponer por spec al implementar: 001 (`DiscordBotListener` JDA + `DiscordMessageMapper` + `IngestUseCaseDiscord`, `TelegramBotListener` long polling + `TelegramMessageMapper` + `IngestUseCaseTelegram`; sin controllers de ingesta),
-> 002 (`AnalyzeUseCase`, `SpringAiAnalyzeAdapter`, `RelevancePolicy`), 003 (`GenerateUseCase`,
-> `ChannelPolicy`, `HallucinationGuard`), 004 (`PackageRunUseCase`, `OciObjectStorageAdapter`).
-> Nivel 3 solo si un componente lo justifica.
+001 ingesta: `DiscordMessageListener` (JDA, filtro `#Listen` por ID, anti-bot) → `DiscordConfig`
+(token por env, fail-fast) → `IngestUseCaseDiscord` / `IngestDiscordService` → `Comment.create` +
+`MessageContent` (trim, truncado 2000 + flag) → `BufferPort.getCurrentBatchId()` + `publish
+IngestAcceptedEvent` (sin consumidor aún: 002 pendiente).
+Buffer: `RedisBufferAdapter` (`SADD messageId` dedup → `RPUSH` JSON → `INCRBY` bytes UTF-8;
+keys `buffer:current:id/list/ids/bytes`; `maxBatchSize` inyectado, flush en 004) + `RedisConfig`
+(Lettuce + `RedisTemplate<String,String>`).
+Seguridad: `SecurityConfig` (`health,info` públicos, resto `denyAll`, CSRF off) + `CorsConfig`
+(allowlist por env, `GET,OPTIONS`, sin credenciales, expone `Last-Event-ID`).
+002 (plan): `AnalyzeUseCase`, `SpringAiAnalyzeAdapter`, `RelevancePolicy`.
+003 (plan): `GenerateUseCase`, `ChannelPolicy`, `HallucinationGuard`.
+004 (plan): `PackageRunUseCase`, `BufferService` (flush `≥900KB`), `OciObjectStorageAdapter`,
+`EventsController` SSE, `GlobalExceptionHandler`.
+Nivel 3 solo si un componente lo justifica.

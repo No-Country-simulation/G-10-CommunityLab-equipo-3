@@ -33,9 +33,13 @@ Solo los principales. Escenarios medibles y árbol completo en §10.
 
 ## 1.3 Stakeholders
 
-| Rol | Expectativa respecto a la arquitectura |
-|---|---|
-| Equipo backend (ONE Grupo 10) | Arquitectura implementable por tasks atómicas, trazable a specs |
-| Jurado Hackathon ONE | Demo verificable: `/health`, Swagger, latencias documentadas |
-| Community Managers | Borradores multicanal fieles a la fuente (cero datos inventados) |
-| Oracle OCI (Always Free) | Único storage persistente; objetos `< 1MB`, credenciales por entorno |
+| Rol | Contacto | Expectativa respecto a la arquitectura |
+|---|---|---|
+| Arquitecto de Software + Backend | Yersson David `@YerssonDavid` | Decisiones trazables a specs; núcleo hexagonal puro |
+| Arquitecto BD + Backend | Bruno Vallejos `@brunovallejos-itti` | Modelo de datos y puertos de persistencia (OCI) |
+| Frontend + Diseño UI | Jeferson Oyola `@Jefer1026` | Contratos GET/SSE estables + CORS al origen del panel |
+| Frontend | Alejandro Moreno `@alejhomoreno` | Mismos contratos; catálogo Swagger por endpoint |
+| PO + Scrum Master | Yoant Alnor Ochoa Torre `@yoant8a-system` | Alcance Fase 1 verificable por demo |
+| Jurado Hackathon ONE | TBD (sin contacto aún) | Demo verificable: `/health`, Swagger, latencias documentadas |
+| Community Managers | — | Borradores multicanal fieles a la fuente (cero datos inventados) |
+| Oracle OCI (Always Free) | — | Único storage persistente; objetos `< 1MB`, credenciales por entorno |

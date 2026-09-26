@@ -7,14 +7,14 @@
 | # | Restricción                                                                                                                                                        | Origen |
 |---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
 | CT-1 | Java 21 LTS, sin APIs preview                                                                                                                                      | `pom.xml: java.version` |
-| CT-2 | Spring Boot 4.1.1; módulos Fase 1: `webmvc`, `restclient`, `validation`, `actuator`, `springdoc-openapi`; bots con `JDA` (Discord) y `TelegramBots` long polling (Telegram), solo `infrastructure/` | Constitución §2 |
+| CT-2 | Spring Boot 4.1.1; implementados Fase 1: `webmvc`, `restclient`, `data-redis`, `actuator`, `security`, `JDA` (Discord, solo `infrastructure/`). En plan de desarrollo: `validation`, `springdoc-openapi`, `TelegramBots` long polling (Telegram planificado, Discord primero) | Constitución §2, `pom.xml` |
 | CT-3 | Build Maven Wrapper 3.9.x (`./mvnw test`, `./mvnw spring-boot:run`)                                                                                                | `pom.xml`, `.mvn/` |
 | CT-4 | **Sin persistencia relacional en Fase 1**: prohibidos JPA, Flyway/Liquibase, H2/PostgreSQL/Mongo, `@Entity`, `JpaRepository`                                       | Constitución §2/R1 |
 | CT-5 | Único storage: OCI Object Storage (Always Free), solo vía `ArtifactStorePort` en `infrastructure/`                                                                 | Constitución §2/R1 |
 | CT-6 | IA solo con Spring AI (OpenAI primario), solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort`                                                             | Constitución §2 |
 | CT-7 | **Sin auth en Fase 1**: prohibidos JWT, sesiones, roles. Solo seguridad básica (CORS allowlist, headers, CSRF off por API stateless, Bean Validation, límite 10MB) | Constitución §2/Q3 |
 | CT-8 | Fuentes `DISCORD` (bot JDA) y `TELEGRAM` (bot TelegramBots long polling), sin endpoint REST; canales `LINKEDIN`/`X`/`NEWSLETTER`/`FAQ` únicamente. Entrada: evento nativo (se ignora `author.isBot`, `type=OTRO`, canal/chat = nombre, >2000 truncado con flag) | Constitución R8, spec 001 |
-| CT-9 | Secretos solo por entorno (`OPENAI_API_KEY`, `OCI_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`, `CORS_ALLOWED_ORIGINS`; custodia/rotación por definir). Nunca en git                                                                         | Constitución R4 |
+| CT-9 | Secretos solo por entorno (`OPENAI_API_KEY`, `OCI_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`, `CORS_ALLOWED_ORIGINS`, `REDIS_*`, `BUFFER_MAX_*`; custodia: devs backend). Nunca en git                                                                         | Constitución R4 |
 
 ## 2.2 Restricciones organizativas y de proceso
 
@@ -25,7 +25,7 @@
 | CO-3 | Proceso SDD obligatorio: `spec → plan → tasks → código`, con trazabilidad explícita                                                                                                                                                                                                                | Constitución P5 |
 | CO-4 | Plazo: 4 semanas de desarrollo. Todo scope fuera de 001–004 queda en Fase >1 por plazo. Semana 4 solo estabilización/demo                                                                                                                                                                         | Equipo          |
 | CO-5 | Presupuesto: $0. Solo tiers gratuitos (OCI Always Free + LLM por env). Sin embeddings/vector DB ni servicios pagos en Fase 1; si una cuota gratuita se agota, se reduce consumo (lotes menores, 1 reintento) — sin proveedor alternativo en Fase 1                                                                                          | Equipo          |
-| CO-6 | Datos académicos con anonimato parcial. Uso académico/del proyecto. Al LLM se envían texto, tipo y canal; nunca `author` ni identificadores. El contenido del mensaje no se filtra: si incluye datos sensibles, viajan al proveedor (posible uso para entrenamiento). El equipo no se responsabiliza por el contenido | Equipo          |
+| CO-6 | Datos académicos con anonimato parcial. Uso académico/del proyecto. Al LLM se envían texto, tipo y canal; nunca `author` ni identificadores. Al frontend puede ir solo el nombre de la persona. El contenido del mensaje no se filtra: si incluye datos sensibles, viajan al proveedor (posible uso para entrenamiento). El equipo no se responsabiliza por el contenido | Equipo |
 
 ## 2.3 Convenciones
 
