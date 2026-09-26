@@ -15,3 +15,6 @@
 - [ ] **TASK-001-05**: Configurar seguridad básica resto API (CORS allowlist, headers, CSRF off) + sin PII en logs.
   - *Derivado de:* `constitution Q3,R4-R5 + plan.md §4`
   - *Verificación:* `./mvnw test` + arranque verifica headers y ausencia de endpoints `/api/v1/ingest*`
+- [ ] **TASK-001-06**: Implementar buffer Redis append-only con reemplazo total del in-memory (`spring-data-redis` solo-Java `ListOps/SetOps`, keys `buffer:current:id/list/ids/bytes`, env `REDIS_HOST/PORT + REDIS_BUFFER_MAX_BYTES=921600`, degradado `REDIS_NOT_CONFIGURED`): `BufferPort` extendido (`getCurrentBatchId, append`), `RedisBufferAdapter` (`SADD messageId` dedup → `RPUSH` JSON `ChannelMessage` → `INCRBY bytes` len UTF-8), cableado en `IngestDiscordService` (normaliza → `batchId` → publish → `append`; blanco/inválido sin publish ni append, `p95<300ms`), eliminar `InMemoryBufferAdapter`. Solo append/acumulación; flush/export OCI queda en 004.
+  - *Derivado de:* `constitution §2 Buffer + R6 + spec 004 RF-01/RF-02/RNF-01 + plan 004 §1/§2`
+  - *Verificación:* `./mvnw test -Dtest=RedisBufferAdapterTest,IngestDiscordServiceTest` (mock `RedisTemplate`, sin Docker) + `./mvnw test`
