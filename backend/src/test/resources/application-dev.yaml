@@ -3,3 +3,11 @@
 discord:
   token: test-token
   channel-id: test-channel
+
+# No live Redis in unit tests (mocked RedisTemplate): the Redis health
+# indicator would report DOWN -> 503, so it stays off here. Real runs use
+# Docker Compose auto-start and keep the indicator on.
+management:
+  health:
+    redis:
+      enabled: false
