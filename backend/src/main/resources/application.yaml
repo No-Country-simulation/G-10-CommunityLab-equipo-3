@@ -3,3 +3,9 @@ spring:
     name: communityLab
   profiles:
     active: dev
+
+# Value of buffer max batch size
+redis:
+  buffer:
+    max:
+      bytes: ${REDIS_BUFFER_MAX_BYTES:921600}
