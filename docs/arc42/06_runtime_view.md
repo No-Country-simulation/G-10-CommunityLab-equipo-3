@@ -1,10 +1,22 @@
 # 06. Vista de Tiempo de Ejecución
 
-> Estado: **placeholder**. Diagramar desde specs 001–004 al implementar. Formato: Mermaid `sequenceDiagram`.
+> Estado: **ingesta + buffer implementados; 002–004 según specs**. Formato: Mermaid `sequenceDiagram`.
 
-Secuencias pendientes:
+1. **Ingesta** (spec 001, implementada): `Discord Gateway → DiscordMessageListener → IngestUseCaseDiscord → Comment{OTRO}` + `getCurrentBatchId` + `appendToBatch` + `publish IngestAcceptedEvent` (sin consumidor: 002 pendiente). Telegram long polling planificado, mismo flujo.
 
-1. **Ingesta** (spec 001): `Discord Gateway → DiscordBotListener → IngestUseCaseDiscord → Comentario{OTRO}` y `Telegram API → TelegramBotListener (long polling) → IngestUseCaseTelegram → Comentario{OTRO}` (bots ignorados, vacíos descartados, >2000 truncado con flag).
+```mermaid
+sequenceDiagram
+    participant GW as Discord Gateway
+    participant LI as DiscordMessageListener
+    participant UC as IngestDiscordService
+    participant RD as RedisBufferAdapter
+    GW->>LI: MessageReceivedEvent
+    LI->>LI: filtros bot / canal / vacío
+    LI->>UC: ingest(command)
+    UC->>UC: Comment.create (trim, truncado 2000)
+    UC->>RD: getCurrentBatchId + appendToBatch
+    UC-->>LI: ChannelMessage + evento 002
+```
 2. **Análisis IA** (spec 002): `UseCase → AnalyzePort → SpringAiAdapter → LLM → Structured Output`, timeout 15 s, 1 reintento, fallback `LLM_FALLBACK`.
 3. **Generación multicanal** (spec 003): filtrado `relevance ≥ 60` → prompts por canal → `HallucinationGuard` → activos o `HALLUCINATION_BLOCKED`.
 4. **Orquestación + OCI** (spec 004): `PackageRunUseCase` encadena 001→002→003 → `OciObjectStorageAdapter` → `201 {packageUrl}` / `207` con fallbacks; idempotencia por `batchId` (`deduped:true`).
@@ -21,4 +33,4 @@ sequenceDiagram
     API-->>FE: event {type, batchId, payload}
 ```
 
-> [!TODO] Añadir diagrama de arranque (perfiles, validación de env `DISCORD_BOT_TOKEN`/`TELEGRAM_BOT_TOKEN`, degradado `*_NOT_CONFIGURED` + `503 *_NOT_CONFIGURED`) y de error global (`GlobalExceptionHandler` resto API, sin stacktraces ni PII).
+> Arranque (implementado): perfiles por env → valida `DISCORD_BOT_TOKEN` (fail-fast sin token) → Redis vía Docker Compose auto-arranque en local / contenedor en VM en prod (degradado `REDIS_NOT_CONFIGURED` sin tumbar ingesta) → CORS allowlist por env (falla si `*`) → `GET /actuator/health → UP`. Error global resto API: `GlobalExceptionHandler` (plan 004) con taxonomía §08, sin stacktraces ni PII.
