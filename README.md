@@ -21,7 +21,7 @@ Curar este contenido y redactarlo manualmente para redes sociales toma decenas d
 | Frontend | Angular | Definido |
 | Backend | Java + Spring Boot | Definido |
 | Persistencia | OCI Object Storage | Definido |
-| Deploy | Por definir | ⏳ Pendiente |
+| Deploy | OCI - (Backend), Netlify - (Frontend)  | Definido |
 | Testing | Por definir | ⏳ Pendiente |
 
 Versiones backend definidas: Java 21, Spring Boot 4.1.1, Maven 3.9.16. Versiones frontend (Node, Angular CLI) **por definir**.
