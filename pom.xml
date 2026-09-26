@@ -76,6 +76,25 @@
             <artifactId>JDA</artifactId>
             <version>6.7.0</version>
         </dependency>
+
+        <!-- Dependency of Redis-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Actuator: public GET /actuator/health -> {"status":"UP"}, rest closed (constitution Q3/RNF 004)-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Dependency of Docker Compose-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-docker-compose</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
