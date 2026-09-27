@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.nocountry.simulation.communitylab.application.command.IngestDiscordCommand;
 import com.nocountry.simulation.communitylab.application.port.in.IngestUseCaseDiscord;
+import com.nocountry.simulation.communitylab.infrastructure.adapters.in.mapper.DiscordMessageMapper;
 
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
@@ -56,7 +57,7 @@ class DiscordMessageListenerTest {
 
     @BeforeEach
     void setUpListener() {
-        listener = new DiscordMessageListener(useCase, LISTENED_CHANNEL);
+        listener = new DiscordMessageListener(useCase, LISTENED_CHANNEL, new DiscordMessageMapper());
     }
 
     @Nested
@@ -67,7 +68,7 @@ class DiscordMessageListenerTest {
         @DisplayName("Given bot author, when message arrives, then it is discarded")
         void discardsBotMessage() {
             // Given a message from a bot
-            givenBaseEvent("hello", true, LISTENED_CHANNEL);
+            givenAuthor(true);
 
             // When it is received
             listener.onMessageReceived(event);
@@ -80,7 +81,8 @@ class DiscordMessageListenerTest {
         @DisplayName("Given other channel, when message arrives, then it is discarded")
         void discardsOtherChannelMessage() {
             // Given a message outside the listened channel
-            givenBaseEvent("hello", false, OTHER_CHANNEL);
+            givenAuthor(false);
+            givenChannel(OTHER_CHANNEL);
 
             // When it is received
             listener.onMessageReceived(event);
@@ -93,7 +95,10 @@ class DiscordMessageListenerTest {
         @DisplayName("Given empty content, when message arrives, then it is discarded")
         void discardsEmptyMessage() {
             // Given a blank-only message
-            givenBaseEvent("   ", false, LISTENED_CHANNEL);
+            givenAuthor(false);
+            givenChannel(LISTENED_CHANNEL);
+            when(event.getMessage()).thenReturn(message);
+            when(message.getContentRaw()).thenReturn("   ");
 
             // When it is received
             listener.onMessageReceived(event);
@@ -157,23 +162,25 @@ class DiscordMessageListenerTest {
     }
 
     private void givenEvent(String content, boolean isBot, String channelId) {
-        givenBaseEvent(content, isBot, channelId);
+        givenAuthor(isBot);
+        givenChannel(channelId);
+        when(event.getMessage()).thenReturn(message);
+        when(message.getContentRaw()).thenReturn(content);
         givenDelegationDetails();
     }
 
-    private void givenBaseEvent(String content, boolean isBot, String channelId) {
+    private void givenAuthor(boolean isBot) {
         when(event.getAuthor()).thenReturn(author);
-        when(event.getChannel()).thenReturn(channel);
-        when(event.getMessage()).thenReturn(message);
-
         when(author.isBot()).thenReturn(isBot);
-        when(channel.getId()).thenReturn(channelId);
+    }
 
-        when(message.getContentRaw()).thenReturn(content);
+    private void givenChannel(String channelId) {
+        when(event.getChannel()).thenReturn(channel);
+        when(channel.getId()).thenReturn(channelId);
     }
 
     private void givenDelegationDetails() {
-        when(message.getId()).thenReturn("msg-1");
+        when(event.getMessageId()).thenReturn("msg-1");
         when(author.getId()).thenReturn("author-1");
         when(author.getName()).thenReturn("author-name");
         when(message.getTimeCreated()).thenReturn(OffsetDateTime.parse("2026-09-24T10:00:00Z"));

@@ -2,7 +2,7 @@ package com.nocountry.simulation.communitylab.infrastructure.adapters.out.buffer
 
 import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
-import lombok.extern.slf4j.Slf4j;
+import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
-@Slf4j
 public class RedisBufferAdapter implements BufferPort {
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -50,26 +49,24 @@ public class RedisBufferAdapter implements BufferPort {
             }
             return idBatch;
         } catch (RedisConnectionFailureException e) {
-            log.debug("Error getting current batch ID", e);
             return UUID.randomUUID().toString();
         }
     }
 
     @Override
-    public void appendToBatch(ChannelMessage channelMessage) {
+    public void appendToBatch(EnrichedComment messageProcessed) {
 
-        if (channelMessage == null || channelMessage.messageId() == null) {
-            log.debug("Channel message is null");
+        if (messageProcessed == null || messageProcessed.messageId() == null) {
             return;
         }
 
         try{
-            String json = objectMapper.writeValueAsString(channelMessage);
+            String json = objectMapper.writeValueAsString(messageProcessed);
 
             // Get JSON size in bytes
             int size = json.getBytes(StandardCharsets.UTF_8).length;
 
-            Long result = redisTemplate.opsForSet().add(ids, channelMessage.messageId());
+            Long result = redisTemplate.opsForSet().add(ids, messageProcessed.messageId());
 
             // Validate if already exists
             if(result != null && result == 1L){
@@ -77,10 +74,8 @@ public class RedisBufferAdapter implements BufferPort {
                 redisTemplate.opsForValue().increment(counterSize, size);
             }
         } catch (JacksonException e) {
-            log.debug("Error processing JSON", e);
             return;
         } catch (RedisConnectionFailureException e){
-            log.debug("Error appending to batch", e);
             return;
         }
     }
