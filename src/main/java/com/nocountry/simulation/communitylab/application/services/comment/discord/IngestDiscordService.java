@@ -1,4 +1,4 @@
-package com.nocountry.simulation.communitylab.application.services;
+package com.nocountry.simulation.communitylab.application.services.comment.discord;
 
 import java.util.Optional;
 
@@ -11,12 +11,10 @@ import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class IngestDiscordService implements IngestUseCaseDiscord {
 
@@ -37,21 +35,13 @@ public class IngestDiscordService implements IngestUseCaseDiscord {
 
             String batchId = bufferPort.getCurrentBatchId();
 
-            // Why: no PII in logs, only ids + source.
-            log.debug("Ingested discord message messageId={} batchId={} source={}",
-                    comment.messageId(), batchId, comment.source());
-
             ChannelMessage message = ChannelMessage.from(comment, batchId);
-
-            // Added message to buffer
-            bufferPort.appendToBatch(message);
 
             // Why: sync publish is in-memory and keeps p95<300ms; the heavy
             // LLM work runs later in the 002 @Async @EventListener consumer.
             events.publishEvent(new IngestAcceptedEvent(message));
             return Optional.of(message);
         } catch (InvalidCommentException e) {
-            log.debug("Discarded discord message reason={}", e.getMessage());
             return Optional.empty();
         }
     }

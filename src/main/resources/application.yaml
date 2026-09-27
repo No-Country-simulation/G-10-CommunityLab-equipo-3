@@ -4,6 +4,17 @@ spring:
   profiles:
     active: dev
 
+  ai:
+    openai:
+      api-key: ${API_KEY_LLM_MISTRAL_DEV}
+      chat:
+        model: ${MODEL_MISTRAL}
+      base-url: ${BASE_URL_MODEL_AI}
+
+  output:
+    ansi:
+      enabled: always
+
 # Value of buffer max batch size
 redis:
   buffer:
