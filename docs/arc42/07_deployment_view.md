@@ -15,7 +15,7 @@
 
 - Backend: jar único Spring Boot (`dev`/`prod` por env, sin credenciales en imagen) en contenedor sobre Compute Instance; Redis en contenedor hermano (datos en volumen, nunca en git).
 - Frontend: aplicación externa; alcanza al backend por URL pública con `CORS_ALLOWED_ORIGINS` correspondiente (el hosting del frontend queda fuera de este documento).
-- Variables requeridas: `OPENAI_API_KEY` (+ `OPENAI_MODEL`), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_BOT_USERNAME` opcional).
+- Variables requeridas: `API_KEY_LLM_MISTRAL_DEV` (+ `MODEL_MISTRAL`, `BASE_URL_MODEL_AI` requerido), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_BOT_USERNAME` opcional).
 
 > [!TODO] Bucket real (nombre, región, prefijo `paquetes/`), URLs/DNS reales y shape de la Compute Instance.
 > `Dockerfile` + `.dockerignore` pendientes (TD-3).

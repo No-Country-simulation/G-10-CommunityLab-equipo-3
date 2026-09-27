@@ -22,7 +22,7 @@
 | Lenguaje | Java LTS                             | **21**, sin APIs preview |
 | Framework | Spring Boot                          | **4.1.1**, módulos: `webmvc`, `restclient`, `validation`, `actuator` (a añadir), `springdoc-openapi` (a añadir) |
 | Build | Maven Wrapper                        | 3.9.x — `./mvnw test`, `./mvnw spring-boot:run` |
-| IA | Spring AI                            | OpenAI como único proveedor, modelo configurable por env. Solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort` |
+| IA | Spring AI                            | Contrato API OpenAI, vendor-agnóstico (vale cualquier modelo compatible, ej. Mistral vía `base-url`). Modelo y endpoint configurables por env. Solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort` |
 | Bot Discord | JDA (Java Discord API) | Ingesta Discord: el backend es el bot (Gateway, intents `MESSAGE_CONTENT`/`GUILD_MESSAGES`). Solo en `infrastructure/` tras `IngestUseCaseDiscord`. Token solo por env `DISCORD_BOT_TOKEN` |
 | Bot Telegram | TelegramBots long polling | Ingesta Telegram: el backend es el bot (long polling, sin URL pública; webhook en Fase >1). Solo en `infrastructure/` tras `IngestUseCaseTelegram`. Token/username solo por env `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` |
 | Storage | OCI Object Storage SDK (Always Free) | Único almacenamiento persistente Fase 1, solo vía `ArtifactStorePort` en `infrastructure/` |
@@ -47,7 +47,7 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 - **R2 — Prohibido en `interfaces/`:** lógica de negocio, acceso a storage, llamadas a SDKs. Solo delega a `application`.
 - **R3 — Prohibido en `domain/`:** anotaciones Spring, JPA, Lombok con lógica. Solo POJOs + validación pura.
 - **R4 — Secretos nunca en git:** prohibido commitear `.env`, `*.env`, `application-local.yaml`, `*.pem`, `*.key`, `token*.json`. Lectura vía `${VAR}` en `application.yaml`. Cubierto en `.gitignore`.
-- **R5 — Config por perfiles:** `application.yaml` base sin credenciales (hoy solo `spring.application.name`, mantener). `application-local.yaml` dev, `application-prod.yaml` prod con env: `OPENAI_API_KEY` (+ `OPENAI_MODEL` opcional), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_BOT_USERNAME` opcional).
+- **R5 — Config por perfiles:** `application.yaml` base sin credenciales (hoy solo `spring.application.name`, mantener). `application-local.yaml` dev, `application-prod.yaml` prod con env: `API_KEY_LLM_MISTRAL_DEV` (+ `MODEL_MISTRAL` y `BASE_URL_MODEL_AI` requerido para dirigir la request según proveedor), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_BOT_USERNAME` opcional).
 - **R6 — Presupuesto Fase 1:** ingesta (sin LLM) `p95 < 300ms` local; pipeline con LLM documenta latencia externa aparte; arranque local `< 15s`; objeto OCI `< 1MB` por paquete; buffer Redis flush por `REDIS_BUFFER_MAX_BYTES=921600 (900KB)` para dejar margen de envelope bajo el 1MB.
 - **R7 — Ramas y sync:** trabajo en `backend`. Sync a `main` solo vía workflow `sync backend to main` (`subtree` a `backend/`). Prohibido push directo a `main`.
 - **R8 — Fuentes y canales Fase 1:** fuentes aceptadas `DISCORD`, `TELEGRAM` únicamente. Canales de salida `LINKEDIN`, `X`, `NEWSLETTER`, `FAQ` únicamente. Otra fuente/canal requiere enmienda.
@@ -56,7 +56,7 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 
 - **Q1 — Tests bloqueantes:** `./mvnw test` verde obligatorio. Por use case + `webmvc-test` por controller. Meta ≥80% en `domain`+`application` (JaCoCo cuando se añada).
 - **Q2 — Contratos:** todo `spec.md` con `Dado/Cuando/Entonces`; todo `plan.md` con estrategia de pruebas; todo `tasks.md` con verificación por tarea (comando exacto).
-- **Q3 — Seguridad básica:** CORS allowlist por env (no `*` en prod), headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`), CSRF deshabilitado por API stateless sin cookies (documentado en plan 004), validación Bean Validation en todo input, límite `10MB` por request ingesta, sin PII (tokens, emails completos) en logs.
+- **Q3 — Seguridad básica:** CORS allowlist por env (no `*` en prod), headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`), CSRF deshabilitado por API stateless sin cookies (documentado en plan 004), validación Bean Validation en todo input, límite `10MB` por request ingesta, sin PII (tokens, emails completos) en logs. Anonimato solo ante el LLM; OCI conserva usuario para trazabilidad. Logs prod solo `messageId/batchId/source` (sin `authorId`); en local/test se permite `authorId` a `DEBUG`, nunca `authorName/contenido/tokens`.
 - **Q4 — Revisión:** PR <400 líneas, descripción con `Derivado de: spec.md RF-X + plan.md §Y`, CI verde, un aprobador.
 - **Q5 — Estilo:** Java 21 idiomático (records), inglés en código/commits, español en docs SDD. Se comenta el porqué, no el qué.
 
@@ -87,3 +87,5 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 - `v1.0-final (esta)`: ratifica D1 sin JPA, D2 seguridad básica, D3 Fase 1 = toda AI / Fase >1 = auth+usuarios, D4 Actuator sí, D5 negocio communityLab + R8 fuentes/canales.
 - `v1.1-bots`: JDA (Discord) + TelegramBots long polling (Telegram) en alcance Fase 1; REST de ingesta eliminado; `type=OTRO` lo clasifica la IA; truncado a 2000 + flag; sin rate-limit; webhook Telegram en Fase >1.
 - `v1.2-redis-buffer`: `id=messageId` nativo Discord (sin uuid por mensaje) + `batchId=uuid` lote abierto en Redis; buffer `LIST+SET+bytes` solo-Java (sin Lua) con flush por `900KB`; fork post-LLM `SSE inmediato (asset.created, persisted:false) + buffer para OCI batch (package.completed)`; LLM por mensaje, OCI en batch.
+- `v1.3-openai-contract`: IA bajo contrato API OpenAI vendor-agnóstico (ej. Mistral vía `base-url`); envs canónicos `API_KEY_LLM_MISTRAL_DEV + MODEL_MISTRAL + BASE_URL_MODEL_AI` (base-url requerido para dirigir la request según proveedor).
+- `v1.4-trazabilidad`: anonimato solo ante el LLM; OCI/buffer guardan `authorId/authorName/channelId` para trazabilidad; logs prod sin `authorId` (permitido a `DEBUG` en local/test).
