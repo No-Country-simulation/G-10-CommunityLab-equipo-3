@@ -11,10 +11,10 @@
 | CT-3 | Build Maven Wrapper 3.9.x (`./mvnw test`, `./mvnw spring-boot:run`)                                                                                                | `pom.xml`, `.mvn/` |
 | CT-4 | **Sin persistencia relacional en Fase 1**: prohibidos JPA, Flyway/Liquibase, H2/PostgreSQL/Mongo, `@Entity`, `JpaRepository`                                       | Constitución §2/R1 |
 | CT-5 | Único storage: OCI Object Storage (Always Free), solo vía `ArtifactStorePort` en `infrastructure/`                                                                 | Constitución §2/R1 |
-| CT-6 | IA solo con Spring AI (OpenAI primario), solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort`                                                             | Constitución §2 |
+| CT-6 | IA solo con Spring AI bajo contrato API OpenAI vendor-agnóstico (ej. Mistral vía `base-url`), solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort`                                                             | Constitución §2 v1.3 |
 | CT-7 | **Sin auth en Fase 1**: prohibidos JWT, sesiones, roles. Solo seguridad básica (CORS allowlist, headers, CSRF off por API stateless, Bean Validation, límite 10MB) | Constitución §2/Q3 |
 | CT-8 | Fuentes `DISCORD` (bot JDA) y `TELEGRAM` (bot TelegramBots long polling), sin endpoint REST; canales `LINKEDIN`/`X`/`NEWSLETTER`/`FAQ` únicamente. Entrada: evento nativo (se ignora `author.isBot`, `type=OTRO`, canal/chat = nombre, >2000 truncado con flag) | Constitución R8, spec 001 |
-| CT-9 | Secretos solo por entorno (`OPENAI_API_KEY`, `OCI_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`, `CORS_ALLOWED_ORIGINS`, `REDIS_*`, `BUFFER_MAX_*`; custodia: devs backend). Nunca en git                                                                         | Constitución R4 |
+| CT-9 | Secretos solo por entorno (`API_KEY_LLM_MISTRAL_DEV`, `MODEL_MISTRAL`, `BASE_URL_MODEL_AI`, `OCI_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN`/`TELEGRAM_BOT_USERNAME`, `CORS_ALLOWED_ORIGINS`, `REDIS_*`, `BUFFER_MAX_*`; custodia: devs backend). Nunca en git                                                                         | Constitución R4 |
 
 ## 2.2 Restricciones organizativas y de proceso
 

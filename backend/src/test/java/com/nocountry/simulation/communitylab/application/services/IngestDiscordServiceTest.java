@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import java.time.Duration;
 import java.time.Instant;
 
+import com.nocountry.simulation.communitylab.application.services.comment.discord.IngestDiscordService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,9 +17,9 @@ import org.junit.jupiter.api.Timeout;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.nocountry.simulation.communitylab.application.command.IngestDiscordCommand;
-import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
+import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 
 import java.util.ArrayList;
@@ -38,11 +39,13 @@ class IngestDiscordServiceTest {
 
     private IngestDiscordService useCase;
     private ApplicationEventPublisher events;
-    private List<ChannelMessage> appended;
+    private List<EnrichedComment> appended;
 
     @BeforeEach
     void setUp() {
-        // Given un BufferPort fake con lote abierto estable (no Redis real en 001)
+        // Given un BufferPort fake con lote abierto estable (no Redis real en 001).
+        // El buffer guarda EnrichedComment (punto 1); la ingesta solo publica el
+        // evento y el EnrichmentListener async bufferiza después (p95<300ms).
         appended = new ArrayList<>();
         BufferPort fakeBuffer = new BufferPort() {
             @Override
@@ -51,8 +54,8 @@ class IngestDiscordServiceTest {
             }
 
             @Override
-            public void appendToBatch(ChannelMessage channelMessage) {
-                appended.add(channelMessage);
+            public void appendToBatch(EnrichedComment enrichedComment) {
+                appended.add(enrichedComment);
             }
         };
         events = mock(ApplicationEventPublisher.class);
@@ -87,10 +90,9 @@ class IngestDiscordServiceTest {
         verify(events).publishEvent(published.capture());
         assertThat(published.getValue().message().messageId()).isEqualTo("msg-1");
         assertThat(published.getValue().message().batchId()).isEqualTo(FIXED_BATCH_ID);
-        // Then buffered once for Redis append (TASK-001-06, solo append)
-        assertThat(appended).hasSize(1);
-        assertThat(appended.get(0).messageId()).isEqualTo("msg-1");
-        assertThat(appended.get(0).batchId()).isEqualTo(FIXED_BATCH_ID);
+        // Then buffered nada en ingest: el EnrichmentListener async bufferiza
+        // el EnrichedComment después (p95<300ms, sin LLM en el gateway)
+        assertThat(appended).isEmpty();
     }
 
     @Test
@@ -128,14 +130,13 @@ class IngestDiscordServiceTest {
         // When ingested
         var result = useCase.ingest(command);
 
-        // Then truncado a 2000 con flag + batchId preservado
+        // Then truncado a 2000 con flag + batchId preservado; el buffer lo
+        // escribe el listener async con el EnrichedComment, no el ingest
         assertThat(result).isPresent();
         assertThat(result.get().content()).hasSize(2000);
         assertThat(result.get().truncated()).isTrue();
         assertThat(result.get().batchId()).isEqualTo(FIXED_BATCH_ID);
-        // Then truncated payload is what gets buffered
-        assertThat(appended).hasSize(1);
-        assertThat(appended.get(0).content()).hasSize(2000);
+        assertThat(appended).isEmpty();
     }
 
     @Test

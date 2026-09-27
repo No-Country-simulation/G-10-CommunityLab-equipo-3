@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,8 +24,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ValueOperations;
 
-import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
+import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
+import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
+import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -70,16 +74,22 @@ class RedisBufferAdapterTest {
         adapter = new RedisBufferAdapter(redisTemplate, objectMapper, 921600L);
     }
 
-    private static ChannelMessage message(String messageId) {
-        return new ChannelMessage(
+    private static EnrichedComment message(String messageId) {
+        return new EnrichedComment(
                 "batch-1",
                 messageId,
                 "listen-123",
                 "author-1",
                 "author-name",
                 "hello",
+                Sentiment.NEUTRAL,
+                Language.ES,
+                MessageType.OTRO,
+                List.of("saludo"),
+                30,
+                null,
+                EnrichedComment.PROMPT_VERSION,
                 Instant.parse("2026-09-24T10:00:00Z"),
-                false,
                 Source.DISCORD);
     }
 
@@ -131,7 +141,7 @@ class RedisBufferAdapterTest {
     @DisplayName("Given new messageId, when appended, then it RPUSHes JSON and INCRBYs UTF-8 len")
     void appendsNewMessage() {
         // Given messageId no visto (SADD=1)
-        ChannelMessage msg = message("msg-1");
+        EnrichedComment msg = message("msg-1");
         when(setOps.add(IDS_KEY, "msg-1")).thenReturn(1L);
 
         // When agregado al lote
@@ -153,7 +163,7 @@ class RedisBufferAdapterTest {
     @DisplayName("Given duplicate messageId, when appended, then it skips RPUSH and INCRBY")
     void skipsDuplicateMessage() {
         // Given messageId ya visto (SADD=0)
-        ChannelMessage msg = message("msg-1");
+        EnrichedComment msg = message("msg-1");
         when(setOps.add(IDS_KEY, "msg-1")).thenReturn(0L);
 
         // When re-llega
@@ -181,9 +191,12 @@ class RedisBufferAdapterTest {
     @DisplayName("Given null messageId, when appended, then it does nothing without Redis calls")
     void ignoresNullMessageId() {
         // Given mensaje sin messageId (no deduplicable)
-        ChannelMessage msg = new ChannelMessage(
+        EnrichedComment msg = new EnrichedComment(
                 "batch-1", null, "listen-123", "author-1", "author-name",
-                "hello", Instant.parse("2026-09-24T10:00:00Z"), false, Source.DISCORD);
+                "hello", Sentiment.NEUTRAL, Language.ES,
+                MessageType.OTRO,
+                List.of(), 0, null, EnrichedComment.PROMPT_VERSION,
+                Instant.parse("2026-09-24T10:00:00Z"), Source.DISCORD);
 
         // When agregado
         adapter.appendToBatch(msg);

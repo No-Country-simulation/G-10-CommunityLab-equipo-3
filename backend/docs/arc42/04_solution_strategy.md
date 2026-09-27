@@ -11,7 +11,7 @@ Fase >1): se eligieron frente al endpoint REST y frente a RestClient sin SDK por
 (parsing de `Update`/eventos + polling + reconexión ya resueltos); se ignoran bots, sin IDs ni allowlist
 (solo importa el contenido), `>2000` truncado con flag y `type=OTRO` lo clasifica la IA en 002.
 Una sola integración contra el contrato API de OpenAI,
-con modelos intercambiables por env (`OPENAI_MODEL`), porque un único contrato simplifica el MVP y el
+con modelos compatibles intercambiables por env (`MODEL_MISTRAL` + `BASE_URL_MODEL_AI` requerido para dirigir la request según proveedor, ej. actual Mistral), porque un único contrato simplifica el MVP y el
 riesgo de caída queda cubierto solo por fallback tipado. API consumida únicamente por el dashboard
 externo vía GET (paquetes + SSE) en Fase 1 —sin endpoint de ingesta ni POSTs—, con seguridad básica
 por estándar profesional aunque ningún stakeholder la exige (QG-3). Observabilidad = contrato de errores tipados hacia el frontend más `/health` (QG-4):
