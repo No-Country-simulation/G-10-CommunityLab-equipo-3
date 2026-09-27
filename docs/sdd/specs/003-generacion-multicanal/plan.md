@@ -1,7 +1,7 @@
 # Plan 003: Generación multicanal con Spring AI (vivo unitario + batch newsletter)
 
-Derivado de: `spec.md RF-01..RF-06 + RNF-01..RNF-03` + `constitution.md P1-P2,R1,R4-R6,R8,Q1-Q3,Fase1`.
-Consume: `EnrichedComment` de 002 (`#Listen` only). Proveedor: **OpenAI único vía Spring AI** (mismo `spring-ai-starter-model-openai` de 002). Vivo: solo `LINKEDIN/X/FAQ simple` por mensaje; `Newsletter/FAQ consolidado` va por job batch (004).
+Derivado de: `spec.md RF-01..RF-06 + RNF-01..RNF-03` + `constitution.md v1.3-openai-contract, P1-P2,R1,R4-R6,R8,Q1-Q3,Fase1`.
+Consume: `EnrichedComment` de 002 (`#Listen` only). Proveedor: **contrato API OpenAI vía Spring AI** (mismo `spring-ai-starter-model-openai` de 002, vendor-agnóstico, `MODEL_MISTRAL` + `BASE_URL_MODEL_AI` requerido). Vivo: solo `LINKEDIN/X/FAQ simple` por mensaje; `Newsletter/FAQ consolidado` va por job batch (004).
 
 ## 1. Arquitectura y componentes (hexagonal estricto)
 
@@ -48,7 +48,7 @@ Contrato interno: entrada `EnrichedComment` unitario → salida `Asset[]` (`LINK
 
 ## 4. Seguridad básica Q3 + RNF + config
 
-`OPENAI_API_KEY,OPENAI_MODEL` solo env (reúso 002, R4). Sin PII al LLM (solo `text+topics+type`, nunca `author/ids`; buckets OCI sin PII en logs, solo `batchId/assetsCount`). Prompts `v1` en `infrastructure/prompts/` versionados, sin secretos. Límite resto API `10MB` (Q3, se aplica en 004).
+`API_KEY_LLM_MISTRAL_DEV,MODEL_MISTRAL,BASE_URL_MODEL_AI` solo env (reúso 002, R4). Sin PII al LLM (solo `text+topics+type`, nunca `author/ids`; buckets OCI sin PII en logs, solo `batchId/assetsCount`). Prompts `v1` en `infrastructure/prompts/` versionados, sin secretos. Límite resto API `10MB` (Q3, se aplica en 004).
 
 ## 5. Verificación
 
