@@ -27,11 +27,13 @@ discord:
   token: ${DISCORD_BOT_TOKEN:}
   channel-id: ${DISCORD_LISTEN_CHANNEL_ID:}
 
-# Config logging debug
+# Config logging debug (dev/test: trazabilidad con authorId a DEBUG; prod solo messageId/batchId/source)
 logging:
   level:
     com.nocountry.simulation.communitylab.infrastructure.adapters.in: DEBUG
     com.nocountry.simulation.communitylab.infrastructure.adapters.out: DEBUG
+    com.nocountry.simulation.communitylab.application.services.ai: DEBUG
+    com.nocountry.simulation.communitylab.application.services.comment: DEBUG
 
 cors:
   allowed:

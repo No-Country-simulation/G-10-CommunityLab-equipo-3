@@ -1,6 +1,6 @@
 # Tasks 004: Paquete OCI batch + buffer Redis por tamaño + fork SSE vivo (`#Listen` only)
 
-> Telegram fuera. Secuencia: `Bot #Listen → LLM por mensaje → etiquetas → fork: SSE inmediato asset.created + RPUSH Redis → flush OCI batch → SSE package.completed`. `LLM_FALLBACK`/vacío → abort sin SSE ni buffer. OCI-fail flush → `LOG + ⚠️` sin `package.completed` (vivo ya emitido). Anónimo total (solo `messageId/batchId/source`).
+> Telegram fuera. Secuencia: `Bot #Listen → LLM por mensaje → etiquetas → fork: SSE inmediato asset.created + RPUSH Redis → flush OCI batch → SSE package.completed`. `LLM_FALLBACK`/vacío → abort sin SSE ni buffer. OCI-fail flush → `LOG + ⚠️` sin `package.completed` (vivo ya emitido). Anonimato solo ante el LLM; OCI guarda usuario para trazabilidad; logs prod solo `messageId/batchId/source`.
 
 - [ ] **TASK-004-00**: Añadir dependencias `spring-data-redis + oci-java-sdk-objectstorage` + `actuator + springdoc-openapi-starter-webmvc-ui`, cerrar resto actuadores (`health,info` solo). Verificar compatibilidad Boot `4.1.1`. Redis local vía Docker.
   - *Derivado de:* `constitution v1.2 §2 P3,Q3 + plan.md §2`

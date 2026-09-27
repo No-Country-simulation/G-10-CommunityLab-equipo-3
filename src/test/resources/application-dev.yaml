@@ -4,6 +4,24 @@ discord:
   token: test-token
   channel-id: test-channel
 
+# Test-only CORS allowlist: prod resuelve ${CORS_ALLOWED_ORIGINS_DEV} por env;
+# en tests se fija un origen local para no exigir el secreto (Q3 intacto en prod).
+cors:
+  allowed:
+    origins: http://localhost:3000
+
+# Test-only LLM endpoint: contrato OpenAI vendor-agnóstico (v1.3); en tests no
+# hay red (ChatClient mockeado o Builder sin llamadas), solo placeholders.
+spring:
+  ai:
+    openai:
+      api-key: test-key
+      base-url: http://localhost:9999
+      chat:
+        model: test-model
+        options:
+          model: test-model
+
 # No live Redis in unit tests (mocked RedisTemplate): the Redis health
 # indicator would report DOWN -> 503, so it stays off here. Real runs use
 # Docker Compose auto-start and keep the indicator on.
