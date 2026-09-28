@@ -1,18 +1,24 @@
-import { Injectable, computed, effect, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
 import localePt from '@angular/common/locales/pt';
 import { EN, ES, MessageKey, PT } from './messages';
+import { I18N_DICTIONARIES } from './i18n.tokens';
 
 export type Lang = 'es' | 'en' | 'pt';
 
-export const LANGS: { code: Lang; label: string; short: string }[] = [
+export interface LangOption {
+  code: Lang;
+  label: string;
+  short: string;
+}
+
+export const LANGS: readonly LangOption[] = [
   { code: 'es', label: 'Español', short: 'ES' },
   { code: 'en', label: 'English', short: 'EN' },
   { code: 'pt', label: 'Português', short: 'PT' },
 ];
 
-const DICTIONARIES: Record<Lang, Record<MessageKey, string>> = { es: ES, en: EN, pt: PT };
 /** Locale ids for Angular's date formatting */
 const LOCALES: Record<Lang, string> = { es: 'es', en: 'en-US', pt: 'pt' };
 const LANG_KEY = 'lang';
@@ -23,6 +29,7 @@ registerLocaleData(localePt);
 /** UI language (Spanish, English, Portuguese). Everything reads `lang()`, so switching re-renders in place. */
 @Injectable({ providedIn: 'root' })
 export class I18n {
+  private readonly dictionaries = inject(I18N_DICTIONARIES);
   private readonly _lang = signal<Lang>(readLang());
 
   readonly lang = this._lang.asReadonly();
@@ -45,7 +52,7 @@ export class I18n {
 
   /** Translates a key, filling `{name}` placeholders. Unknown keys fall back to the key itself. */
   t(key: MessageKey | string, params?: Record<string, string | number | null>): string {
-    const text = DICTIONARIES[this._lang()][key as MessageKey] ?? ES[key as MessageKey] ?? key;
+    const text = this.dictionaries[this._lang()][key as MessageKey] ?? this.dictionaries.es[key as MessageKey] ?? key;
     return params ? text.replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? '')) : text;
   }
 }
