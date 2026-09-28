@@ -5,7 +5,7 @@ export const routes: Routes = [
     // Public landing page
     path: '',
     pathMatch: 'full',
-    loadComponent: () => import('./features/landing/landing').then((m) => m.Landing),
+    loadComponent: () => import('./features/landing/pages/landing-page/landing-page').then((m) => m.LandingPage),
   },
   {
     // The product: summary, ingestion, curation and OCI storage
