@@ -5,7 +5,8 @@ import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMPr
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
 import com.nocountry.simulation.communitylab.infrastructure.dto.ai.SystemPrompt;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.util.JacksonUtils;
 import org.springframework.stereotype.Service;
