@@ -33,19 +33,19 @@ public final class HallucinationGuard {
     private HallucinationGuard() {
     }
 
-    public static boolean passes(String sourceText, String copy, String flag) {
+    public static boolean passes(String sourceText, String outputContentProcessed, String flag) {
         if (EnrichedComment.LLM_FALLBACK.equals(flag)) {
             return true;
         }
-        return passes(sourceText, copy);
+        return passes(sourceText, outputContentProcessed);
     }
 
-    public static boolean passes(String sourceText, String copy) {
-        if (sourceText == null || sourceText.isBlank() || copy == null || copy.isBlank()) {
+    public static boolean passes(String sourceText, String outputContentProcessed) {
+        if (sourceText == null || sourceText.isBlank() || outputContentProcessed == null || outputContentProcessed.isBlank()) {
             return false;
         }
         String source = normalize(sourceText);
-        String text = normalize(copy);
+        String text = normalize(outputContentProcessed);
 
         for (Pattern company : COMPANY_PATTERNS) {
             if (company.matcher(text).find() && !company.matcher(source).find()) {
