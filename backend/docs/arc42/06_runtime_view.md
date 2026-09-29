@@ -17,16 +17,16 @@ sequenceDiagram
     UC->>RD: getCurrentBatchId + appendToBatch
     UC-->>LI: ChannelMessage + evento 002
 ```
-2. **Análisis IA** (spec 002): `UseCase → AnalyzePort → SpringAiAdapter → LLM → Structured Output`, timeout 15 s, 1 reintento, fallback `LLM_FALLBACK`.
+2. **Análisis IA** (spec 002): `EnrichmentListener → RequestToLLMProcess → AnalyzeMessageLlmAdapter → LLM → Structured Output`, timeout 15 s, 1 reintento, fallback `LLM_FALLBACK`.
 3. **Generación multicanal** (spec 003): filtrado `relevance ≥ 60` → prompts por canal → `HallucinationGuard` → activos o `HALLUCINATION_BLOCKED`.
 4. **Orquestación + OCI** (spec 004): `PackageRunUseCase` encadena 001→002→003 → `OciObjectStorageAdapter` → `201 {packageUrl}` / `207` con fallbacks; idempotencia por `batchId` (`deduped:true`).
-5. **Suscripción SSE** (spec 004 RF-07): el dashboard abre `GET /api/v1/events` y escucha hasta que
+5. **Suscripción SSE** (spec 004 RF-07): el dashboard abre `GET /api/v1/discord/messages` y escucha hasta que
    el pipeline emite eventos; reconexión con `Last-Event-ID` sin pérdida.
 
 ```mermaid
 sequenceDiagram
     participant FE as Frontend (cliente SSE)
-    participant API as GET /api/v1/events
+    participant API as GET /api/v1/discord/messages
     participant ORQ as PackageRunUseCase
     FE->>API: subscribe (Last-Event-ID?)
     ORQ-->>API: asset.created / package.completed

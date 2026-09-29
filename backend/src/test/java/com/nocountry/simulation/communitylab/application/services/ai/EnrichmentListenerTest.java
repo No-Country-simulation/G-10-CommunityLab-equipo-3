@@ -2,7 +2,9 @@ package com.nocountry.simulation.communitylab.application.services.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -15,35 +17,42 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
-import com.nocountry.simulation.communitylab.application.dtos.RequestToLLM;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommentFromAi;
+import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
 import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMProcess;
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
+import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
+import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
+import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentException;
 
 /**
- * Unit tests for the async enrichment consumer (no Spring context: direct
- * call to {@code on}, the {@code @Async} proxy only applies at runtime).
- *
- * <p>Derivado de: spec 002 RF-01/RF-02/RF-04 (anonimato solo ante el LLM,
- * tolerancia a fallos sin 500) + plan 002 §1 (background tras 001).
+ * Unit tests for the post-ingest orchestration (no Spring context).
+ * Mockito only at port boundaries; domain records are real.
+ * Derivado de: plan 003 §3 (tolerancia a fallos, fork SSE + buffer) +
+ * spec 002 RF-04 (LLM_FALLBACK nunca 500) + spec 004 RF-06 (fallback
+ * bufferizado y audible por SSE, post inválido descartado con LOG).
  */
 @DisplayName("EnrichmentListener")
 class EnrichmentListenerTest {
 
+    private static final String BATCH_ID = "batch-1";
+    private static final String MESSAGE_ID = "msg-1";
+
     private RequestToLLMProcess llm;
     private EnrichedCommentFromAi converter;
     private BufferPort buffer;
-
+    private EventPublishPost publisher;
     private EnrichmentListener listener;
 
     @BeforeEach
@@ -51,99 +60,156 @@ class EnrichmentListenerTest {
         llm = mock(RequestToLLMProcess.class);
         converter = mock(EnrichedCommentFromAi.class);
         buffer = mock(BufferPort.class);
-        listener = new EnrichmentListener(llm, converter, buffer);
+        publisher = mock(EventPublishPost.class);
+        listener = new EnrichmentListener(llm, converter, buffer, publisher);
     }
 
-    private static IngestAcceptedEvent event(String content) {
-        Comment comment = Comment.create(
-                "msg-1", "listen-123", "author-1", "author-name",
-                content, Instant.parse("2026-09-24T10:00:00Z"), Source.DISCORD);
-        return new IngestAcceptedEvent(ChannelMessage.from(comment, "batch-1"));
+    @Test
+    @DisplayName("Given an event without message, when processed, then nothing runs and nothing is thrown")
+    void nullMessageDiscarded() {
+        // Given an event that carries no message
+        IngestAcceptedEvent event = new IngestAcceptedEvent(null);
+
+        // When processed then no exception escapes and no port is touched
+        assertThatCode(() -> listener.on(event)).doesNotThrowAnyException();
+        verifyNoInteractions(llm, converter, buffer, publisher);
     }
 
-    private static ResponseModel response() {
-        return new ResponseModel("processed", Language.ES, Sentiment.NEUTRAL,
-                MessageType.OTRO, List.of("saludo"), 30);
+    @Test
+    @DisplayName("Given an empty content, when processed, then nothing runs and nothing is thrown")
+    void emptyContentDiscarded() {
+        // Given a message whose content is empty
+        IngestAcceptedEvent event = event("");
+
+        // When processed then no exception escapes and no port is touched
+        assertThatCode(() -> listener.on(event)).doesNotThrowAnyException();
+        verifyNoInteractions(llm, converter, buffer, publisher);
     }
 
-    private static EnrichedComment enriched() {
+    @Test
+    @DisplayName("Given a valid post, when processed, then it is published first and buffered second")
+    void publishesAndBuffersValidPost() {
+        // Given the LLM answers and the converter builds a valid post
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        EnrichedComment post = validPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(post);
+
+        // When processed
+        listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
+
+        // Then SSE first (fork A) and buffer second (fork B), same post
+        InOrder order = inOrder(publisher, buffer);
+        order.verify(publisher).publish(post);
+        order.verify(buffer).appendToBatch(post);
+    }
+
+    @Test
+    @DisplayName("Given an LLM failure, when processed, then the fallback trace is published and buffered, never a 500")
+    void flagsLlmFallbackOnLlmFailure() {
+        // Given the LLM call fails
+        when(llm.processMessage(any())).thenThrow(new RuntimeException("llm down"));
+        EnrichedComment fallbackPost = fallbackPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(fallbackPost);
+
+        // When processed then no exception escapes
+        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+
+        // Then the converter received exactly the neutral fallback response
+        var responseCaptor = org.mockito.ArgumentCaptor.forClass(ResponseModel.class);
+        verify(converter).constructMessage(any(Comment.class), responseCaptor.capture(), eq(BATCH_ID));
+        assertThat(responseCaptor.getValue()).isEqualTo(ResponseModel.fallback());
+
+        // Then the flagged trace still goes out (auditable) and into the buffer
+        verify(publisher).publish(fallbackPost);
+        verify(buffer).appendToBatch(fallbackPost);
+        assertThat(fallbackPost.flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
+    }
+
+    @Test
+    @DisplayName("Given a copy with a company absent from the source, when processed, then the Guard blocks it")
+    void guardBlocksHallucinatedPost() {
+        // Given a valid-looking post whose copy invents a company the source never mentions
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(validPost("Alguien sabe como pasar la certificacion de google cloud sin pagar cursos"));
+
+        // When processed
+        listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
+
+        // Then the post never reaches SSE nor the buffer
+        verifyNoInteractions(publisher, buffer);
+    }
+
+    @Test
+    @DisplayName("Given an invalid non-fallback post, when processed, then it is silently discarded")
+    void invalidPostDiscardedSilently() {
+        // Given the converter rejects the post (record validation: invalid asset)
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenThrow(new InvalidAssetException("copy is required"));
+
+        // When processed then no exception escapes and nothing is published or buffered
+        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        verify(publisher, never()).publish(any());
+        verify(buffer, never()).appendToBatch(any());
+    }
+
+    @Test
+    @DisplayName("Given a fallback trace with empty copy, when processed, then it is still published (flag-first)")
+    void fallbackPublishesEvenWithEmptyPost() {
+        // Given an LLM failure mapped to a real fallback record (copy null, content null)
+        when(llm.processMessage(any())).thenThrow(new RuntimeException("llm down"));
+        EnrichedComment fallbackPost = new EnrichedComment(
+                BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
+                null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
+                EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
+                Channels.FAQ, null, null, List.of(), null);
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(fallbackPost);
+
+        // When processed
+        listener.on(event("hola comunidad"));
+
+        // Then the flag-first check lets the auditable trace through
+        verify(publisher).publish(fallbackPost);
+        verify(buffer).appendToBatch(fallbackPost);
+    }
+
+    private IngestAcceptedEvent event(String content) {
+        return new IngestAcceptedEvent(new ChannelMessage(
+                BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
+                content, Instant.now(), false, Source.DISCORD));
+    }
+
+    private ResponseModel validResponse() {
+        return new ResponseModel(
+                "Consegui mi primer empleo como dev Java, gracias comunidad",
+                Language.ES, Sentiment.POSITIVO, MessageType.LOGRO,
+                List.of("empleo", "java"), 85,
+                Channels.FAQ, "Primer empleo dev", "Conseguiste tu primer empleo como dev gracias a la comunidad?",
+                List.of("#EmpleoTech"), null);
+    }
+
+    private EnrichedComment validPost() {
+        return validPost("Conseguiste tu primer empleo como dev gracias a la comunidad?");
+    }
+
+    private EnrichedComment validPost(String copy) {
         return new EnrichedComment(
-                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
-                "processed", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
-                List.of("saludo"), 30, null, EnrichedComment.PROMPT_VERSION,
-                Instant.parse("2026-09-24T10:00:00Z"), Source.DISCORD);
+                BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
+                "Consegui mi primer empleo como dev Java, gracias comunidad",
+                Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
+                List.of("empleo", "java"), 85, null, null, Instant.now(), Source.DISCORD,
+                Channels.FAQ, "Primer empleo dev", copy, List.of("#EmpleoTech"), null);
     }
 
-    @Test
-    @DisplayName("Dado evento valido, cuando llega, entonces pide al LLM solo con el texto y bufferiza")
-    void enrichesAndBuffers() {
-        // Dado un evento normalizado con trazabilidad (Comment.create ya trimea en 001)
-        IngestAcceptedEvent accepted = event("hello");
-        when(llm.processMessage(new RequestToLLM("hello"))).thenReturn(response());
-        when(converter.constructMessage(
-                org.mockito.ArgumentMatchers.any(Comment.class),
-                org.mockito.ArgumentMatchers.eq(response()),
-                org.mockito.ArgumentMatchers.eq("batch-1"))).thenReturn(enriched());
-
-        // Cuando se consume (sync en test, @Async solo en runtime)
-        assertThatCode(() -> listener.on(accepted)).doesNotThrowAnyException();
-
-        // Entonces al LLM solo va el texto (anonimato) y el buffer recibe el enriquecido
-        var requestCaptor = forClass(RequestToLLM.class);
-        verify(llm).processMessage(requestCaptor.capture());
-        assertThat(requestCaptor.getValue().message()).isEqualTo("hello");
-        verify(converter).constructMessage(
-                org.mockito.ArgumentMatchers.any(Comment.class),
-                org.mockito.ArgumentMatchers.eq(response()),
-                org.mockito.ArgumentMatchers.eq("batch-1"));
-        // EnrichedComment es record (equals por valor), pero se verifica por messageId trazado
-        var bufferedCaptor = forClass(EnrichedComment.class);
-        verify(buffer).appendToBatch(bufferedCaptor.capture());
-        assertThat(bufferedCaptor.getValue().messageId()).isEqualTo("msg-1");
-    }
-
-    @Test
-    @DisplayName("Dado contenido vacio, cuando llega, entonces aborta sin LLM ni buffer ni throw")
-    void discardsEmptyContent() {
-        // Dado un evento con contenido vacio (filtro previo roto o carrera)
-        Comment comment = Comment.create(
-                "msg-1", "listen-123", "author-1", "author-name",
-                "hello", Instant.parse("2026-09-24T10:00:00Z"), Source.DISCORD);
-        ChannelMessage empty = new ChannelMessage(
-                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
-                "", comment.sentTime(), false, Source.DISCORD);
-
-        // Cuando se consume entonces aborta silencioso (nunca 500)
-        assertThatCode(() -> listener.on(new IngestAcceptedEvent(empty))).doesNotThrowAnyException();
-
-        // Entonces sin LLM, sin conversion, sin buffer
-        verifyNoInteractions(llm, converter, buffer);
-    }
-
-    @Test
-    @DisplayName("Dado fallo del LLM, cuando llega, entonces bufferea fallback con flag sin throw")
-    void buffersFallbackOnLlmFailure() {
-        // Dado un evento valido pero el LLM cae
-        IngestAcceptedEvent accepted = event("hello");
-        when(llm.processMessage(org.mockito.ArgumentMatchers.any()))
-                .thenThrow(new RuntimeException("llm down"));
-        EnrichedComment fallback = new EnrichedComment(
-                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
-                null, Sentiment.NEUTRAL, null, MessageType.OTRO,
-                List.of(), 0, EnrichedComment.LLM_FALLBACK, EnrichedComment.PROMPT_VERSION,
-                Instant.parse("2026-09-24T10:00:00Z"), Source.DISCORD);
-        when(converter.constructMessage(
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any())).thenReturn(fallback);
-
-        // Cuando se consume entonces no lanza (nunca 500)
-        assertThatCode(() -> listener.on(accepted)).doesNotThrowAnyException();
-
-        // Entonces el fallo deja rastro tipado en el buffer
-        var bufferedCaptor = forClass(EnrichedComment.class);
-        verify(buffer).appendToBatch(bufferedCaptor.capture());
-        assertThat(bufferedCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
-        assertThat(bufferedCaptor.getValue().relevance()).isZero();
+    private EnrichedComment fallbackPost() {
+        return new EnrichedComment(
+                BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
+                null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
+                EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
+                Channels.FAQ, null, null, List.of(), null);
     }
 }

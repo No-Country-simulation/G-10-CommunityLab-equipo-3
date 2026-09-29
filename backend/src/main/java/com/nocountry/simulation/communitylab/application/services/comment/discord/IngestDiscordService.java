@@ -11,10 +11,12 @@ import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class IngestDiscordService implements IngestUseCaseDiscord {
 
@@ -40,8 +42,12 @@ public class IngestDiscordService implements IngestUseCaseDiscord {
             // Why: sync publish is in-memory and keeps p95<300ms; the heavy
             // LLM work runs later in the 002 @Async @EventListener consumer.
             events.publishEvent(new IngestAcceptedEvent(message));
+            // Why ids only (Q3): no author/content in ingest logs.
+            log.info("ingest accepted: messageId={} batchId={} source=DISCORD",
+                    comment.messageId(), batchId);
             return Optional.of(message);
         } catch (InvalidCommentException e) {
+            log.warn("ingest rejected: messageId={} cause=invalid", command.messageId());
             return Optional.empty();
         }
     }
