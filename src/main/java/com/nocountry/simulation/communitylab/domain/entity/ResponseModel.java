@@ -1,5 +1,6 @@
 package com.nocountry.simulation.communitylab.domain.entity;
 
+import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
@@ -12,7 +13,12 @@ public record ResponseModel(
         Sentiment sentiment,
         MessageType messageType,
         List<String> topics,
-        int relevance
+        int relevance,
+        Channels channelPost,
+        String titlePost,
+        String copy,
+        List<String> hashtags,
+        String cta
 ) {
     public static final int MAX_TOPICS = 5;
 
@@ -25,6 +31,6 @@ public record ResponseModel(
 
     /** Fallback object when the LLM fails - neutral, empty, zero. */
     public static ResponseModel fallback() {
-        return new ResponseModel(null, null, Sentiment.NEUTRAL, MessageType.OTRO, List.of(), 0);
+        return new ResponseModel(null, null, Sentiment.NEUTRAL, MessageType.OTRO, List.of(), 0, Channels.FAQ, "", "", List.of(), "");
     }
 }
