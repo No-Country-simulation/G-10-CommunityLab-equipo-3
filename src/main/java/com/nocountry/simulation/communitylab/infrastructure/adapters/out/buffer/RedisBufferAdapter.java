@@ -75,7 +75,7 @@ public class RedisBufferAdapter implements BufferPort {
                 redisTemplate.opsForList().rightPush(jsonKey, json);
                 redisTemplate.opsForValue().increment(counterSize, size);
                 log.debug("buffer appended: messageId={} batchId={} sizeBytes={}",
-                        messageProcessed.messageId(), messageProcessed.batchidLote(), size);
+                        messageProcessed.messageId(), messageProcessed.messageBatchId(), size);
             } else {
                 log.debug("buffer deduped: messageId={}", messageProcessed.messageId());
             }

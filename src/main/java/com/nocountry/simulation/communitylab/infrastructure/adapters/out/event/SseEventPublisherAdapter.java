@@ -1,7 +1,7 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.out.event;
 
+import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
-import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -34,7 +34,7 @@ public class SseEventPublisherAdapter implements EventPublishPost {
     }
 
     @Override
-    public EnrichedComment publish(EnrichedComment post) {
+    public ResponseClient publish(ResponseClient post) {
         // Why messageId as event id: deterministic, doubles as Last-Event-ID on reconnect.
         StoredEvent event = new StoredEvent(post.messageId(), post);
         pushReplay(event);
@@ -51,7 +51,7 @@ public class SseEventPublisherAdapter implements EventPublishPost {
         }
         // Why ids only (Q3): no authorId/authorName/content/tokens in prod logs.
         log.info("Event published: messageId={} batchId={} source={}",
-                post.messageId(), post.batchidLote(), post.source());
+                post.messageId(), post.messageBatchId(), post.source());
         return post;
     }
 
@@ -85,5 +85,5 @@ public class SseEventPublisherAdapter implements EventPublishPost {
         }
     }
 
-    private record StoredEvent(String id, EnrichedComment post) {}
+    private record StoredEvent(String id, ResponseClient post) {}
 }
