@@ -1,17 +1,17 @@
 # Plan 004: Paquete OCI batch + buffer Redis por tamaño + fork SSE vivo + GETs + newsletter batch
 
-Derivado de: `spec.md RF-01..RF-09 (fork SSE+buffer, SSE doble, RF-08 GETs persistido, RF-09 newsletter 2º nivel)` + `constitution.md v1.2-redis-buffer R1,R4-R6,Q3-Q4,Fase1`.
-Alcance semanal: solo `DISCORD #Listen` por ID → `Bot → LLM por mensaje (002) → etiquetas (003) → fork: SSE inmediato asset.created + buffer Redis por bytes → flush OCI batch → SSE package.completed` `N:1`, `health` + Swagger + seguridad. Solo backend habla OCI/Redis; frontend vía SSE doble + GETs persistidos.
+Derivado de: `spec.md RF-01..RF-09 single-GET 2026-09-28 (fork SSE+buffer interno, SSE en único GET /events, sin GETs persistidos, newsletter job interno)` + `constitution.md v1.6-single-get R1,R4-R6,Q3-Q4,Fase1`.
+Alcance semanal: solo `DISCORD #Listen` por ID → `Bot → LLM por mensaje (002) → etiquetas (003) → fork: SSE inmediato asset.created + buffer Redis interno por bytes → flush OCI batch interno → SSE package.completed por el mismo stream` `N:1`, `health` + Swagger (único GET) + seguridad. Solo backend habla OCI/Redis; frontend solo recibe `GET /api/v1/discord/messages`.
 
 ## 1. Arquitectura y componentes
 
 ```mermaid
 flowchart LR
   LIS[#Listen JDA id=messageId] --> ING[IngestUseCaseDiscord batchId=lote abierto]
-  ING --> ANA[AnalyzeService Spring AI per-msg]
+  ING --> ANA[AnalyzeMessageLlmAdapter Spring AI per-msg]
   ANA -->|fallback abort| STOP[LOG + ⚠️ sin SSE ni buffer]
-  ANA --> GEN[GenerateService vivo LINKEDIN/X/FAQ per-msg]
-  GEN -->|vacío/DRAFT_EMPTY abort| STOP
+  ANA --> GEN[EnrichmentListener post LINKEDIN/X/FAQ per-msg]
+  GEN -->|LLM_FALLBACK/post inválido abort| STOP
   GEN --> FORK{Fork post-LLM}
   FORK -->|A| SSE1[EventsController SSE asset.created persisted:false]
   FORK -->|B| BUF[BufferService RPUSH Redis]
@@ -21,15 +21,14 @@ flowchart LR
   AP -.implementa.-> OCI[OciObjectStorageAdapter SDK]
   FLUSH -->|201| SSE2[EventsController SSE package.completed con lo guardado]
   FLUSH -->|OCI fail| LOG[LOG error sin package.completed, vivo ya emitido]
-  SCHED[NewsletterScheduler 5d] --> NL[GenerateNewsletterUseCase 15 aleatorios desde OCI]
+  SCHED[NewsletterScheduler 5d job interno] --> NL[GenerateNewsletterUseCase 15 aleatorios desde OCI]
   NL --> AP
-  API[PackageController + GETs + Analyze/GenerateController] --> FLUSH
 ```
 
-* `domain`: `AssetPackage{batchId=uuid lote Redis o newsletter-{fecha}, generatedAt, source:DISCORD, assets: vivo LINKEDIN/X/FAQ simple de N mensajes + enriched con usuario para trazabilidad, stats{received=N, analyzed=N, fallbackCount, assetsCount=N}, promptVersion, packageUrl?}`. Anonimato solo ante el LLM; OCI guarda `authorId/authorName/channelId`. Logs prod solo `messageId/batchId/source` (en local/test se permite `authorId` a `DEBUG`). `<1MB application/json`, threshold buffer `900KB`.
+* `domain`: `AssetPackage{batchId=uuid lote Redis o newsletter-{fecha}, generatedAt, source:DISCORD, assets: vivo LINKEDIN/X/FAQ de N mensajes (FAQ: 1 duda = 1 post, sin consolidado, enmienda 003 2026-09-28) + enriched con usuario para trazabilidad, stats{received=N, analyzed=N, fallbackCount, assetsCount=N}, promptVersion, packageUrl?}`. Anonimato solo ante el LLM; OCI guarda `authorId/authorName/channelId`. Logs prod solo `messageId/batchId/source` (en local/test se permite `authorId` a `DEBUG`). `<1MB application/json`, threshold buffer `900KB`.
 * `application`: `ports/in/PackageRunUseCase + GenerateNewsletterUseCase + ports/out/ArtifactStorePort(put/get/list) + ports/out/BufferPort(getCurrentBatchId, append, flushIfNeeded)`, `services/BufferService` (solo Java sin Lua: `SADD ids messageId` dedup → `RPUSH list json procesado` → `INCRBY bytes len` → si `>=900KB` flush `synchronized`: `LRANGE` → envuelve `LIST` JSONs en `assets[]` → `put OCI paquete-{batchId lote}.json` → `SSE package.completed` → `DEL + nuevo uuid lote`; `LLM_FALLBACK`/vacío nunca entra al buffer) y `GenerateNewsletterService` (sorteo puro 15 aleatorios desde OCI, `≥3 temas`, abort si `<15`/fallback). Idempotencia doble: `messageId` en buffer + `deduped:true` por `batchId` lote en OCI.
 * `infrastructure`: `RedisBufferAdapter` (`spring-data-redis` `RedisTemplate<String,String>`: keys `buffer:current:id/list/ids/bytes`, `Docker` local / `OCI Cache` prod, env `REDIS_HOST/PORT + REDIS_BUFFER_MAX_BYTES=921600`, degradado `REDIS_NOT_CONFIGURED` → sin buffer pero con SSE vivo) + `OciObjectStorageAdapter` SDK `putObject/getObject/listObjects` con keys `paquetes/paquete-{batchId lote}.json` y `paquetes/newsletter-{fecha}.json`, `Content-Type: application/json`. `OciConfig` env `OCI_BUCKET,OCI_REGION,NAMESPACE/AUTH` (valores dev cuenta), `NewsletterScheduler (@Scheduler cron=${NEWSLETTER_CRON:0 0 0 */5 * *}, enabled=true solo prod)` + `OciConfig` degradado `OCI_NOT_CONFIGURED`.
-* `interfaces`: `PackageController POST /packages:run (flush manual) + POST /packages:newsletter (manual) + GET /packages + GET /packages/{batchId lote}` + `Analyze/GenerateController` + `EventsController SSE GET /events`: `asset.created {messageId, batchId-abierto, persisted:false}` inmediato + `package.completed {batchId lote, packageUrl}` con lo guardado, con `Last-Event-ID` + `GET /actuator/health → UP` + Swagger (6 + SSE doble, sin ingest).
+* `infrastructure/adapters/in/web`: único `EventsController SSE GET /api/v1/discord/messages`: `asset.created {messageId, batchId-abierto, persisted:false}` inmediato + `package.completed {batchId lote, packageUrl}` con lo guardado por el mismo stream, con `Last-Event-ID` (replay en memoria, ventana corta) + `GET /actuator/health → UP` + Swagger (único GET + health, sin ingest, sin POSTs, sin GETs packages).
 
 ## 2. Decisiones técnicas y trade-offs
 
@@ -65,10 +64,10 @@ flowchart LR
 * Unit `GenerateNewsletterService` (sorteo 15 aleatorios puro; `<15` → abort; `≥3 temas`; fallback → abort).
 * Adapter `RedisBufferAdapterTest` mockeado (`RedisTemplate`): `SADD/RPUSH/INCRBY`, `LRANGE` envuelve `LIST` JSONs, `bytes>=900KB` dispara flush, `DEL + nuevo uuid`, sin Redis → `REDIS_NOT_CONFIGURED` con SSE vivo intacto.
 * Adapter `OciObjectStorageAdapterTest` mockeado: `put/get/list`, `<1MB` + `Content-Type`, keys `paquete-{batchId lote}/newsletter-`, re-put → `deduped:true`, sin creds → `OCI_NOT_CONFIGURED`.
-* `webmvc-test`: `PackageControllerTest` (`:run` flush manual, `:newsletter`, `GETs` 200 solo persistido, SSE `asset.created persisted:false + package.completed`), `HealthTest` UP. Scheduler `enabled=false` en test.
+* `webmvc-test`: `EventsControllerTest` (único `GET /api/v1/discord/messages` SSE `asset.created persisted:false + package.completed` por el mismo stream, `Last-Event-ID` replay), `HealthTest` UP. Scheduler `enabled=false` en test.
 * Seguridad: CORS, 400 problema, sin stacktraces/PII.
 
 ## 4. Verificación
 
 * `./mvnw test -Dtest=*Package*,*Buffer*,*Redis*,*Newsletter*,*Events*,*Health*`
-* `./mvnw spring-boot:run` → `#Listen` → por mensaje `asset.created + RPUSH`; al llegar a `900KB` → `201 + package.completed + ✅`; fallback/vacío → `LOG + ⚠️` sin SSE ni buffer; OCI-fail flush → `LOG + ⚠️` sin `package.completed`; `GET /packages` solo persistido; `POST /packages:newsletter` con ≥15 genera newsletter. Telegram fuera. Redis local vía Docker.
+* `./mvnw spring-boot:run` → `#Listen` → por mensaje `asset.created + RPUSH interno`; al llegar a `900KB` → flush interno + `package.completed + ✅` por el mismo SSE; fallback/vacío → `LOG + ⚠️` sin SSE ni buffer; OCI-fail flush → `LOG + ⚠️` sin `package.completed`; sin `GET /packages`; newsletter solo por job interno con ≥15 paquetes. Telegram fuera. Redis local vía Docker.

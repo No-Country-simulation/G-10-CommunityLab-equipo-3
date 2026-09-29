@@ -1,6 +1,6 @@
 # Constitución del Proyecto: communityLab backend
 
-> **Versión:** 1.0-final · **Estado:** ratificada · **Fecha:** 2026-09-18
+> **Versión:** 1.6-single-get · **Estado:** ratificada · **Fecha:** 2026-09-28
 > **Alcance:** rama `backend` (sync a `main/backend/` vía `automation-update-backend.yml`).
 > **Stack verificado:** Java 21 + Spring Boot 4.1.1 + Maven (ver `pom.xml`, `README.md`).
 > **Negocio (ratificado):** motor inteligente de transformación y distribución de contenido para comunidades tech (Discord, Telegram). Convierte actividad orgánica (testimonios, logros, dudas) en activos listos para LinkedIn, X/Twitter, Newsletter y FAQ. MVP Hackathon Oracle Next Education ONE - Grupo 10.
@@ -8,8 +8,8 @@
 
 ## 1. Principios Fundamentales
 
-- **P1 — Hexagonal estricto, núcleo puro:** la lógica de negocio vive en `domain` + `application`. `interfaces` (web) solo mapea HTTP <-> DTO. Verificación: `domain/` sin imports `org.springframework` ni `jakarta.persistence`; ningún `*Controller` contiene lógica condicional de negocio.
-- **P2 — Dependencias hacia adentro:** `interfaces -> application -> domain`. `infrastructure` implementa puertos de `application`, nunca al revés. Verificación en review de PR.
+- **P1 — Hexagonal estricto, núcleo puro:** la lógica de negocio vive en `domain` + `application`. `infrastructure/adapters/in/web` solo mapea HTTP <-> DTO. Verificación: `domain/` sin imports `org.springframework` ni `jakarta.persistence`; ningún `*Controller` contiene lógica condicional de negocio.
+- **P2 — Dependencias hacia adentro:** `infrastructure/adapters/in/web -> application -> domain`. `infrastructure/adapters/out` implementa puertos de `application`, nunca al revés. Verificación en review de PR.
 - **P3 — API-first verificable:** todo endpoint nuevo expone OpenAPI/Swagger actualizado y test `webmvc-test`. Sin Swagger, sin merge.
 - **P4 — Todo vago es métrica:** prohibido "rápido / limpio / seguro" sin número. Ej: `p95 < 1500ms` en pipeline IA local (sin contar latencia LLM externa), `cobertura >= 80% en domain+application`.
 - **P5 — SDD antes que código:** sin `spec.md` aprobado no hay `plan.md`; sin `plan.md` no hay `tasks.md`; sin `tasks.md` no hay código. Los planes viven en `docs/sdd/specs/NNN-*/plan.md`. Prohibido `docs/sdd/plan.md` global.
@@ -22,7 +22,7 @@
 | Lenguaje | Java LTS                             | **21**, sin APIs preview |
 | Framework | Spring Boot                          | **4.1.1**, módulos: `webmvc`, `restclient`, `validation`, `actuator` (a añadir), `springdoc-openapi` (a añadir) |
 | Build | Maven Wrapper                        | 3.9.x — `./mvnw test`, `./mvnw spring-boot:run` |
-| IA | Spring AI                            | Contrato API OpenAI, vendor-agnóstico (vale cualquier modelo compatible, ej. Mistral vía `base-url`). Modelo y endpoint configurables por env. Solo en `infrastructure/` tras `AnalyzePort` / `GeneratePort` |
+| IA | Spring AI                            | Contrato API OpenAI, vendor-agnóstico (vale cualquier modelo compatible, ej. Mistral vía `base-url`). Modelo y endpoint configurables por env. Solo en `infrastructure/` tras `RequestToLLMProcess` |
 | Bot Discord | JDA (Java Discord API) | Ingesta Discord: el backend es el bot (Gateway, intents `MESSAGE_CONTENT`/`GUILD_MESSAGES`). Solo en `infrastructure/` tras `IngestUseCaseDiscord`. Token solo por env `DISCORD_BOT_TOKEN` |
 | Bot Telegram | TelegramBots long polling | Ingesta Telegram: el backend es el bot (long polling, sin URL pública; webhook en Fase >1). Solo en `infrastructure/` tras `IngestUseCaseTelegram`. Token/username solo por env `TELEGRAM_BOT_TOKEN` / `TELEGRAM_BOT_USERNAME` |
 | Storage | OCI Object Storage SDK (Always Free) | Único almacenamiento persistente Fase 1, solo vía `ArtifactStorePort` en `infrastructure/` |
@@ -39,12 +39,11 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 
 - **R1 — Paquetes fijos:** base `com.nocountry.simulation.communitylab`:
   ```text
-  domain/         # POJOs/records puros: Comment, Asset, AssetPackage, Relevance. Sin Spring/JPA.
+  domain/         # POJOs/records puros: Comment, EnrichedComment, ResponseModel; políticas RelevancePolicy/HallucinationGuard (AssetPackage llega con 004). Sin Spring/JPA.
   application/    # Use cases + ports + commands + dtos. Sin @Controller, sin @Entity, sin SDKs.
-  infrastructure/ # Adapters: Spring AI, OCI SDK, Redis buffer (spring-data-redis), JDA (bot Discord), TelegramBots long polling (bot Telegram), CsvParser, RestClient, config. Implementa ports.
-  interfaces/     # Controllers, mappers HTTP<->DTO, GlobalExceptionHandler.
+  infrastructure/ # Adapters in (web controllers, mappers HTTP<->DTO, GlobalExceptionHandler, bots JDA/Telegram) + adapters out (Spring AI, OCI SDK, Redis buffer, RestClient) + config. Los adapters out implementan ports.
   ```
-- **R2 — Prohibido en `interfaces/`:** lógica de negocio, acceso a storage, llamadas a SDKs. Solo delega a `application`.
+- **R2 — Prohibido en `infrastructure/adapters/in/web`:** lógica de negocio, acceso a storage, llamadas a SDKs. Solo delega a `application`.
 - **R3 — Prohibido en `domain/`:** anotaciones Spring, JPA, Lombok con lógica. Solo POJOs + validación pura.
 - **R4 — Secretos nunca en git:** prohibido commitear `.env`, `*.env`, `application-local.yaml`, `*.pem`, `*.key`, `token*.json`. Lectura vía `${VAR}` en `application.yaml`. Cubierto en `.gitignore`.
 - **R5 — Config por perfiles:** `application.yaml` base sin credenciales (hoy solo `spring.application.name`, mantener). `application-local.yaml` dev, `application-prod.yaml` prod con env: `API_KEY_LLM_MISTRAL_DEV` (+ `MODEL_MISTRAL` y `BASE_URL_MODEL_AI` requerido para dirigir la request según proveedor), `OCI_BUCKET`, `OCI_REGION`, `CORS_ALLOWED_ORIGINS`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN` (+ `TELEGRAM_BOT_USERNAME` opcional).
@@ -89,3 +88,5 @@ Regla de adición: lo fuera de esta tabla requiere enmienda + justificación `De
 - `v1.2-redis-buffer`: `id=messageId` nativo Discord (sin uuid por mensaje) + `batchId=uuid` lote abierto en Redis; buffer `LIST+SET+bytes` solo-Java (sin Lua) con flush por `900KB`; fork post-LLM `SSE inmediato (asset.created, persisted:false) + buffer para OCI batch (package.completed)`; LLM por mensaje, OCI en batch.
 - `v1.3-openai-contract`: IA bajo contrato API OpenAI vendor-agnóstico (ej. Mistral vía `base-url`); envs canónicos `API_KEY_LLM_MISTRAL_DEV + MODEL_MISTRAL + BASE_URL_MODEL_AI` (base-url requerido para dirigir la request según proveedor).
 - `v1.4-trazabilidad`: anonimato solo ante el LLM; OCI/buffer guardan `authorId/authorName/channelId` para trazabilidad; logs prod sin `authorId` (permitido a `DEBUG` en local/test).
+- `v1.5-hexagonal-puro`: se elimina la capa fantasma `interfaces/` (propia de Clean Architecture, no hexagonal). Los controllers web son adaptadores de entrada en `infrastructure/adapters/in/web/`; bots en `adapters/in/bot|*`. Flujo `adapters/in/web -> application -> domain`, `adapters/out -.implementa.-> application`. Alinea código real (`src/.../infrastructure/adapters/in/web/`) con docs.
+- `v1.6-single-get`: la API de negocio expone un único `GET /api/v1/discord/messages` (SSE). Análisis/generación/flush/newsletter son internos (evento + jobs); sin `POSTs` ni `GETs packages`. Buffer/OCI solo internos; el `GET` solo emite al frontend.

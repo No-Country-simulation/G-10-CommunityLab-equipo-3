@@ -29,7 +29,7 @@ flowchart LR
 | Comunidades Discord / Telegram | Discord entra vía bot JDA y Telegram vía bot TelegramBots long polling (el backend es ambos bots). Sin polling REST ni endpoints | Entrada |
 | LLM externo (OpenAI) | Análisis (sentimiento, temas, relevancia) y redacción multicanal con salida estructurada | Bidireccional |
 | OCI Object Storage | Persistencia del `PaqueteDeActivos` (`paquete-{batchId}.json`, `< 1MB`) | Salida |
-| Frontend (dashboard externo) | Único consumidor de la API en Fase 1. Lee por GET: paquetes procesados y eventos SSE; seguridad futura en Fase >1 | Salida (lectura) |
+| Frontend (dashboard externo) | Único consumidor de la API en Fase 1. Solo recibe el único `GET /api/v1/discord/messages` (SSE vivo); seguridad futura en Fase >1 | Salida (lectura) |
 | Community Managers | Consumen borradores y publican manualmente | Salida (humana) |
 | Jurado / plataforma ONE | Verifican `/actuator/health` y Swagger | Lectura |
 
@@ -41,11 +41,10 @@ Fuera de alcance Fase 1: publicación automática en redes, webhook Telegram, au
 |---|---|---|
 | Ingesta Discord (bot JDA) | Gateway Discord, eventos `MessageReceivedEvent`, sin endpoint REST | Se ignora `author.isBot`; `type=OTRO`; canal = nombre; >2000 truncado con flag |
 | Ingesta Telegram (bot TelegramBots long polling) | Telegram API, `Update`, sin endpoint REST ni URL pública | Se ignora `from.isBot`; `type=OTRO`; chat = nombre; >2000 truncado con flag |
-| Análisis `POST /api/v1/analyze` | Diferido (requiere enmienda de spec 002) | — |
-| Generación `POST /api/v1/generate` | Diferido (requiere enmienda de spec 003) | — |
-| Paquetes `GET /api/v1/packages`, `GET /api/v1/packages/{batchId}` | HTTPS + REST, JSON | Solo lo persistido en OCI; lo vivo no es recuperable por GET |
-| Orquestación `POST /api/v1/packages:run`, newsletter manual | Diferidos (requieren enmienda de spec 004) | — |
-| Eventos `GET /api/v1/events` | HTTPS + SSE (`text/event-stream`) | Tipos `asset.created` / `package.completed`; reconexión por `Last-Event-ID`; mismo CORS que el resto |
+| Análisis y generación | Internos (evento `#Listen` → LLM → assets). Sin endpoint (decisión single-GET 2026-09-28) | — |
+| Paquetes y flush OCI | Jobs internos (buffer por bytes → flush automático; newsletter por `@Scheduler`). Sin endpoint | Solo lo persistido sale vía SSE |
+| Orquestación manual | Eliminada (sin `:run` ni newsletter manual) | — |
+| Eventos `GET /api/v1/discord/messages` | HTTPS + SSE (`text/event-stream`) | Único endpoint de negocio. Tipos `asset.created` / `package.completed` por el mismo stream; reconexión por `Last-Event-ID` (replay en memoria); mismo CORS que el resto |
 | Storage | OCI SDK, objetos `application/json` | Credenciales por entorno, nunca en repo |
 | Salud | `GET /actuator/health` (solo `health,info` expuestos) | Sin auth, `p95 < 100ms` |
 | Docs API | Swagger UI (`springdoc-openapi`) | Obligatorio por endpoint (P3) |

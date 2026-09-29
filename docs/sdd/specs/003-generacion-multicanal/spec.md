@@ -4,35 +4,39 @@
 
 ## 1. Problema y Objetivo
 
-El análisis sin redacción no sirve a Community Management. Objetivo 003: convertir comentarios con `relevance >= 60` en borradores listos para publicar, adaptados al tono de cada canal, más tips FAQ a partir de `DUDA`s.
+El análisis sin redacción no sirve a Community Management. Objetivo 003: convertir comentarios publicables en borradores listos para publicar, adaptados al tono de cada canal, más preguntas FAQ curadas a partir de `DUDA`s y `QUEJA`s. Alcance estricto: recolectar → procesar → redactar; el modelo NUNCA responde preguntas ni soluciona dudas o quejas, solo las cura y redacta.
 
 ## 2. Requerimientos Funcionales
 
-- **RF-01 — Copy LinkedIn:** para cada `LOGRO|TESTIMONIO` con `relevance>=60`, generar `{copy (80..600 chars), hashtags[2..5], cta}` en tono inspirador/profesional español.
+- **RF-01 — Copy LinkedIn:** para cada `LOGRO|TESTIMONIO` publicable, generar `{copy (80..600 chars), hashtags[2..5], cta}` en tono inspirador/profesional español.
   - *Criterio:* **Dado** un logro "primer empleo Java", **Cuando** se genera, **Entonces** el copy incluye el logro, menciona comunidad, 2-5 hashtags (`#EmpleoTech` etc.) y CTA, sin inventar empresa/salario no presentes.
 - **RF-02 — Post X/Twitter:** variante `<=280 chars` + 1-2 hashtags, tono directo.
   - *Criterio:* **Dado** el mismo logro, **Cuando** se genera X, **Entonces** `length<=280`.
 - **RF-03 — Resumen Newsletter semanal:** a partir de N comentarios, generar `{titulo, resumen (100..400 palabras), destacados[3..5]}`.
   - *Criterio:* **Dado** 10 enriquecidos, **Cuando** se genera newsletter, **Entonces** cubre ≥3 temas distintos sin duplicar copys de LinkedIn.
-- **RF-04 — Tips FAQ:** por cada `DUDA` recurrente (mismo `topics`), generar `{pregunta, respuesta Didáctica (50..250 palabras), fuentes: ids[]}`.
-  - *Criterio:* **Dado** 3 dudas de "NullPointer", **Cuando** se genera FAQ, **Entonces** 1 tip consolidado cita los 3 ids.
+- **RF-04 — Preguntas FAQ:** por cada `DUDA` o `QUEJA`, generar `{titlePost (título de la duda o queja), copy (reformulada + contexto solo-del-mensaje, 20..500 chars), hashtags[0..5], cta: null}`. PROHIBIDO responder, solucionar, aconsejar o diagnosticar; cada duda o queja va a su propio post (sin consolidado batch). Las preguntas y quejas nunca van a X ni LinkedIn.
+  - *Criterio:* **Dado** una duda "error 401 en OCI", **Cuando** se genera FAQ, **Entonces** 1 post con `titlePost` temático y `copy` pregunta reformulada sin solución, `cta: null`.
+  - *Criterio:* **Dado** una duda "error 401 en OCI", **Cuando** se genera FAQ, **Entonces** 1 post con `titlePost` temático y `copy` pregunta reformulada sin solución, `cta: null`.
 - **RF-05 — Prohibido alucinar:** nunca inventar nombres de empresas, salarios, fechas o métricas no presentes en el texto fuente.
   - *Criterio:* **Dado** texto sin empresa, **Cuando** se genera copy, **Entonces** no contiene empresa; test de alucinación con lista negra pasa.
-- **RF-06 — Filtrado por umbral:** `relevance<60` no genera LinkedIn/X, solo puede ir a FAQ si es `DUDA`.
+- **RF-06 — (eliminada 2026-09-28) Filtrado por umbral:** `relevance<60` no genera LinkedIn/X, solo puede ir a FAQ si es `DUDA`.
   - *Criterio:* **Dado** `relevance=20`, **Cuando** se genera, **Entonces** sin salida LinkedIn/X.
+  - *Causa de eliminación:* en la práctica las preguntas reales puntúan alto (≈95) y superarían el corte, dejando la protección de canal en manos de un umbral redundante. La prohibición de preguntas/quejas en X/LinkedIn ya está garantizada por RF-04 (reglas de canal del prompt `SystemPrompt`: DUDA/QUEJA/pregunta → FAQ siempre). El `relevance` queda como estimación informativa sin uso de filtrado (ver spec 002 §4); su rúbrica no se define y su deriva carece de efecto.
 
 ## 3. RNF
 
-- **RNF-01:** salidas siempre JSON validable; reintento 1 vez + fallback `DRAFT_EMPTY` sin `500`.
+- **RNF-01:** salidas siempre JSON validable; reintento 1 vez + fallback `LLM_FALLBACK` sin `500`.
 - **RNF-02:** prompts versionados (`promptVersion: v1`) trazables en la respuesta para auditoría jurado.
-- **RNF-03:** tono por canal documentado en spec (LinkedIn inspirador, X conciso, Newsletter resumen, FAQ didáctico), no libre.
+- **RNF-03:** tono por canal documentado en spec (LinkedIn inspirador, X conciso, Newsletter resumen, FAQ pregunta curada — prohibido responder), no libre.
 
 ## 4. Dominio y Glosario
 
 - **Asset:** `{id, sourceCommentIds[], channel: LINKEDIN|X|NEWSLETTER|FAQ, title?, copy, hashtags?, cta?, promptVersion}`.
+  - *Alineación 2026-09-28 (implementación):* no existe clase dedicada; el Asset se materializa como los campos de post embebidos en `ResponseModel` y `EnrichedComment` (`channelPost/titlePost/copy/hashtags/cta`), con `promptVersion` global (`EnrichedComment.PROMPT_VERSION`), sin `id` ni `sourceCommentIds[]` por asset (trazabilidad por `messageId` del comentario).
 - **AssetPackage (anticipa 004):** `{batchId, generatedAt, assets: Asset[], stats}`.
 - Ejemplo LinkedIn: `{copy:"De la comunidad al primer empleo... 🚀", hashtags:["#ONE","#EmpleoTech"], cta:"Comparte tu historia en #logros"}`.
 
 ## 5. Fuera de Alcance
 
 - Publicación automática en LinkedIn/X (solo borradores), imágenes/canva, calendario editorial, A/B testing, traducción multi-idioma completa (solo es/en base), auth/usuarios.
+- Responder preguntas o solucionar dudas de la comunidad (el modelo nunca responde; solo cura y redacta posts).

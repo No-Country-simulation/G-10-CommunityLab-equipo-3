@@ -16,7 +16,7 @@ riesgo de caída queda cubierto solo por fallback tipado. API consumida únicame
 externo vía GET (paquetes + SSE) en Fase 1 —sin endpoint de ingesta ni POSTs—, con seguridad básica
 por estándar profesional aunque ningún stakeholder la exige (QG-3). Observabilidad = contrato de errores tipados hacia el frontend más `/health` (QG-4):
 todo fallo se retorna clasificado, nunca como `500` opaco (taxonomía en §08). Tiempo real hacia el dashboard por SSE
-(`GET /api/v1/events`): el frontend escucha `asset.created`/`package.completed` con reconexión por
+(`GET /api/v1/discord/messages`): el frontend escucha `asset.created`/`package.completed` con reconexión por
 `Last-Event-ID`. Buffer Redis append-only por tamaño (`900KB`, solo-Java sin Lua, degradado sin tumbar
 ingesta): en local corre en Docker, en producción dentro de la misma VM del backend; el lote
 (`batchId` = uuid del lote abierto) se cierra por bytes y va a OCI como 1 objeto `<1MB`.
