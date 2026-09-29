@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -14,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class RedisBufferAdapter implements BufferPort {
 
     private final RedisTemplate<String, String> redisTemplate;
@@ -72,10 +74,16 @@ public class RedisBufferAdapter implements BufferPort {
             if(result != null && result == 1L){
                 redisTemplate.opsForList().rightPush(jsonKey, json);
                 redisTemplate.opsForValue().increment(counterSize, size);
+                log.debug("buffer appended: messageId={} batchId={} sizeBytes={}",
+                        messageProcessed.messageId(), messageProcessed.batchidLote(), size);
+            } else {
+                log.debug("buffer deduped: messageId={}", messageProcessed.messageId());
             }
         } catch (JacksonException e) {
+            log.warn("buffer serialize failed: messageId={}", messageProcessed.messageId());
             return;
         } catch (RedisConnectionFailureException e){
+            log.warn("buffer redis down: messageId={}", messageProcessed.messageId());
             return;
         }
     }
