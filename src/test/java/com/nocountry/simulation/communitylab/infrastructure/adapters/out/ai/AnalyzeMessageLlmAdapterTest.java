@@ -30,11 +30,11 @@ import com.nocountry.simulation.communitylab.infrastructure.dto.ai.SystemPrompt;
 class AnalyzeMessageLlmAdapterTest {
 
     private static final String VALID = """
-            {"messageProcess": "Hola, alguien sabe desplegar en OCI",
+            {"messageAuthor": "Hola, alguien sabe desplegar en OCI",
              "language": "ES", "sentiment": "NEUTRAL", "messageType": "DUDA",
              "topics": ["oci", "despliegue"], "relevance": 65,
              "channelPost": "FAQ", "titlePost": "Despliegue en OCI: error 401",
-             "copy": "¿Cómo desplegar una API en OCI cuando aparece el error 401?",
+             "outputContentProcessed": "¿Cómo desplegar una API en OCI cuando aparece el error 401?",
              "hashtags": ["#OCI"], "cta": null}""";
 
     private ChatClient.ChatClientRequestSpec spec;
@@ -70,7 +70,7 @@ class AnalyzeMessageLlmAdapterTest {
         ResponseModel response = service.processMessage(new RequestToLLM("hola oci?"));
 
         // Then metadata fields land
-        assertThat(response.messageProcess()).isEqualTo("Hola, alguien sabe desplegar en OCI");
+        assertThat(response.messageAuthor()).isEqualTo("Hola, alguien sabe desplegar en OCI");
         assertThat(response.language()).isEqualTo(Language.ES);
         assertThat(response.sentiment()).isEqualTo(Sentiment.NEUTRAL);
         assertThat(response.messageType()).isEqualTo(MessageType.DUDA);
@@ -79,7 +79,7 @@ class AnalyzeMessageLlmAdapterTest {
         // Then post fields land (the sanitizer must not mangle the object)
         assertThat(response.channelPost()).isEqualTo(Channels.FAQ);
         assertThat(response.titlePost()).isEqualTo("Despliegue en OCI: error 401");
-        assertThat(response.copy()).isEqualTo("¿Cómo desplegar una API en OCI cuando aparece el error 401?");
+        assertThat(response.outputContentProcessed()).isEqualTo("¿Cómo desplegar una API en OCI cuando aparece el error 401?");
         assertThat(response.hashtags()).containsExactly("#OCI");
         assertThat(response.cta()).isNull();
     }

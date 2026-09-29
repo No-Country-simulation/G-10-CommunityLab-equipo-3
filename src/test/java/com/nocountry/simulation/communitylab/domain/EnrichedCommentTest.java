@@ -73,7 +73,7 @@ class EnrichedCommentTest {
 
         // Then post, metadata and trace preserved
         assertThat(enriched.channelPost()).isEqualTo(Channels.LINKEDIN);
-        assertThat(enriched.copy()).hasSize(100);
+        assertThat(enriched.outputContentProcessed()).hasSize(100);
         assertThat(enriched.hashtags()).containsExactly("#ONE", "#EmpleoTech");
         assertThat(enriched.cta()).isEqualTo("Comparte tu historia");
         assertThat(enriched.sentiment()).isEqualTo(Sentiment.POSITIVO);
@@ -82,7 +82,7 @@ class EnrichedCommentTest {
         assertThat(enriched.relevance()).isEqualTo(75);
         assertThat(enriched.flag()).isNull();
         assertThat(enriched.messageId()).isEqualTo("msg-1");
-        assertThat(enriched.batchidLote()).isEqualTo("batch-1");
+        assertThat(enriched.messageBatchId()).isEqualTo("batch-1");
         assertThat(enriched.authorId()).isEqualTo("author-1");
         assertThat(enriched.promptVersion()).isEqualTo(EnrichedComment.PROMPT_VERSION);
         assertThat(enriched.sentTime()).isEqualTo(SENT);
@@ -99,7 +99,7 @@ class EnrichedCommentTest {
 
         // Then preserved
         assertThat(enriched.channelPost()).isEqualTo(Channels.X);
-        assertThat(enriched.copy()).hasSize(280);
+        assertThat(enriched.outputContentProcessed()).hasSize(280);
         assertThat(enriched.hashtags()).containsExactly("#ONE");
     }
 
