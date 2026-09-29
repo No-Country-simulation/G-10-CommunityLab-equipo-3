@@ -1,0 +1,10 @@
+<app-landing-layout [i18n]="i18n" [theme]="theme" [langs]="langs" [sections]="sections" [active]="active()" [open]="menuOpen()" [scrolled]="scrolled()" (navigate)="scrollTo($event.id, $event.event)" (toggleMenu)="toggleMenu()" (setLanguage)="setLang($event)">
+<main class="overflow-x-hidden">
+  <app-landing-hero (navigate)="scrollTo($event.id, $event.event)" />
+  <app-landing-features [features]="features" />
+  <app-landing-how-it-works [steps]="steps" />
+  <app-landing-example [outputs]="outputs" />
+  <app-landing-platform [stats]="stats" [features]="features" />
+  <app-landing-cta-banner />
+</main>
+</app-landing-layout>

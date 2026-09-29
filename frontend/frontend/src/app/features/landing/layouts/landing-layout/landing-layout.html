@@ -1,0 +1,3 @@
+<app-landing-navbar [i18n]="i18n()" [theme]="theme()" [langs]="langs()" [sections]="sections()" [active]="active()" [open]="open()" [scrolled]="scrolled()" (navigate)="navigate.emit($event)" (toggleMenu)="toggleMenu.emit()" (setLanguage)="setLanguage.emit($event)" />
+<ng-content />
+<app-landing-footer [sections]="sections()" (navigate)="navigate.emit($event)" />

@@ -9,6 +9,11 @@ import Aura from '@primeuix/themes/aura';
 
 import { routes } from './app.routes';
 import { provideCommunityLabApi } from './core/api/provide-api';
+import { I18N_DICTIONARIES } from './core/i18n/i18n.tokens';
+import { EN, ES, PT } from './core/i18n/messages';
+import { LANDING_EN } from './features/landing/i18n/landing.en';
+import { LANDING_ES } from './features/landing/i18n/landing.es';
+import { LANDING_PT } from './features/landing/i18n/landing.pt';
 
 const CommunityLabPreset = definePreset(Aura, {
   semantic: {
@@ -75,6 +80,14 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAnimationsAsync(),
     provideHttpClient(withFetch()),
+    {
+      provide: I18N_DICTIONARIES,
+      useValue: {
+        es: { ...ES, ...LANDING_ES },
+        en: { ...EN, ...LANDING_EN },
+        pt: { ...PT, ...LANDING_PT },
+      },
+    },
     MessageService,
     // Set useMocks to false once the Spring Boot API is running
     provideCommunityLabApi({ baseUrl: 'http://localhost:8080/api/v1', useMocks: true }),
