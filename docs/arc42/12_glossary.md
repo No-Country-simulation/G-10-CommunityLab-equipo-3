@@ -18,7 +18,7 @@
 | Canal (Channel) | Destino del activo. Valores Fase 1: `LINKEDIN` \| `X` \| `NEWSLETTER` \| `FAQ` |
 | PaqueteDeActivos | `{batchId, generatedAt, source, assets[], stats, promptVersion, packageUrl?}` persistido como `paquete-{batchId}.json` en OCI (spec 004) |
 | Salida estructurada (Structured Output) | JSON con schema fijo exigido al LLM; si falla tras 1 reintento se aplica fallback sin `500` |
-| Puerto / Adaptador | Contrato en `application/` e implementación en `infrastructure/` (p. ej. `AnalyzePort`, `OciObjectStorageAdapter`) |
+| Puerto / Adaptador | Contrato en `application/` e implementación en `infrastructure/` (p. ej. `RequestToLLMProcess`, `OciObjectStorageAdapter`) |
 | OCI Object Storage | Almacenamiento de objetos de Oracle Cloud (tier Always Free). Único storage persistente de Fase 1 |
 | Spring AI | Abstracción (`ChatClient`) para invocar el LLM (OpenAI, modelo configurable por entorno) |
 | Actuator | Módulo Spring Boot de observabilidad mínima; en Fase 1 solo `health,info` públicos |

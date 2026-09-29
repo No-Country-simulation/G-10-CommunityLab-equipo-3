@@ -1,0 +1,79 @@
+package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.discordMessage;
+
+import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.infrastructure.adapters.out.event.SseEventPublisherAdapter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+@Tag(name = "Events", description = "Single public read endpoint: live SSE stream of processed posts.")
+@RestController
+@RequiredArgsConstructor
+@Slf4j
+public class GetMessagesProcessedDiscord {
+
+    private final SseEventPublisherAdapter publisher;
+
+    // Why the payload schema points at EnrichedComment: SseEmitter itself carries
+    // no type information for springdoc, so the documented contract is the event
+    // data (post + metadata). Domain stays free of swagger annotations (R3).
+    @Operation(
+            summary = "Subscribe to processed posts",
+            description = """
+                    Opens a long-lived SSE stream emitting one `asset.created` event per \
+                    processed Discord message (post + analysis metadata). \
+                    Reconnect with the last received event id to replay missed events. \
+                    Swagger \"Try it out\" does not render streams; consume from the frontend with:
+                    `const es = new EventSource('/api/v1/discord/messages'); \
+                    es.addEventListener('asset.created', e => render(JSON.parse(e.data)));`""")
+    @ApiResponse(
+            responseCode = "200",
+            description = "Stream opened; events flow as `asset.created` until timeout (~30min), then reconnect.",
+            content = @Content(
+                    mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
+                    schema = @Schema(implementation = EnrichedComment.class),
+                    examples = @ExampleObject(
+                            name = "asset.created",
+                            summary = "Processed LinkedIn post with metadata",
+                            value = """
+                                    {
+                                      "batchidLote": "b3e1a2c4-0000-4000-8000-000000000001",
+                                      "messageId": "msg-1",
+                                      "channelId": "listen-123",
+                                      "authorId": "author-1",
+                                      "authorName": "author-name",
+                                      "contentProcessed": "Ayer conseguí mi primer empleo como dev Java, gracias por todo el apoyo!",
+                                      "sentiment": "POSITIVO",
+                                      "language": "ES",
+                                      "messageType": "LOGRO",
+                                      "topics": ["empleo", "java", "logro"],
+                                      "relevance": 85,
+                                      "flag": null,
+                                      "promptVersion": "v1",
+                                      "sentTime": "2026-09-28T10:00:00Z",
+                                      "source": "DISCORD",
+                                      "channelPost": "LINKEDIN",
+                                      "titlePost": null,
+                                      "copy": "De la comunidad al primer empleo como dev Java. Gracias por el apoyo en el camino!",
+                                      "hashtags": ["#ONE", "#EmpleoTech", "#Java"],
+                                      "cta": "Comparte tu historia en #logros"
+                                    }""")))
+    @GetMapping(value = "/api/v1/discord/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter getMessagesProcessedDiscord(
+            @Parameter(description = "Last received event id for replay; omit on first connect.", example = "msg-1")
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEvent) {
+        log.debug("sse subscribe: lastEventId={}", lastEvent);
+        return publisher.subscribe(lastEvent);
+    }
+}
