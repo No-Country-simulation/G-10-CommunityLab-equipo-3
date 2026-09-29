@@ -13,12 +13,12 @@ import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetExcept
 // Structure for buffering in Redis
 public record EnrichedComment(
         // Now don't utilize batchIdLote but for storage in Redis it's necessary
-        String batchidLote,
+        String messageBatchId,
         String messageId,
         String channelId,
         String authorId,
         String authorName,
-        String contentProcessed,
+        String messageAuthor,
         Sentiment sentiment,
         Language language,
         MessageType messageType,
@@ -30,7 +30,7 @@ public record EnrichedComment(
         Source source,
         Channels channelPost,
         String titlePost,
-        String copy,
+        String outputContentProcessed,
         List<String> hashtags,
         String cta) {
 
@@ -64,8 +64,8 @@ public record EnrichedComment(
             if (channelPost == null) {
                 throw new InvalidAssetException("channelPost is required");
             }
-            if (copy == null || copy.isBlank()) {
-                throw new InvalidAssetException("copy is required");
+            if (outputContentProcessed == null || outputContentProcessed.isBlank()) {
+                throw new InvalidAssetException("outputContentProcessed is required");
             }
         }
 
@@ -73,18 +73,18 @@ public record EnrichedComment(
         relevance = Math.min(100, Math.max(0, relevance));
         hashtags = hashtags == null ? List.of() : List.copyOf(hashtags);
         promptVersion = promptVersion == null ? PROMPT_VERSION : promptVersion;
-        copy = copy == null ? null : copy.trim();
+        outputContentProcessed = outputContentProcessed == null ? null : outputContentProcessed.trim();
 
         if (!fallback) {
-            validatePost(channelPost, titlePost, copy, hashtags, cta);
+            validatePost(channelPost, titlePost, outputContentProcessed, hashtags, cta);
         }
     }
 
-    private static void validatePost(Channels channelPost, String titlePost, String copy, List<String> hashtags, String cta) {
+    private static void validatePost(Channels channelPost, String titlePost, String outputContentProcessed, List<String> hashtags, String cta) {
         switch (channelPost) {
             case LINKEDIN -> {
-                if (copy.length() < LINKEDIN_MIN_CHARS || copy.length() > LINKEDIN_MAX_CHARS) {
-                    throw new InvalidAssetException("linkedin copy must be 80..600 chars");
+                if (outputContentProcessed.length() < LINKEDIN_MIN_CHARS || outputContentProcessed.length() > LINKEDIN_MAX_CHARS) {
+                    throw new InvalidAssetException("linkedin outputContentProcessed must be 80..600 chars");
                 }
                 if (hashtags.size() < LINKEDIN_MIN_TAGS || hashtags.size() > LINKEDIN_MAX_TAGS) {
                     throw new InvalidAssetException("linkedin hashtags must be 2..5");
@@ -94,25 +94,25 @@ public record EnrichedComment(
                 }
             }
             case X -> {
-                if (copy.length() > X_MAX_CHARS) {
-                    throw new InvalidAssetException("x copy must be <=280 chars");
+                if (outputContentProcessed.length() > X_MAX_CHARS) {
+                    throw new InvalidAssetException("x outputContentProcessed must be <=280 chars");
                 }
                 if (hashtags.size() < X_MIN_TAGS || hashtags.size() > X_MAX_TAGS) {
                     throw new InvalidAssetException("x hashtags must be 1..2");
                 }
             }
             case NEWSLETTER -> {
-                int words = wordCount(copy);
+                int words = wordCount(outputContentProcessed);
                 if (words < NEWSLETTER_MIN_WORDS || words > NEWSLETTER_MAX_WORDS) {
-                    throw new InvalidAssetException("newsletter copy must be 100..400 words");
+                    throw new InvalidAssetException("newsletter outputContentProcessed must be 100..400 words");
                 }
                 if (hashtags.size() > MAX_TAGS_OTHER) {
                     throw new InvalidAssetException("newsletter hashtags must be <=5");
                 }
             }
             case FAQ -> {
-                if (copy.length() < FAQ_MIN_CHARS || copy.length() > FAQ_MAX_CHARS) {
-                    throw new InvalidAssetException("faq copy must be 20..500 chars");
+                if (outputContentProcessed.length() < FAQ_MIN_CHARS || outputContentProcessed.length() > FAQ_MAX_CHARS) {
+                    throw new InvalidAssetException("faq outputContentProcessed must be 20..500 chars");
                 }
                 if (titlePost == null || titlePost.isBlank()) {
                     throw new InvalidAssetException("faq titlePost is required");

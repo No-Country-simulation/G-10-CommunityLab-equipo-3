@@ -27,10 +27,10 @@ El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer
 
 ## 4. Dominio y Glosario
 
-- **EnrichedComment = Comment + {sentiment, topics[], relevance, language, flag?}**.
+- **EnrichedComment = Comment + {messageBatchId, messageAuthor, sentiment, topics[], relevance, language, flag?, channelPost/titlePost/outputContentProcessed/hashtags/cta}** (interno+Redis; el SSE expone `ResponseClient(messageId/messageBatchId/channelPost/...)`, ver 003 §4).
 - **Relevance:** 0-100, estimación informativa del LLM ("importancia", sin rúbrica definida), renormalizada por `RelevancePolicy` (pisos/topes por tipo). Sin uso de filtrado: el umbral de publicación `>=60` sugerido aquí quedó eliminado con RF-06 de 003 (enmienda 2026-09-28).
 - **Structured Output:** JSON con schema fijo exigido al LLM.
 
 ## 5. Fuera de Alcance
 
-- Redacción de copys (003), guardado OCI (004), fine-tuning, embeddings/vector DB, moderación automática/baneo, auth/usuarios.
+- Redacción de outputContentProcessed (003), guardado OCI (004), fine-tuning, embeddings/vector DB, moderación automática/baneo, auth/usuarios.

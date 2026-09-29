@@ -8,7 +8,7 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 import java.util.List;
 
 public record ResponseModel(
-        String messageProcess,
+        String messageAuthor,
         Language language,
         Sentiment sentiment,
         MessageType messageType,
@@ -16,7 +16,7 @@ public record ResponseModel(
         int relevance,
         Channels channelPost,
         String titlePost,
-        String copy,
+        String outputContentProcessed,
         List<String> hashtags,
         String cta
 ) {

@@ -19,10 +19,10 @@ import org.junit.jupiter.api.Test;
 class LlmOutputSanitizerTest {
 
     private static final String VALID_JSON = """
-            {"messageProcess":"Hola comunidad","language":"ES","sentiment":"NEUTRAL",\
+            {"messageAuthor":"Hola comunidad","language":"ES","sentiment":"NEUTRAL",\
             "messageType":"DUDA","topics":["oci"],"relevance":65,\
             "channelPost":"FAQ","titlePost":"Despliegue en OCI",\
-            "copy":"¿Cómo desplegar una API en OCI?","hashtags":[],"cta":null}""";
+            "outputContentProcessed":"¿Cómo desplegar una API en OCI?","hashtags":[],"cta":null}""";
 
     private final LlmOutputSanitizer sanitizer = new LlmOutputSanitizer();
 
@@ -37,7 +37,7 @@ class LlmOutputSanitizerTest {
 
         // Then payload built
         assertThat(model.channelPost()).isEqualTo(Channels.FAQ);
-        assertThat(model.copy()).isEqualTo("¿Cómo desplegar una API en OCI?");
+        assertThat(model.outputContentProcessed()).isEqualTo("¿Cómo desplegar una API en OCI?");
         assertThat(model.titlePost()).isEqualTo("Despliegue en OCI");
     }
 
@@ -67,7 +67,7 @@ class LlmOutputSanitizerTest {
 
         // Then exact object converted
         assertThat(model.titlePost()).isEqualTo("Despliegue en OCI");
-        assertThat(model.copy()).isEqualTo("¿Cómo desplegar una API en OCI?");
+        assertThat(model.outputContentProcessed()).isEqualTo("¿Cómo desplegar una API en OCI?");
     }
 
     @Test
@@ -83,7 +83,7 @@ class LlmOutputSanitizerTest {
         var model = sanitizer.convert(raw);
 
         // Then inner braces preserved in the value
-        assertThat(model.copy()).isEqualTo("Usa {id} así en tu llamada y listo ya");
+        assertThat(model.outputContentProcessed()).isEqualTo("Usa {id} así en tu llamada y listo ya");
     }
 
     @Test
@@ -99,7 +99,7 @@ class LlmOutputSanitizerTest {
         var model = sanitizer.convert(raw);
 
         // Then value intact
-        assertThat(model.copy()).startsWith("Dijo 'hola'");
+        assertThat(model.outputContentProcessed()).startsWith("Dijo 'hola'");
     }
 
     @Test

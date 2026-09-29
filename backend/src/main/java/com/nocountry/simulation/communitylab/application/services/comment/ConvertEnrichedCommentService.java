@@ -12,7 +12,7 @@ public class ConvertEnrichedCommentService implements EnrichedCommentFromAi {
 
     @Override
     public EnrichedComment constructMessage(Comment comment, ResponseModel responseFromModel, String batchId) {
-        boolean failed = responseFromModel.messageProcess() == null;
+        boolean failed = responseFromModel.messageAuthor() == null;
         int relevance = failed ? 0 : RelevancePolicy.score(
                 responseFromModel.messageType(),
                 responseFromModel.sentiment(),
@@ -25,7 +25,7 @@ public class ConvertEnrichedCommentService implements EnrichedCommentFromAi {
                 comment.channelId(),
                 comment.authorId(),
                 comment.authorName(),
-                responseFromModel.messageProcess(),
+                responseFromModel.messageAuthor(),
                 responseFromModel.sentiment(),
                 responseFromModel.language(),
                 responseFromModel.messageType(),
@@ -37,7 +37,7 @@ public class ConvertEnrichedCommentService implements EnrichedCommentFromAi {
                 comment.source(),
                 responseFromModel.channelPost(),
                 responseFromModel.titlePost(),
-                responseFromModel.copy(),
+                responseFromModel.outputContentProcessed(),
                 responseFromModel.hashtags(),
                 responseFromModel.cta());
     }

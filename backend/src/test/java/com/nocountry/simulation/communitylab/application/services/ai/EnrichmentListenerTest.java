@@ -17,9 +17,11 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
 import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
+import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommentFromAi;
@@ -98,10 +100,12 @@ class EnrichmentListenerTest {
         // When processed
         listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
 
-        // Then SSE first (fork A) and buffer second (fork B), same post
+        // Then SSE first (fork A, ResponseClient mapping) and buffer second (fork B)
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
         InOrder order = inOrder(publisher, buffer);
-        order.verify(publisher).publish(post);
+        order.verify(publisher).publish(clientCaptor.capture());
         order.verify(buffer).appendToBatch(post);
+        assertThat(clientCaptor.getValue()).isEqualTo(expectedClient(post));
     }
 
     @Test
@@ -117,13 +121,15 @@ class EnrichmentListenerTest {
         assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
 
         // Then the converter received exactly the neutral fallback response
-        var responseCaptor = org.mockito.ArgumentCaptor.forClass(ResponseModel.class);
+        var responseCaptor = ArgumentCaptor.forClass(ResponseModel.class);
         verify(converter).constructMessage(any(Comment.class), responseCaptor.capture(), eq(BATCH_ID));
         assertThat(responseCaptor.getValue()).isEqualTo(ResponseModel.fallback());
 
         // Then the flagged trace still goes out (auditable) and into the buffer
-        verify(publisher).publish(fallbackPost);
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
+        verify(publisher).publish(clientCaptor.capture());
         verify(buffer).appendToBatch(fallbackPost);
+        assertThat(clientCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
         assertThat(fallbackPost.flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
     }
 
@@ -173,8 +179,10 @@ class EnrichmentListenerTest {
         listener.on(event("hola comunidad"));
 
         // Then the flag-first check lets the auditable trace through
-        verify(publisher).publish(fallbackPost);
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
+        verify(publisher).publish(clientCaptor.capture());
         verify(buffer).appendToBatch(fallbackPost);
+        assertThat(clientCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
     }
 
     private IngestAcceptedEvent event(String content) {
@@ -211,5 +219,17 @@ class EnrichmentListenerTest {
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
                 Channels.FAQ, null, null, List.of(), null);
+    }
+
+    // Mirror of the listener's EnrichedComment -> ResponseClient mapping; a record
+    // so equality asserts the whole published payload in one line.
+    private ResponseClient expectedClient(EnrichedComment source) {
+        return new ResponseClient(
+                source.authorName(), source.messageAuthor(), source.messageId(),
+                source.messageBatchId(), source.sentiment(), source.language(),
+                source.messageType(), source.topics(), source.relevance(),
+                source.flag(), source.sentTime(), source.source(),
+                source.channelPost(), source.titlePost(), source.outputContentProcessed(),
+                source.hashtags(), source.cta());
     }
 }

@@ -14,7 +14,7 @@
   - *Implementación:* `domain/enums/ai/Sentiment.java`, `domain/enums/ai/Language.java`, `domain/entity/EnrichedComment.java`, `domain/policy/RelevancePolicy.java`
   - *Derivado de:* `spec.md RF-01,RF-03 + plan.md §1`
   - *Verificación:* `./mvnw test -Dtest=RelevancePolicyTest`
-  - *Cierre 2026-09-27:* `RelevancePolicyTest` 7/7 + `Language{es,en,pt,other}` literal spec + `EnrichedComment` record con `batchidLote, messageType, topics, relevance, flag, promptVersion`.
+  - *Cierre 2026-09-27:* `RelevancePolicyTest` 7/7 + `Language{es,en,pt,other}` literal spec + `EnrichedComment` record con `messageBatchId, messageType, topics, relevance, flag, promptVersion`.
 - [x] **TASK-002-02**: Crear `application` `ports/in/AnalyzeUseCase, ports/out/AnalyzePort, services/AnalyzeService` tolerante a fallos.
   - *Implementación:* `application/port/out/RequestToLLMProcess.java`, `application/services/ai/EnrichmentListener.java`, `application/services/comment/ConvertEnrichedCommentService.java`
   - *Derivado de:* `spec.md RF-04 + plan.md §1`

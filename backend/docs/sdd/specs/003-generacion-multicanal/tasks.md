@@ -10,7 +10,8 @@
   - *Derivado de:* `spec.md RF-01,RF-02,RF-05 + plan.md §1`
   - *Verificación:* `./mvnw test -Dtest=HallucinationGuardTest,AssetTest`
   - *Cierre 2026-09-28 (alineación de nombres):* `Channel` → `Channels` (`domain/enums/Channels.java`); `Asset` sin clase dedicada → campos de post en `ResponseModel`/`EnrichedComment` (`channelPost/titlePost/copy/hashtags/cta`, ver spec §4); `HallucinationGuard` implementado con ese nombre + `HallucinationGuardTest`. Validación de longitudes por canal declarada en `SystemPrompt` (REGLAS DE REDACCIÓN POR CANAL) y post-hoc mínima en `EnrichmentListener` (copy/hashtags no vacíos); `AssetTest` no aplica (no hay clase).
-- [x] **TASK-003-02**: Crear `application` `ChannelPolicy` puro (LinkedIn `80..600+2..5 tags+cta`, X `<=280+1..2 tags`, Newsletter `100..400 palabras+3..5 destacados`, FAQ `copy 20..500 chars + titlePost obligatorio + cta null`, preguntas y quejas nunca X/LinkedIn, 1 duda o queja = 1 post sin consolidado).
+  - *Cierre 2026-09-29 (renombre + ResponseClient):* `copy` → `outputContentProcessed`, `contentProcessed/messageProcess` → `messageAuthor`, `batchidLote` → `messageBatchId`, canal único `channelPost`; SSE expone `ResponseClient(messageId/messageBatchId/channelPost/...)`, Redis guarda `EnrichedComment`.
+- [x] **TASK-003-02**: Crear `application` `ChannelPolicy` puro (LinkedIn `80..600+2..5 tags+cta`, X `<=280+1..2 tags`, Newsletter `100..400 palabras+3..5 destacados`, FAQ `outputContentProcessed 20..500 chars + titlePost obligatorio + cta null`, preguntas y quejas nunca X/LinkedIn, 1 duda o queja = 1 post sin consolidado).
   - *Implementación:* `infrastructure/dto/ai/SystemPrompt.java` (reglas de canal) + `application/services/ai/EnrichmentListener.java` (validación post-hoc)
   - *Derivado de:* `spec.md RF-01..RF-04 + plan.md §1 + enmienda FAQ-pregunta 2026-09-28`
   - *Verificación:* `./mvnw test -Dtest=ChannelPolicyTest`

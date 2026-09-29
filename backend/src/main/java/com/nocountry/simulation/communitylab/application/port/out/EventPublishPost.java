@@ -1,7 +1,7 @@
 package com.nocountry.simulation.communitylab.application.port.out;
 
-import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 
 public interface EventPublishPost {
-    EnrichedComment publish(EnrichedComment post);
+    ResponseClient publish(ResponseClient post);
 }
