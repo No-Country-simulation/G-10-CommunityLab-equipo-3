@@ -1,6 +1,7 @@
 package com.nocountry.simulation.communitylab.application.services.ai;
 
 import com.nocountry.simulation.communitylab.application.dtos.RequestToLLM;
+import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommentFromAi;
@@ -68,28 +69,49 @@ public class EnrichmentListener {
             // Every record goes through the Guard (single choke point);
             // LLM_FALLBACK traces are approved inside it as auditable records.
             if (!HallucinationGuard.passes(
-                    comment.content(), messageProcessed.copy(), messageProcessed.flag())) {
+                    comment.content(), messageProcessed.outputContentProcessed(), messageProcessed.flag())) {
                 // Why ids only (Q3): no authorId/authorName/content/tokens in prod logs.
                 log.warn("Guard blocked content: messageId={} batchId={} source={}",
                         comment.messageId(), event.message().batchId(), comment.source());
                 return;
             }
 
-            // Why flag-first equals + fallback skip: flag/contentProcessed can be null
+            // Why flag-first equals + fallback skip: flag/messageAuthor can be null
             // (NPE here silently dropped every valid post and every fallback trace).
             boolean fallback = EnrichedComment.LLM_FALLBACK.equals(messageProcessed.flag());
-            if (!fallback && (messageProcessed.contentProcessed() == null
-                    || messageProcessed.contentProcessed().isBlank()
+            if (!fallback && (messageProcessed.messageAuthor() == null
+                    || messageProcessed.messageAuthor().isBlank()
                     || messageProcessed.hashtags().isEmpty()
-                    || messageProcessed.copy() == null
-                    || messageProcessed.copy().isBlank())) {
+                    || messageProcessed.outputContentProcessed() == null
+                    || messageProcessed.outputContentProcessed().isBlank())) {
                 log.warn("Post invalid: messageId={} batchId={} source={}",
                         comment.messageId(), event.message().batchId(), comment.source());
                 return;
             }
 
+            // Create response to client
+            ResponseClient responseToClient = new ResponseClient(
+                    messageProcessed.authorName(),
+                    messageProcessed.messageAuthor(),
+                    messageProcessed.messageId(),
+                    messageProcessed.messageBatchId(),
+                    messageProcessed.sentiment(),
+                    messageProcessed.language(),
+                    messageProcessed.messageType(),
+                    messageProcessed.topics(),
+                    messageProcessed.relevance(),
+                    messageProcessed.flag(),
+                    messageProcessed.sentTime(),
+                    messageProcessed.source(),
+                    messageProcessed.channelPost(),
+                    messageProcessed.titlePost(),
+                    messageProcessed.outputContentProcessed(),
+                    messageProcessed.hashtags(),
+                    messageProcessed.cta()
+            );
+
             // Sent message to client
-            eventPublishPost.publish(messageProcessed);
+            eventPublishPost.publish(responseToClient);
 
             // Storage message in Redis
             buffer.appendToBatch(messageProcessed);

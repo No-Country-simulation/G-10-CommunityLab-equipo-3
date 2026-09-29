@@ -47,9 +47,11 @@ class SwaggerDocsTest {
     void documentsPostSchema() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.copy")
+                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.outputContentProcessed")
                         .exists())
                 .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.channelPost")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.messageBatchId")
                         .exists())
                 .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.hashtags")
                         .exists())

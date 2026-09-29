@@ -11,10 +11,13 @@
 | Tipo de comentario | `TESTIMONIO` \| `LOGRO` \| `DUDA` \| `OTRO`. Entrada 001 siempre `OTRO`; 002 lo clasifica |
 | JDA | Java Discord API: cliente Gateway del bot Discord en `infrastructure/`. Token por env, intents `MESSAGE_CONTENT`/`GUILD_MESSAGES`; se ignoran `author.isBot` |
 | TelegramBots | Librería del bot Telegram en `infrastructure/` (long polling temporal MVP; webhook en Fase >1). Token/username por env; se ignoran `from.isBot`; `Update` → `Comentario` |
-| ComentarioEnriquecido | `Comentario` + `{sentiment, topics[], relevance, language, flag?}` (spec 002) |
-| Relevancia | Puntuación 0–100 que prioriza qué se convierte en activo. Umbral de publicación: ≥ 60 |
+| ComentarioEnriquecido | `Comentario` + `{messageBatchId, messageAuthor, sentiment, topics[], relevance, language, flag?, channelPost/titlePost/outputContentProcessed/hashtags/cta}` interno+Redis (spec 002/003); el SSE expone `ResponseClient` |
+| Relevancia | Puntuación 0–100 informativa del LLM, renormalizada por `RelevancePolicy`. Sin uso de filtrado (enmienda RF-06/003) |
 | Sentimiento | `POSITIVO` \| `NEUTRAL` \| `NEGATIVO` (spec 002) |
-| Activo | Borrador listo para publicar: `{id, sourceCommentIds[], channel, copy, hashtags?, cta?, promptVersion}` (spec 003) |
+| Activo | Borrador listo para publicar: `{id, sourceCommentIds[], channel, outputContentProcessed, hashtags?, cta?, promptVersion}` (spec 003) |
+| messageAuthor | Texto del autor con curaduría mínima (conserva palabras, no publicable). Antes `contentProcessed/messageProcess` |
+| outputContentProcessed | Redacción nueva lista para publicar, adaptada a canal. Antes `copy` |
+| ResponseClient | DTO SSE (`messageId/messageBatchId/channelPost/messageAuthor/outputContentProcessed/...`). Redis guarda `EnrichedComment` |
 | Canal (Channel) | Destino del activo. Valores Fase 1: `LINKEDIN` \| `X` \| `NEWSLETTER` \| `FAQ` |
 | PaqueteDeActivos | `{batchId, generatedAt, source, assets[], stats, promptVersion, packageUrl?}` persistido como `paquete-{batchId}.json` en OCI (spec 004) |
 | Salida estructurada (Structured Output) | JSON con schema fijo exigido al LLM; si falla tras 1 reintento se aplica fallback sin `500` |

@@ -41,8 +41,8 @@ Seguridad: `SecurityConfig` (`health,info` públicos, resto `denyAll`, CSRF off)
 `AnalyzeMessageLlmAdapter` + `SystemPrompt` + `LlmOutputSanitizer`, `ConvertEnrichedCommentService`,
 `RelevancePolicy`, `FailEnvModelConfiguration` (degradado `LLM_NOT_CONFIGURED`).
 003 (implementado, fusionada en 002 single-LLM-call): post por canal en `ResponseModel`/`EnrichedComment`
-(`channelPost/titlePost/copy/hashtags/cta`), reglas de canal en `SystemPrompt` (LINKEDIN/X/FAQ),
-`HallucinationGuard`.
+(`channelPost/titlePost/outputContentProcessed/hashtags/cta`), reglas de canal en `SystemPrompt` (LINKEDIN/X/FAQ),
+`HallucinationGuard`. SSE expone `ResponseClient(messageId/messageBatchId/channelPost/...)`, Redis guarda `EnrichedComment`.
 004 (plan): `PackageRunUseCase`, `BufferService` (flush `≥900KB`), `OciObjectStorageAdapter`,
-`EventsController` SSE, `GlobalExceptionHandler`.
+`GetMessagesProcessedDiscord` SSE + `SseEventPublisherAdapter`, `GlobalExceptionHandler`.
 Nivel 3 solo si un componente lo justifica.
