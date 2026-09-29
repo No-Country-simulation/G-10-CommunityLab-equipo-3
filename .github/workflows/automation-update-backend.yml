@@ -72,9 +72,16 @@ jobs:
 
           # NOTA: NO usar --squash. Así se conservan intactos todos los
           # commits individuales (autoría, fechas y líneas) de cada dev.
+          SYNC_MSG="sync: Update backend from branch backend"
           if [ -d "backend" ]; then
-            git subtree pull --prefix=backend origin backend \
-              -m "sync: Update backend from branch backend"
+            if ! git subtree pull --prefix=backend origin backend \
+              -m "$SYNC_MSG"; then
+              echo "Pull normal falló (historias no relacionadas?). Reintentando con merge que permite historias no relacionadas..."
+              git merge --abort 2>/dev/null || true
+              git fetch origin backend
+              git merge --allow-unrelated-histories --no-ff -Xsubtree=backend \
+                -m "$SYNC_MSG" FETCH_HEAD
+            fi
           else
             git subtree add --prefix=backend origin backend \
               -m "sync: Add backend subtree from branch backend"
