@@ -34,6 +34,11 @@ public class ConvertEnrichedCommentService implements EnrichedCommentFromAi {
                 failed ? EnrichedComment.LLM_FALLBACK : null,
                 EnrichedComment.PROMPT_VERSION,
                 comment.sentTime(),
-                comment.source());
+                comment.source(),
+                responseFromModel.channelPost(),
+                responseFromModel.titlePost(),
+                responseFromModel.copy(),
+                responseFromModel.hashtags(),
+                responseFromModel.cta());
     }
 }

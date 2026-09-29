@@ -19,9 +19,9 @@
 | Operabilidad | Jurado/ONE | `GET /actuator/health` sin auth | health | `UP` | `p95 < 100ms` |
 | Mantenibilidad | CI | suite `domain+application` | tests | verde | cobertura ≥ 80% (JaCoCo pendiente) |
 | Fiabilidad | LLM caído | 1 comentario de cada 10 falla (15s + 1 reintento) | pipeline | resto procesado + fallback | sin `500`; `fallbackCount` reportado |
-| Fiabilidad | Generación vacía | 003 sin borrador | pipeline | aborta sin SSE ni buffer | `DRAFT_EMPTY`, solo `LOG + ⚠️` |
+| Fiabilidad | Generación fallida | 002/003 sin post válido | pipeline | aborta sin SSE ni buffer | `LLM_FALLBACK`, solo `LOG + ⚠️` |
 | Eficiencia | Buffer Redis | lote alcanza `bytes` | `buffer:current:*` | flush a OCI | `≥ 921600B` (900KB) |
 | Fiabilidad | Paquete OCI | lote cerrado no vacío | `paquete-{batchId}.json` | persistido | `< 1MB`, `application/json` |
 | Fiabilidad | Orquestación | mensaje procesado con fallbacks parciales | `POST` diferido / job | `207` con detalle | `deduped:true` por `batchId` |
-| Fiabilidad | Frontend cae | reconexión SSE | `GET /api/v1/events` | reanuda sin pérdida | `Last-Event-ID` |
+| Fiabilidad | Frontend cae | reconexión SSE | `GET /api/v1/discord/messages` | reanuda sin pérdida | `Last-Event-ID` |
 | Seguridad | Origin no permitido | request cross-origin | API | bloqueado por CORS | sin `Access-Control-Allow-Origin` |

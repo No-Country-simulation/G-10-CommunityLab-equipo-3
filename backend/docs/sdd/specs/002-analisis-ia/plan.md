@@ -7,14 +7,14 @@ Proveedor: **contrato API OpenAI vía Spring AI** (`spring-ai-starter-model-open
 
 ```mermaid
 flowchart LR
-  UC[application: AnalyzeUseCase] --> AP[application ports/out: AnalyzePort]
-  AP -.implementa.-> OAI[infrastructure: SpringAiOpenAiAdapter]
+  L[application: EnrichmentListener] --> AP[application ports/out: RequestToLLMProcess]
+  AP -.implementa.-> OAI[infrastructure: AnalyzeMessageLlmAdapter]
   UC --> POL[application: RelevancePolicy negocio puro]
 ```
 
 * `domain`: `EnrichedComment = Comment + {type clasificado, sentiment, topics[1..5], relevance 0..100, language, flag?}`, `Sentiment{POSITIVO,NEUTRAL,NEGATIVO}`, `Language{ES,EN,PT,OTHER}` (mayúsculas por convención Java; wire = nombre de la constante). Entrada siempre `OTRO` (001 Discord esta semana; Telegram deferrado, fuera de alcance semanal). La IA clasifica a `TESTIMONIO|LOGRO|DUDA|OTRO`. Si `truncated:true`, no penalizar por corte. Reglas negocio puras en `RelevancePolicy`: `LOGRO/TESTIMONIO positivo > DUDA`, `<15 chars → irrelevante`.
-* `application`: `ports/in/AnalyzeUseCase`, `ports/out/AnalyzePort`, `services/AnalyzeService` (invocado directo tras `001` en background; si `LLM_FALLBACK` → `PackageRunService` **aborta sin 003/OCI/SSE**, solo `LOG + ⚠️`).
-* `infrastructure`: `SpringAiOpenAiAdapter` tras `AnalyzePort` con **Spring AI real esta semana**: `ChatClient` (contrato OpenAI, `spring-ai-starter-model-openai` + BOM) + structured-output (`BeanOutputConverter` contra schema) + `timeout 15s + 1 reintento + fallback LLM_FALLBACK`, `promptVersion:v1`, temperatura `0.1-0.2`. Config `spring.ai.openai.api-key=${API_KEY_LLM_MISTRAL_DEV}`, `spring.ai.openai.chat.options.model=${MODEL_MISTRAL}`, `spring.ai.openai.base-url=${BASE_URL_MODEL_AI}` (requerido para dirigir la request según proveedor), solo en `infrastructure/config`. Anónimo total: solo `text+type` al LLM, nunca `author/ids/channel`. Key solo por env, nunca en logs/respuestas. Sin `API_KEY_LLM_MISTRAL_DEV` o sin `BASE_URL_MODEL_AI` → degradado `LLM_NOT_CONFIGURED` con abort sin tumbar health.
+* `application`: `ports/out/RequestToLLMProcess`, `services/ai/EnrichmentListener` (invocado por evento `IngestAcceptedEvent` tras `001`; si `LLM_FALLBACK` → traza bufferizada **abort sin 003/OCI/SSE de paquete**, solo `LOG + ⚠️`), `services/comment/ConvertEnrichedCommentService` (ensambla `EnrichedComment` con `RelevancePolicy.score`).
+* `infrastructure`: `AnalyzeMessageLlmAdapter` tras `RequestToLLMProcess` con **Spring AI real esta semana**: `ChatClient` (contrato OpenAI, `spring-ai-starter-model-openai` + BOM) + structured-output (`BeanOutputConverter` contra schema) + `timeout 15s + 1 reintento + fallback LLM_FALLBACK`, `promptVersion:v1`, temperatura `0.1-0.2`. Config `spring.ai.openai.api-key=${API_KEY_LLM_MISTRAL_DEV}`, `spring.ai.openai.chat.options.model=${MODEL_MISTRAL}`, `spring.ai.openai.base-url=${BASE_URL_MODEL_AI}` (requerido para dirigir la request según proveedor), solo en `infrastructure/config`. Anónimo total: solo `text+type` al LLM, nunca `author/ids/channel`. Key solo por env, nunca en logs/respuestas. Sin `API_KEY_LLM_MISTRAL_DEV` o sin `BASE_URL_MODEL_AI` → degradado `LLM_NOT_CONFIGURED` con abort sin tumbar health.
 
 Contrato interno: entrada `Comment` de `#Listen` (`type=OTRO`, quizá `truncated:true`), salida `EnrichedComment` o `LLM_FALLBACK → abort`. Secuencia: `Bot #Listen → LLM (002) → etiquetas (003) → OCI + SSE (004)`.
 
@@ -32,8 +32,8 @@ Contrato interno: entrada `Comment` de `#Listen` (`type=OTRO`, quizá `truncated
 
 ## 3. Estrategia de pruebas
 
-* Unit `RelevancePolicy` (LOGRO>DUDA, <15 chars), unit `AnalyzeService` con `AnalyzePort` fake (válido → enriquecido; schema inválido → `LLM_FALLBACK → abort` sin `500`).
-* Adapter `SpringAiOpenAiAdapterTest` con `ChatClient` mockeado: JSON schema inválido → 1 reintento → fallback `LLM_FALLBACK`; sin `API_KEY_LLM_MISTRAL_DEV` o sin `BASE_URL_MODEL_AI` → degradado sin `500`.
+* Unit `RelevancePolicy` (LOGRO>DUDA, <15 chars), unit `AnalyzeMessageLlmAdapter` con `ChatClient` mockeado (válido → enriquecido; schema inválido → `LLM_FALLBACK → abort` sin `500`).
+* Adapter `AnalyzeMessageLlmAdapterTest` con `ChatClient` mockeado: JSON schema inválido → 1 reintento → fallback `LLM_FALLBACK`; sin `API_KEY_LLM_MISTRAL_DEV` o sin `BASE_URL_MODEL_AI` → degradado sin `500`. Unit `LlmOutputSanitizerTest` para la higiene de wire-format (fences, recorte balanceado ignorando llaves en strings, candidatos + fingerprint).
 * Cobertura ≥80% `domain+application`.
 
 ## 4. Seguridad/RNF

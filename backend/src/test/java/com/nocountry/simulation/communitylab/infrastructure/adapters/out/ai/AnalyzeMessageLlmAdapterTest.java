@@ -15,6 +15,7 @@ import org.springframework.ai.chat.client.ChatClient.CallResponseSpec;
 
 import com.nocountry.simulation.communitylab.application.dtos.RequestToLLM;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
+import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
@@ -25,17 +26,20 @@ import com.nocountry.simulation.communitylab.infrastructure.dto.ai.SystemPrompt;
  * Derivado de: plan 002 §3 (schema inválido → 1 reintento → throw; el listener
  * convierte el throw en LLM_FALLBACK, nunca 500).
  */
-@DisplayName("AnalyzeService")
-class AnalyzeServiceTest {
+@DisplayName("AnalyzeMessageLlmAdapter")
+class AnalyzeMessageLlmAdapterTest {
 
     private static final String VALID = """
             {"messageProcess": "Hola, alguien sabe desplegar en OCI",
              "language": "ES", "sentiment": "NEUTRAL", "messageType": "DUDA",
-             "topics": ["oci", "despliegue"], "relevance": 65}""";
+             "topics": ["oci", "despliegue"], "relevance": 65,
+             "channelPost": "FAQ", "titlePost": "Despliegue en OCI: error 401",
+             "copy": "¿Cómo desplegar una API en OCI cuando aparece el error 401?",
+             "hashtags": ["#OCI"], "cta": null}""";
 
     private ChatClient.ChatClientRequestSpec spec;
     private CallResponseSpec callSpec;
-    private AnalyzeService service;
+    private AnalyzeMessageLlmAdapter service;
 
     @BeforeEach
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -51,24 +55,33 @@ class AnalyzeServiceTest {
         when(spec.options((org.springframework.ai.chat.prompt.ChatOptions.Builder) any()))
                 .thenReturn(spec);
         when(spec.call()).thenReturn(callSpec);
-        service = new AnalyzeService(builder, new SystemPrompt());
+        // Why a real sanitizer: these tests exercise the full wire-format path
+        // (fences, preamble cut, retry) — mocking it would hide regressions.
+        service = new AnalyzeMessageLlmAdapter(builder, new SystemPrompt(), new LlmOutputSanitizer());
     }
 
     @Test
-    @DisplayName("Given valid JSON, when processed, then it parses without retry")
+    @DisplayName("Given valid JSON, when processed, then all 11 contract fields land")
     void parsesValidJson() {
-        // Given the model answers clean JSON
+        // Given the model answers the full 11-field contract
         when(callSpec.content()).thenReturn(VALID);
 
         // When processed
         ResponseModel response = service.processMessage(new RequestToLLM("hola oci?"));
 
-        // Then all six fields land
-        assertThat(response.messageType()).isEqualTo(MessageType.DUDA);
-        assertThat(response.sentiment()).isEqualTo(Sentiment.NEUTRAL);
+        // Then metadata fields land
+        assertThat(response.messageProcess()).isEqualTo("Hola, alguien sabe desplegar en OCI");
         assertThat(response.language()).isEqualTo(Language.ES);
+        assertThat(response.sentiment()).isEqualTo(Sentiment.NEUTRAL);
+        assertThat(response.messageType()).isEqualTo(MessageType.DUDA);
         assertThat(response.topics()).containsExactly("oci", "despliegue");
         assertThat(response.relevance()).isEqualTo(65);
+        // Then post fields land (the sanitizer must not mangle the object)
+        assertThat(response.channelPost()).isEqualTo(Channels.FAQ);
+        assertThat(response.titlePost()).isEqualTo("Despliegue en OCI: error 401");
+        assertThat(response.copy()).isEqualTo("¿Cómo desplegar una API en OCI cuando aparece el error 401?");
+        assertThat(response.hashtags()).containsExactly("#OCI");
+        assertThat(response.cta()).isNull();
     }
 
     @Test
@@ -80,6 +93,17 @@ class AnalyzeServiceTest {
 
         when(callSpec.content()).thenReturn("```" + VALID + "\n```");
         assertThat(service.processMessage(new RequestToLLM("b")).relevance()).isEqualTo(65);
+    }
+
+    @Test
+    @DisplayName("Given preamble around JSON, when processed, then the object is extracted")
+    void extractsObjectFromPreamble() {
+        // Given a chatty answer with preamble and epilogue (seen live with Mistral)
+        when(callSpec.content()).thenReturn(
+                "Claro, aquí tienes el JSON:\n" + VALID + "\nEspero que te sirva.");
+
+        // When processed then parsed without retry
+        assertThat(service.processMessage(new RequestToLLM("x")).relevance()).isEqualTo(65);
     }
 
     @Test

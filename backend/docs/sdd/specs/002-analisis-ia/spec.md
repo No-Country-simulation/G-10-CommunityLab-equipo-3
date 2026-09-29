@@ -28,7 +28,7 @@ El lote normalizado aún es texto no estructurado. El objetivo 002 es enriquecer
 ## 4. Dominio y Glosario
 
 - **EnrichedComment = Comment + {sentiment, topics[], relevance, language, flag?}**.
-- **Relevance:** 0-100, prioriza qué se convierte en activo. Umbral sugerido publicación: `>=60` (ajustable en 003).
+- **Relevance:** 0-100, estimación informativa del LLM ("importancia", sin rúbrica definida), renormalizada por `RelevancePolicy` (pisos/topes por tipo). Sin uso de filtrado: el umbral de publicación `>=60` sugerido aquí quedó eliminado con RF-06 de 003 (enmienda 2026-09-28).
 - **Structured Output:** JSON con schema fijo exigido al LLM.
 
 ## 5. Fuera de Alcance
