@@ -28,7 +28,7 @@ export const LANDING_EN = {
   'landing.features.highlight': 'the whole flow',
   'landing.features.lead': 'Capture, analyze, transform and store: the four steps of the CommunityLab challenge, automated so the Community Manager only reviews and publishes.',
   'landing.features.ingest.title': 'Message ingestion',
-  'landing.features.ingest.text': 'Load Discord and Telegram conversations as JSON or CSV, or type them in. Kora normalizes them without any reshaping on your side.',
+  'landing.features.ingest.text': 'Kora listens to your Discord channel and picks up every new message automatically, with no exports or uploads on your side.',
   'landing.features.analysis.title': 'LLM analysis',
   'landing.features.analysis.text': 'Sentiment, topics and relevance for every message, with an explanation of why it is (or isn\'t) worth turning into content.',
   'landing.features.content.title': 'Content per channel',
@@ -50,7 +50,7 @@ export const LANDING_EN = {
   'landing.how.s3.text': 'Edit the generated posts, approve and publish them in one click. Create social banners.',
   'landing.how.s4.title': 'It is stored on OCI',
   'landing.how.s4.text': 'The analysis and the content are archived as JSON in Object Storage.',
-  'landing.how.cta': 'Try the examples',
+  'landing.how.cta': 'Review content',
   'landing.how.secondary': 'See curation',
   'landing.how.alt': 'Kora sitting on its base',
 

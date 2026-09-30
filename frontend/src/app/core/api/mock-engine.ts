@@ -142,16 +142,13 @@ export function analyze(interaction: Interaction): InteractionAnalysis {
 
 export function process(
   interactions: Interaction[],
-  formats?: AssetType[],
   processedAt = new Date().toISOString(),
 ): ProcessResult {
   const batchId = `batch-${processedAt.slice(0, 10).replace(/-/g, '')}-${hash(processedAt + interactions.length).slice(0, 6)}`;
   const analyzed: AnalyzedInteraction[] = interactions.map((i) => ({ ...i, analysis: analyze(i) }));
 
   const assets = analyzed.flatMap((i) =>
-    ROUTE_FORMATS[i.analysis.route]
-      .filter((type) => !formats || formats.includes(type))
-      .map((type, idx) => generateAsset(i, type, batchId, idx, processedAt)),
+    ROUTE_FORMATS[i.analysis.route].map((type, idx) => generateAsset(i, type, batchId, idx, processedAt)),
   );
 
   const relevant = analyzed.filter((i) => i.analysis.route !== 'discard');

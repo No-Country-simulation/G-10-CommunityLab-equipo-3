@@ -91,7 +91,7 @@ export interface BatchSummary {
   mainTopics: string[];
 }
 
-/** Response of POST /api/v1/interactions/process — the heart of the MVP. */
+/** A processed batch, as stored in OCI (GET /api/v1/storage/objects/{name}). */
 export interface ProcessResult {
   batchId: string;
   processedAt: string;
@@ -100,12 +100,6 @@ export interface ProcessResult {
   interactions: AnalyzedInteraction[];
   assets: GeneratedAsset[];
   storage: StorageReceipt;
-}
-
-export interface ProcessRequest {
-  interactions: Interaction[];
-  /** Asset types the orchestrator should produce when the route allows it. */
-  formats?: AssetType[];
 }
 
 /** An object listed from the OCI bucket (one per processed batch). */
