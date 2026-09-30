@@ -1,4 +1,4 @@
-package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.discordMessage;
+package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.telegramMessage;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -22,22 +22,22 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
 import com.nocountry.simulation.communitylab.infrastructure.adapters.out.event.SseEventPublisherAdapter;
 
 import net.dv8tion.jda.api.JDA;
-import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
 /**
  * SSE subscription endpoint (no Spring context slice: full Boot context with MockMvc).
  *
- * <p>Derivado de: spec 004 RF-07 (GET text/event-stream con reconexión por
- * {@code Last-Event-ID}) + decisión single-GET (sin POSTs).
+ * <p>Derivado de: spec 005 RF-07 (GET text/event-stream con reconexión por
+ * {@code Last-Event-ID}) + plan.md §1,§3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@DisplayName("GetMessagesProcessedDiscord")
-class GetMessagesProcessedDiscordTest {
+@DisplayName("GetMessageProcessedTelegram")
+class GetMessageProcessedTelegramTest {
 
     // Why: the real JDA bean must never hit the Discord gateway in tests.
     @MockitoBean
@@ -66,7 +66,7 @@ class GetMessagesProcessedDiscordTest {
         });
 
         // When subscribed without replay id, then async stream starts
-        MvcResult started = mockMvc.perform(get("/api/v1/discord/messages")
+        MvcResult started = mockMvc.perform(get("/api/v1/telegram/messages")
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted())
                 .andReturn();
@@ -91,8 +91,8 @@ class GetMessagesProcessedDiscordTest {
         });
 
         // When subscribed with replay id, then async stream starts
-        MvcResult started = mockMvc.perform(get("/api/v1/discord/messages")
-                        .header("Last-Event-ID", "msg-7")
+        MvcResult started = mockMvc.perform(get("/api/v1/telegram/messages")
+                        .header("Last-Event-ID", "tg-7")
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andExpect(request().asyncStarted())
                 .andReturn();
@@ -100,6 +100,6 @@ class GetMessagesProcessedDiscordTest {
         // And completing the emitter resolves 200 forwarding the id
         emitted.get(0).complete();
         mockMvc.perform(asyncDispatch(started)).andExpect(status().isOk());
-        verify(publisher).subscribe("msg-7");
+        verify(publisher).subscribe("tg-7");
     }
 }

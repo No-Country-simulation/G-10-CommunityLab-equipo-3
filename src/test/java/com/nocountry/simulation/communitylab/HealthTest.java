@@ -13,6 +13,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import net.dv8tion.jda.api.JDA;
+import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
 /**
  * Public health endpoint (no Spring context slice: full Boot context with MockMvc).
@@ -29,6 +30,11 @@ class HealthTest {
     // hit the Discord gateway in tests.
     @MockitoBean
     private JDA jda;
+
+    // Why: the Telegram long-polling starter registers the bot against the real
+    // API on context startup; mock the initializer so tests stay offline.
+    @MockitoBean
+    private TelegramBotInitializer telegramBotInitializer;
 
     @Autowired
     private MockMvc mockMvc;
