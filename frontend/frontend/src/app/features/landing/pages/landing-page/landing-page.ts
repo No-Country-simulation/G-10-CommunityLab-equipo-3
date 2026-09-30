@@ -32,8 +32,8 @@ export class LandingPage implements AfterViewInit {
     { id: 'plataforma', key: 'landing.nav.platform' },
   ];
   protected readonly features = [
-    { icon: 'pi pi-inbox', title: 'landing.features.ingest.title', text: 'landing.features.ingest.text', link: '/app/ingest', color: '#d97706' },
-    { icon: 'pi pi-sparkles', title: 'landing.features.analysis.title', text: 'landing.features.analysis.text', link: '/app/ingest', color: '#8b5cf6' },
+    { icon: 'pi pi-inbox', title: 'landing.features.ingest.title', text: 'landing.features.ingest.text', link: '/app/content', color: '#d97706' },
+    { icon: 'pi pi-sparkles', title: 'landing.features.analysis.title', text: 'landing.features.analysis.text', link: '/app/content', color: '#8b5cf6' },
     { icon: 'pi pi-sitemap', title: 'landing.features.content.title', text: 'landing.features.content.text', link: '/app/content', color: '#10b981' },
     { icon: 'pi pi-cloud-upload', title: 'landing.features.storage.title', text: 'landing.features.storage.text', link: '/app/storage', color: '#c74634' },
   ];

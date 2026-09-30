@@ -30,7 +30,7 @@ export class Summary {
       title: 'step.ingest',
       text: 'summary.step.ingest',
       icon: 'pi pi-inbox',
-      link: '/app/ingest',
+      link: '/app/content',
       color: '#d97706',
       colorTo: '#b45309',
     },
@@ -38,7 +38,7 @@ export class Summary {
       title: 'step.analysis',
       text: 'summary.step.analysis',
       icon: 'pi pi-sparkles',
-      link: '/app/ingest',
+      link: '/app/content',
       color: '#8b5cf6',
       colorTo: '#6d28d9',
     },
@@ -72,7 +72,7 @@ export class Summary {
     const objects = this.store.objects();
     const t = (key: string) => this.i18n.t(key);
     return [
-      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/ingest' },
+      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/storage' },
       { label: t('summary.stat.generated'), value: this.store.assets().length, icon: 'pi pi-file-edit', link: '/app/content' },
       { label: t('summary.stat.pending'), value: this.store.pendingReview(), icon: 'pi pi-eye', link: '/app/content' },
       { label: t('summary.stat.packages'), value: objects.length, icon: 'pi pi-cloud', link: '/app/storage' },
