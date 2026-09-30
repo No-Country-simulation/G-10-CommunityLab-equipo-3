@@ -123,6 +123,20 @@
             <artifactId>swagger-annotations</artifactId>
             <version>2.2.38</version>
         </dependency>
+
+        <!-- Source: https://mvnrepository.com/artifact/org.telegram/telegrambots-springboot-longpolling-starter -->
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots-springboot-longpolling-starter</artifactId>
+            <version>10.3.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambots-client</artifactId>
+            <version>10.3.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>
