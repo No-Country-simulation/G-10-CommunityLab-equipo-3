@@ -39,10 +39,9 @@ export class Sidebar {
   readonly close = output<void>();
   readonly toggleCollapse = output<void>();
 
-  /** Mirrors the challenge flow: ingest + analyze → curate → store in OCI. */
+  /** Curate → store in OCI; ingestion and analysis happen in the backend. */
   protected readonly items: NavItem[] = [
     { label: 'nav.summary', path: '/app', emoji: PAGE_ICON.summary },
-    { label: 'nav.ingest', path: '/app/ingest', emoji: PAGE_ICON.ingest },
     { label: 'nav.content', path: '/app/content', emoji: PAGE_ICON.content, badge: this.store.pendingReview },
     { label: 'nav.storage', path: '/app/storage', emoji: PAGE_ICON.storage },
   ];

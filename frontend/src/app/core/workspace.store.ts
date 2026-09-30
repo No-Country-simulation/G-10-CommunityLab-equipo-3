@@ -1,27 +1,26 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 import {
   AssetPatch,
   AssetStatus,
   GeneratedAsset,
   INTERACTION_SOURCES,
-  Interaction,
   InteractionSource,
-  ProcessResult,
   StoredObject,
 } from './api/api.models';
 import { CommunityLabApi } from './api/community-lab.api';
+import { DiscordLiveFeed, LIVE_ASSET_PREFIX } from './api/discord-live-feed';
 
 const SOURCE_KEY = 'active-source';
 
-/** Shared state for ingestion results, curation and OCI storage, backed by CommunityLabApi. */
+/** Shared state for curation and OCI storage, backed by CommunityLabApi. */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceStore {
   private readonly api = inject(CommunityLabApi);
+  private readonly liveFeed = inject(DiscordLiveFeed);
 
   private readonly _assets = signal<GeneratedAsset[]>([]);
   private readonly _objects = signal<StoredObject[]>([]);
-  private readonly _lastResult = signal<ProcessResult | null>(null);
   private readonly _busyIds = signal<Set<string>>(new Set());
   private readonly _activeSource = signal<InteractionSource>(readActiveSource());
 
@@ -42,7 +41,6 @@ export class WorkspaceStore {
   });
 
   readonly objects = this._objects.asReadonly();
-  readonly lastResult = this._lastResult.asReadonly();
   readonly loaded = signal(false);
 
   readonly pipeline = computed(() => {
@@ -65,41 +63,43 @@ export class WorkspaceStore {
   }
 
   constructor() {
-    this.api.listAssets().subscribe((assets) => {
-      this._assets.set(assets);
-      this.loaded.set(true);
+    this.api.listAssets().subscribe({
+      // Keep assets the live feed may have pushed while the list was loading
+      next: (assets) => this._assets.update((live) => [...live, ...assets]),
+      // Endpoint missing or backend down: start empty and rely on the live feed
+      error: () => this.loaded.set(true),
+      complete: () => this.loaded.set(true),
     });
     this.refreshStorage();
+    this.liveFeed.assets.subscribe((asset) => this.upsert(asset));
+    this.liveFeed.connect();
   }
+
+  /** Connection state of the backend SSE stream. */
+  readonly liveStatus = this.liveFeed.status;
 
   isBusy(id: string) {
     return this._busyIds().has(id);
   }
 
-  process(interactions: Interaction[]): Observable<ProcessResult> {
-    return this.api.processInteractions({ interactions }).pipe(
-      tap((result) => {
-        this._lastResult.set(result);
-        this._assets.update((list) => [...result.assets, ...list]);
-        this.refreshStorage();
-      }),
-    );
-  }
-
-  clearResult() {
-    this._lastResult.set(null);
-  }
-
   update(id: string, patch: AssetPatch) {
+    if (id.startsWith(LIVE_ASSET_PREFIX)) return this.patchLocal(id, patch);
     this.track(id, this.api.updateAsset(id, patch));
   }
 
   publish(id: string) {
+    if (id.startsWith(LIVE_ASSET_PREFIX)) {
+      return this.patchLocal(id, { status: 'published' }, new Date().toISOString());
+    }
     this.track(id, this.api.publishAsset(id));
   }
 
   refreshStorage() {
-    this.api.listStoredObjects().subscribe((objects) => this._objects.set(objects));
+    this.api.listStoredObjects().subscribe({
+      next: (objects) => this._objects.set(objects),
+      // No storage endpoint yet: keep the current (empty) list
+      error: () => {},
+    });
   }
 
   getStoredObject(objectName: string) {
@@ -115,12 +115,20 @@ export class WorkspaceStore {
     });
   }
 
+  /** Live assets from the SSE stream: newest first, replayed events replace the old copy. */
+  private upsert(asset: GeneratedAsset) {
+    this._assets.update((list) => [asset, ...list.filter((a) => a.id !== asset.id)]);
+  }
+
+  /** The backend has no PATCH/publish yet, so curation of live assets stays in the browser. */
+  private patchLocal(id: string, patch: AssetPatch, publishedAt?: string) {
+    const current = this._assets().find((a) => a.id === id);
+    if (!current) return;
+    this.replace({ ...current, ...patch, ...(publishedAt ? { publishedAt } : {}) });
+  }
+
   private replace(asset: GeneratedAsset) {
     this._assets.update((list) => list.map((a) => (a.id === asset.id ? asset : a)));
-    // Keep the ingestion result view in sync with curation edits
-    this._lastResult.update((r) =>
-      r ? { ...r, assets: r.assets.map((a) => (a.id === asset.id ? asset : a)) } : r,
-    );
   }
 
   private release(id: string) {

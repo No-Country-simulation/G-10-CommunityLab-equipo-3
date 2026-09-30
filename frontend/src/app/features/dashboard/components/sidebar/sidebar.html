@@ -126,6 +126,20 @@
       <p class="truncate border-t border-dashed border-stone-200 pt-1.5 font-mono text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
         {{ api.useMocks ? 'mock-engine' : api.baseUrl }}
       </p>
+      @if (api.liveFeedUrl) {
+        @let live = store.liveStatus();
+        <div class="flex items-center justify-between gap-2 text-[0.72rem] text-stone-500 dark:text-stone-400"
+          [title]="api.liveFeedUrl">
+          <span class="inline-flex items-center gap-1.5 font-semibold">
+            <i class="pi pi-discord"></i> {{ 'sidebar.live.title' | t }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 font-bold">
+            <span class="h-[7px] w-[7px] rounded-full"
+              [class]="live === 'open' ? 'bg-emerald-500' : live === 'connecting' ? 'bg-amber-500' : 'bg-rose-500'"></span>
+            {{ 'sidebar.live.' + live | t }}
+          </span>
+        </div>
+      }
     </div>
   </div>
 
