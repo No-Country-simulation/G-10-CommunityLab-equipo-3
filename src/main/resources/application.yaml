@@ -25,3 +25,4 @@ redis:
 telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
+    listen-group-id: ${TELEGRAM_LISTEN_GROUP_ID}

@@ -37,10 +37,19 @@ public class TelegramMessageListener implements SpringLongPollingBot, LongPollin
     public void consume(Update update) {
         Message message = update.getMessage();
 
+        // Get message and value if not null
         if(!update.hasMessage()){
             log.debug("ingest discarded: reason=no-message");
             return;
         }
+
+        if(!message.getChat().getId().equals(properties.listenGroupId())){
+            log.debug("ingest discarded: reason=chat-not-allowed messageId={}", message.getMessageId());
+            return;
+        }
+
+        if(message.getFrom() == null)
+            return;
 
         User user = message.getFrom();
 
