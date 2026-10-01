@@ -9,10 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import net.dv8tion.jda.api.JDA;
+import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
 /**
  * Public health endpoint (no Spring context slice: full Boot context with MockMvc).
@@ -29,6 +32,18 @@ class HealthTest {
     // hit the Discord gateway in tests.
     @MockitoBean
     private JDA jda;
+
+    // Why: the Telegram long-polling starter registers the bot against the real
+    // API on context startup; mock the initializer so tests stay offline.
+    @MockitoBean
+    private TelegramBotInitializer telegramBotInitializer;
+
+    // Why: TelegramBotProperties binds a long at startup; the Binder does not
+    // resolve YAML placeholders, so tests must supply a numeric value.
+    @DynamicPropertySource
+    static void telegramProperties(DynamicPropertyRegistry registry) {
+        registry.add("telegram.bot.listen-group-id", () -> "555");
+    }
 
     @Autowired
     private MockMvc mockMvc;
