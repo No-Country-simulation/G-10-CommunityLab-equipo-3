@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -35,6 +37,13 @@ class SwaggerDocsTest {
     @MockitoBean
     private TelegramBotInitializer telegramBotInitializer;
 
+    // Why: TelegramBotProperties binds a long at startup; the Binder does not
+    // resolve YAML placeholders, so tests must supply a numeric value.
+    @DynamicPropertySource
+    static void telegramProperties(DynamicPropertyRegistry registry) {
+        registry.add("telegram.bot.listen-group-id", () -> "555");
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -50,19 +59,19 @@ class SwaggerDocsTest {
     }
 
     @Test
-    @DisplayName("Given started app, when GET /v3/api-docs, then EnrichedComment schema exposes post fields")
+    @DisplayName("Given started app, when GET /v3/api-docs, then ResponseClient schema exposes post fields")
     void documentsPostSchema() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.outputContentProcessed")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.outputContentProcessed")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.channelPost")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.channelPost")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.messageBatchId")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.messageBatchId")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.hashtags")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.hashtags")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.sentiment")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.source")
                         .exists());
     }
 

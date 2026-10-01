@@ -1,6 +1,7 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.telegramMessage;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
@@ -18,12 +19,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
+import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.infrastructure.adapters.out.event.SseEventPublisherAdapter;
 
 import net.dv8tion.jda.api.JDA;
@@ -48,6 +52,13 @@ class GetMessageProcessedTelegramTest {
     @MockitoBean
     private TelegramBotInitializer telegramBotInitializer;
 
+    // Why: TelegramBotProperties binds a long at startup; the Binder does not
+    // resolve YAML placeholders, so tests must supply a numeric value.
+    @DynamicPropertySource
+    static void telegramProperties(DynamicPropertyRegistry registry) {
+        registry.add("telegram.bot.listen-group-id", () -> "555");
+    }
+
     @MockitoBean
     private SseEventPublisherAdapter publisher;
 
@@ -59,7 +70,7 @@ class GetMessageProcessedTelegramTest {
     void opensEventStream() throws Exception {
         // Given a fresh emitter from the publisher
         List<SseEmitter> emitted = new ArrayList<>();
-        when(publisher.subscribe(any())).thenAnswer(invocation -> {
+        when(publisher.subscribe(eq(Source.TELEGRAM), any())).thenAnswer(invocation -> {
             SseEmitter emitter = new SseEmitter(60_000L);
             emitted.add(emitter);
             return emitter;
@@ -76,7 +87,7 @@ class GetMessageProcessedTelegramTest {
         mockMvc.perform(asyncDispatch(started))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM));
-        verify(publisher).subscribe(null);
+        verify(publisher).subscribe(Source.TELEGRAM, null);
     }
 
     @Test
@@ -84,7 +95,7 @@ class GetMessageProcessedTelegramTest {
     void forwardsLastEventId() throws Exception {
         // Given a fresh emitter from the publisher
         List<SseEmitter> emitted = new ArrayList<>();
-        when(publisher.subscribe(any())).thenAnswer(invocation -> {
+        when(publisher.subscribe(eq(Source.TELEGRAM), any())).thenAnswer(invocation -> {
             SseEmitter emitter = new SseEmitter(60_000L);
             emitted.add(emitter);
             return emitter;
@@ -100,6 +111,6 @@ class GetMessageProcessedTelegramTest {
         // And completing the emitter resolves 200 forwarding the id
         emitted.get(0).complete();
         mockMvc.perform(asyncDispatch(started)).andExpect(status().isOk());
-        verify(publisher).subscribe("tg-7");
+        verify(publisher).subscribe(Source.TELEGRAM, "tg-7");
     }
 }
