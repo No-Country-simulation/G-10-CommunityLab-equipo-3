@@ -1,4 +1,4 @@
-package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.discordMessage;
+package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.telegramMessage;
 
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -22,21 +22,20 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-public class GetMessagesProcessedDiscord {
-
+public class GetMessageProcessedTelegram {
     private final SseEventPublisherAdapter publisher;
 
     // Why the payload schema points at ResponseClient: SseEmitter itself carries
     // no type information for springdoc, so the documented contract is the event
     // data (post + metadata). Domain stays free of swagger annotations (R3).
     @Operation(
-            summary = "Subscribe to processed posts",
+            summary = "Subscribe to processed Telegram posts",
             description = """
                     Opens a long-lived SSE stream emitting one `asset.created` event per \
-                    processed Discord message (post + analysis metadata). \
+                    processed Telegram message (post + analysis metadata). \
                     Reconnect with the last received event id to replay missed events. \
                     Swagger "Try it out" does not render streams; consume from the frontend with:
-                    `const es = new EventSource('/api/v1/discord/messages'); \
+                    `const es = new EventSource('/api/v1/telegram/messages'); \
                     es.addEventListener('asset.created', e => render(JSON.parse(e.data)));`""")
     @ApiResponse(
             responseCode = "200",
@@ -46,12 +45,12 @@ public class GetMessagesProcessedDiscord {
                     schema = @Schema(implementation = ResponseClient.class),
                     examples = @ExampleObject(
                             name = "asset.created",
-                            summary = "Processed LinkedIn post with metadata",
+                            summary = "Processed Telegram post with metadata",
                             value = """
                                     {
                                       "authorName": "author-name",
                                       "messageAuthor": "Ana_dev",
-                                      "messageId": "msg-1",
+                                      "messageId": "tg-1",
                                       "messageBatchId": "b3e1a2c4-0000-4000-8000-000000000001",
                                       "sentiment": "POSITIVO",
                                       "language": "ES",
@@ -60,18 +59,19 @@ public class GetMessagesProcessedDiscord {
                                       "relevance": 85,
                                       "flag": null,
                                       "sentTime": "2026-09-28T10:00:00Z",
-                                      "source": "DISCORD",
+                                      "source": "TELEGRAM",
                                       "channelPost": "LINKEDIN",
                                       "titlePost": null,
                                       "outputContentProcessed": "De la comunidad al primer empleo como dev Java. Gracias por el apoyo en el camino!",
                                       "hashtags": ["#ONE", "#EmpleoTech", "#Java"],
                                       "cta": "Comparte tu historia en #logros"
                                     }""")))
-    @GetMapping(value = "/api/v1/discord/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter getMessagesProcessedDiscord(
-            @Parameter(description = "Last received event id for replay; omit on first connect.", example = "msg-1")
-            @RequestHeader(value = "Last-Event-ID", required = false) String lastEvent) {
-        log.debug("sse subscribe: lastEventId={}", lastEvent);
-        return publisher.subscribe(Source.DISCORD,lastEvent);
+    @GetMapping(value = "/api/v1/telegram/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter getMessagesProcessedTelegram(
+            @Parameter(description = "Last received event id for replay; omit on first connect.", example = "tg-1")
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEvent
+    ) {
+        log.debug("sse subscribe telegram: lastEventId={}", lastEvent);
+        return publisher.subscribe(Source.TELEGRAM, lastEvent);
     }
 }

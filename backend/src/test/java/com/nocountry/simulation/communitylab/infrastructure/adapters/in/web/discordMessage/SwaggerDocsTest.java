@@ -9,15 +9,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import net.dv8tion.jda.api.JDA;
+import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
 /**
  * Public API docs (no Spring context slice: full Boot context with MockMvc).
  *
- * <p>Derivado de: spec 004 RF-04 (Swagger documenta el único GET) + constitution P3.
+ * <p>Derivado de: spec 004 RF-04 (Swagger documenta el único GET) + spec 005 RF-07
+ * (Swagger documenta el GET Telegram) + constitution P3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -27,6 +31,18 @@ class SwaggerDocsTest {
     // Why: the real JDA bean must never hit the Discord gateway in tests.
     @MockitoBean
     private JDA jda;
+
+    // Why: the Telegram long-polling starter registers the bot against the real
+    // API on context startup; mock the initializer so tests stay offline.
+    @MockitoBean
+    private TelegramBotInitializer telegramBotInitializer;
+
+    // Why: TelegramBotProperties binds a long at startup; the Binder does not
+    // resolve YAML placeholders, so tests must supply a numeric value.
+    @DynamicPropertySource
+    static void telegramProperties(DynamicPropertyRegistry registry) {
+        registry.add("telegram.bot.listen-group-id", () -> "555");
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,25 +59,53 @@ class SwaggerDocsTest {
     }
 
     @Test
-    @DisplayName("Given started app, when GET /v3/api-docs, then EnrichedComment schema exposes post fields")
+    @DisplayName("Given started app, when GET /v3/api-docs, then ResponseClient schema exposes post fields")
     void documentsPostSchema() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.outputContentProcessed")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.outputContentProcessed")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.channelPost")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.channelPost")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.messageBatchId")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.messageBatchId")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.hashtags")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.hashtags")
                         .exists())
-                .andExpect(jsonPath("$.components.schemas.EnrichedComment.properties.sentiment")
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.source")
                         .exists());
     }
 
     @Test
-    @DisplayName("Given started app, when GET /swagger-ui/index.html, then UI is served publicly")
+    @DisplayName("Given started app, when GET /v3/api-docs, then UI is served publicly")
     void servesSwaggerUi() throws Exception {
         mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then the Telegram SSE endpoint is documented")
+    void documentsTelegramSseEndpoint() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/telegram/messages'].get.summary")
+                        .value("Subscribe to processed Telegram posts"))
+                .andExpect(jsonPath("$.paths['/api/v1/telegram/messages'].get.responses['200']")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then ResponseClient schema exposes Telegram post fields")
+    void documentsTelegramPostSchema() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.outputContentProcessed")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.source")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.messageBatchId")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.hashtags")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.sentiment")
+                        .exists());
     }
 }
