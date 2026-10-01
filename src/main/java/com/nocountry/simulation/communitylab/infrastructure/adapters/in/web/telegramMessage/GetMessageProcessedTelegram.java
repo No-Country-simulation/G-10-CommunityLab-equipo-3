@@ -1,6 +1,7 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.telegramMessage;
 
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
+import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.infrastructure.adapters.out.event.SseEventPublisherAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -71,6 +72,6 @@ public class GetMessageProcessedTelegram {
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEvent
     ) {
         log.debug("sse subscribe telegram: lastEventId={}", lastEvent);
-        return publisher.subscribe(lastEvent);
+        return publisher.subscribe(Source.TELEGRAM, lastEvent);
     }
 }
