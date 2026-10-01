@@ -2,6 +2,8 @@ package com.nocountry.simulation.communitylab;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import net.dv8tion.jda.api.JDA;
@@ -19,6 +21,13 @@ class CommunityLabApplicationTests {
     // API on context startup; mock the initializer so tests stay offline.
     @MockitoBean
     private TelegramBotInitializer telegramBotInitializer;
+
+    // Why: TelegramBotProperties binds a long at startup; the Binder does not
+    // resolve YAML placeholders, so tests must supply a numeric value.
+    @DynamicPropertySource
+    static void telegramProperties(DynamicPropertyRegistry registry) {
+        registry.add("telegram.bot.listen-group-id", () -> "555");
+    }
 
     @Test
     void contextLoads() {

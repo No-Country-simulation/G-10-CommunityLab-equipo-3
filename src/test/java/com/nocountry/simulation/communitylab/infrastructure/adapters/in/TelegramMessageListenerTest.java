@@ -34,12 +34,15 @@ import org.telegram.telegrambots.meta.api.objects.message.Message;
  * Mirror of {@code DiscordMessageListenerTest}: same package as the source
  * for fast lookup.
  *
- * <p>Derivado de: spec 005 RF-01,RF-02 (filtros bot/no-message/no-text) + plan §1.
+ * <p>Derivado de: spec 005 RF-01,RF-02 (filtros chat-allowlist/bot/no-message/no-text) + plan §1.
  * No Spring context: IngestUseCaseTelegram mock (puerto), mapper real.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TelegramMessageListener")
 class TelegramMessageListenerTest {
+
+    // Why same id in setUp and happy paths: one mutation point for the allowlist value.
+    private static final long ALLOWED_CHAT_ID = 555L;
 
     @Mock
     private IngestUseCaseTelegram useCase;
@@ -62,7 +65,7 @@ class TelegramMessageListenerTest {
     void setUpListener() {
         // Why: listener is a thin adapter, real mapper + mock use case isolates filtering.
         listener = new TelegramMessageListener(
-                new TelegramBotProperties("test-token"),
+                new TelegramBotProperties("test-token", ALLOWED_CHAT_ID),
                 new TelegramMessageMapper(),
                 useCase);
     }
@@ -86,11 +89,46 @@ class TelegramMessageListenerTest {
         }
 
         @Test
+        @DisplayName("Dado mensaje de un chat fuera del allowlist, cuando llega, entonces se descarta en silencio")
+        void discardsMessageFromOtherChat() {
+            // Dado un mensaje de humano en un chat distinto al permitido
+            when(update.hasMessage()).thenReturn(true);
+            when(update.getMessage()).thenReturn(message);
+            when(message.getChat()).thenReturn(chat);
+            when(chat.getId()).thenReturn(999L);
+
+            // Cuando se consume
+            listener.consume(update);
+
+            // Entonces no delega al caso de uso (filtro duro RF-02)
+            verifyNoInteractions(useCase);
+        }
+
+        @Test
+        @DisplayName("Dado mensaje sin autor (canal o admin anonimo), cuando llega, entonces se descarta sin lanzar")
+        void discardsMessageWithoutFrom() {
+            // Dado un mensaje del chat permitido sin from
+            when(update.hasMessage()).thenReturn(true);
+            when(update.getMessage()).thenReturn(message);
+            when(message.getChat()).thenReturn(chat);
+            when(chat.getId()).thenReturn(ALLOWED_CHAT_ID);
+            when(message.getFrom()).thenReturn(null);
+
+            // Cuando se consume entonces no propaga excepcion
+            listener.consume(update);
+
+            // Entonces no delega al caso de uso
+            verifyNoInteractions(useCase);
+        }
+
+        @Test
         @DisplayName("Dado autor bot, cuando llega mensaje, entonces se descarta")
         void discardsBotMessage() {
             // Dado un mensaje de un bot
             when(update.hasMessage()).thenReturn(true);
             when(update.getMessage()).thenReturn(message);
+            when(message.getChat()).thenReturn(chat);
+            when(chat.getId()).thenReturn(ALLOWED_CHAT_ID);
             when(message.getFrom()).thenReturn(from);
             when(from.getIsBot()).thenReturn(Boolean.TRUE);
 
@@ -107,6 +145,8 @@ class TelegramMessageListenerTest {
             // Dado un mensaje sin texto (sticker/foto)
             when(update.hasMessage()).thenReturn(true);
             when(update.getMessage()).thenReturn(message);
+            when(message.getChat()).thenReturn(chat);
+            when(chat.getId()).thenReturn(ALLOWED_CHAT_ID);
             when(message.getFrom()).thenReturn(from);
             when(from.getIsBot()).thenReturn(Boolean.FALSE);
             when(message.getText()).thenReturn(null);
@@ -125,6 +165,8 @@ class TelegramMessageListenerTest {
             // Dado un mensaje solo-blancos
             when(update.hasMessage()).thenReturn(true);
             when(update.getMessage()).thenReturn(message);
+            when(message.getChat()).thenReturn(chat);
+            when(chat.getId()).thenReturn(ALLOWED_CHAT_ID);
             when(message.getFrom()).thenReturn(from);
             when(from.getIsBot()).thenReturn(Boolean.FALSE);
             when(message.getText()).thenReturn("   ");
