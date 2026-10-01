@@ -1,6 +1,6 @@
 # Plan 005: Ingesta Telegram long polling + reuso pipeline + dual SSE
 
-Derivado de: `spec.md RF-01..RF-07 + RNF-01..RNF-04` + `constitution.md v1.6 P1-P6,R1-R8,Q1-Q5` + `specs 001/002/003/004`.
+Derivado de: `spec.md RF-01..RF-07 + RNF-01..RNF-04` + `constitution.md v1.7-dual-get P1-P6,R1-R8,Q1-Q5` + `specs 001/002/003/004`.
 Alcance: solo `TELEGRAM` long polling (backend es el bot). Sin `POST` ingesta. Secuencia: `Bot Telegram → LLM por mensaje (002) → etiquetas canal (003) → fork: SSE inmediato + buffer Redis lote por tamaño → OCI batch + frontend (004)`, `N mensajes = 1 paquete`. Redis como almacenamiento de lote volátil; OCI único persistente.
 
 ## 1. Arquitectura y componentes (hexagonal estricto)
@@ -35,7 +35,7 @@ Contrato interno: `Update` válido → `Comment{id nativo, batchId lote}` en p95
   Razón: uniformidad del dominio 1..2000 + no perder mensajes largos; la IA no penaliza por corte (ver 002).
 * Decisión: nuevo `GET /api/v1/telegram/messages` SSE separado (dual-get).
   Alternativa descartada: reusar único `GET /api/v1/discord/messages` con filtro `?source=` o mismo stream multiplexado.
-  Razón: aislamiento por fuente para demo y evolución independiente Discord/Telegram; UX clara por canal de origen. Requiere enmienda `v1.6-single-get → v1.7-dual-get`: `Decisión dual-get / Alternativa single-get multiplexado / Razón aislamiento demo sin romper fork existente`. Swagger documenta ambos GETs + health (P3).
+  Razón: aislamiento por fuente para demo y evolución independiente Discord/Telegram; UX clara por canal de origen. Enmienda ratificada en constitución `v1.7-dual-get`: `Decisión dual-get / Alternativa single-get multiplexado / Razón aislamiento demo sin romper fork existente`. Swagger documenta ambos GETs + health (P3).
 * Decisión: Redis como almacenamiento de lote volátil, OCI único persistente (sin cambio).
   Alternativa descartada: Redis queryable como DB + `GET /packages` o persistencia local en disco.
   Razón: respeta constitución §2 Buffer/Storage + R6; el `GET` telegram es solo vivo SSE + replay memoria, nunca expone el buffer abierto por HTTP (igual que 004 RF-08).

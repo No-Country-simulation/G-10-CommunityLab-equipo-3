@@ -1,6 +1,6 @@
 # Especificación 005: Ingesta Telegram vía long polling + reuso pipeline
 
-> Respeta: `constitution.md` v1.6-single-get (P1-P6, R1-R8, Q1-Q5, Fase 1). Activa `001 RF-01b` deferrado. Solo QUÉ y POR QUÉ, sin decisiones de código. Sin endpoint REST de ingesta: el backend es el bot Telegram (long polling).
+> Respeta: `constitution.md` v1.7-dual-get (P1-P6, R1-R8, Q1-Q5, Fase 1). Activa `001 RF-01b` deferrado. Solo QUÉ y POR QUÉ, sin decisiones de código. Sin endpoint REST de ingesta: el backend es el bot Telegram (long polling).
 
 ## 1. Problema y Objetivo
 
@@ -23,7 +23,7 @@ Objetivo 005: escuchar los mensajes de Telegram —el backend es el bot—, vali
   - *Criterio:* **Dado** un logro Telegram "primer empleo Java", **Cuando** termina `003`, **Entonces** existe `ResponseClient{source=TELEGRAM, channelPost=LINKEDIN, outputContentProcessed 80..600, hashtags[2..5]}` válido contra el mismo schema que Discord.
 - **RF-06 — Fork post-LLM + buffer lote Redis:** tras `003` hay fork en paralelo: `A) SSE inmediato asset.created` con `ResponseClient` + `B) RPUSH buffer Redis` con `EnrichedComment` interno para OCI batch (flush automático por tamaño, sin disparo manual). Redis actúa como almacenamiento de lote volátil; OCI es el único persistente. Si `002` da `LLM_FALLBACK` → se guarda en buffer con `flag=LLM_FALLBACK` y `relevance=0` (auditoría) sin SSE; si el post es inválido → descarte sin SSE ni buffer/OCI, solo `LOG`.
   - *Criterio:* **Dado** un mensaje válido procesado, **Cuando** termina `003`, **Entonces** hay `asset.created {persisted:false}` en <5s + `RPUSH` a Redis; **Cuando** el buffer alcanza `REDIS_BUFFER_MAX_BYTES`, **Entonces** hay guardado OCI batch + `package.completed`.
-- **RF-07 — Retorno al cliente por SSE Telegram:** `GET /api/v1/telegram/messages` (`text/event-stream`) emite `asset.created` inmediato con `ResponseClient` plano (`id:` header = `messageId`) y `package.completed` con lo guardado en OCI, con reconexión por `Last-Event-ID`. Requiere enmienda `v1.6-single-get → dual-get` (ver plan 005 §2).
+- **RF-07 — Retorno al cliente por SSE Telegram:** `GET /api/v1/telegram/messages` (`text/event-stream`) emite `asset.created` inmediato con `ResponseClient` plano (`id:` header = `messageId`) y `package.completed` con lo guardado en OCI, con reconexión por `Last-Event-ID`. Enmienda ratificada: `v1.7-dual-get` (ver plan 005 §2).
   - *Criterio:* **Dado** un dashboard suscrito, **Cuando** se procesa un mensaje Telegram, **Entonces** recibe `asset.created` en <5s; **Cuando** se guarda un paquete batch, **Entonces** recibe `package.completed`; **Dado** reconexión con `Last-Event-ID`, **Entonces** no pierde eventos ya emitidos (ventana replay en memoria).
 
 ## 3. Requerimientos No Funcionales (RNF)
