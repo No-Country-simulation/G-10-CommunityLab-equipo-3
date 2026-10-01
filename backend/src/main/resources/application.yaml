@@ -20,3 +20,9 @@ redis:
   buffer:
     max:
       bytes: ${REDIS_BUFFER_MAX_BYTES:921600}
+
+# Configuration Telegram
+telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN}
+    listen-group-id: ${TELEGRAM_LISTEN_GROUP_ID}
