@@ -1,0 +1,60 @@
+# Especificación 006: Almacenamiento OCI con lectura directa (opción A)
+
+> Respeta: `constitution.md` v1.7-dual-get R4-R6, Q3, Fase 1. Extiende `004-paquete-oci-health` sin romperlo. Solo QUÉ/POR QUÉ.
+> Alcance: backend en Docker sobre VM OCI persiste el lote Redis ya cerrado (`<1MB`) en Object Storage del mismo ecosistema vía Instance Principal transparent. Backend solo escribe. Frontend solo lee vía PAR directa con `GET`.  `1 lote = 1 objeto = 1 PAR read por objeto`.
+> Secuencia: `buffer Redis por bytes (004) → flush 1 PUT → 1 CreatePAR read → SSE package.completed {batchId, parUrlBase, expiresAt} → frontend GET directo a OCI`.
+
+## 1. Problema y Objetivo
+
+El buffer Redis es volátil y hoy acumula sin persistir (`RedisBufferAdapter` sin flush, `maxBatchSize` reservado). Sin persistencia en la misma nube donde corre el backend, la demo no es verificable y la configuración con claves externas amplía la superficie de error.
+
+Objetivo 006: cuando el lote cierra por tamaño (`buffer:current:bytes >= REDIS_BUFFER_MAX_BYTES`), guardar `1 objeto JSON <1MB` en el bucket OCI de la misma región/compartment donde corre la VM, sin claves en repo/env/imagen Docker, y permitir al frontend leerlo directo con `GET` sin credenciales IAM, con el mínimo número de peticiones (1 PAR por lote, no 1 por asset interno).
+
+## 2. Requerimientos Funcionales
+
+- **RF-01 — Guardado batch 1:1 (reusa 004):** al cerrar el lote Redis por tamaño, persistir `paquetes/paquete-{batchId lote}.json` con `assets[N mensajes]` y devolver `{etag, sizeBytes}`. Solo se guarda si `assets[]` no vacío; vacío o post inválido aborta sin OCI (trazas `LLM_FALLBACK` sí se bufferizan como registro auditable, ver 004 RF-06).
+  - *Criterio:* **Dado** un lote válido con `bytes >= 921600` y envelope final `<1MB`, **Cuando** hace flush, **Entonces** existe 1 objeto `paquetes/paquete-{batchId}.json` `Content-Type: application/json`. **Dado** fallo OCI, **Cuando** ocurre, **Entonces** solo `LOG` error sin PII, sin evento `package.completed` (el `asset.created` vivo ya se emitió por SSE).
+- **RF-02 — Backend solo escribe con Instance Principal:** el backend corre en Docker sobre VM OCI (Compute) del mismo tenancy/compartment que el bucket. Autenticación transparente vía endpoint de metadata de instancia, sin `*.pem/*.key/.oci/token*.json` en repo, env o imagen. Política IAM de mínimo privilegio sobre el dynamic-group de la VM: `OBJECT_CREATE + OBJECT_OVERWRITE + PAR_MANAGE` (+ `OBJECT_READ` solo para poder otorgar PAR read, sin usar `GetObject/ListObjects` en código de negocio).
+  - *Criterio:* **Dado** contenedor sin ficheros de clave ni `OCI_*_KEY` en env, **Cuando** arranca en la VM, **Entonces** resuelve credenciales vía Instance Principal y puede hacer `PutObject + CreatePreauthenticatedRequest`. **Dado** arranque en local sin metadata OCI, **Cuando** faltan `OCI_BUCKET/OCI_REGION/OCI_NAMESPACE`, **Entonces** degrada a `OCI_NOT_CONFIGURED` con SSE vivo intacto (mismo patrón que `REDIS_NOT_CONFIGURED`), sin tumbar el contexto.
+- **RF-03 — 1 PAR read por lote/objeto:** por cada paquete guardado se crea como máximo 1 PAR de lectura sobre ese objeto. No se crea PAR por asset interno ni se reutiliza una PAR global para todos los lotes.
+  - *Criterio:* **Dado** N lotes guardados, **Cuando** se cuentan `CreatePreauthenticatedRequest`, **Entonces** hay N PARs (1:1 por lote), no N×M. **Dado** N assets dentro de 1 lote, **Cuando** se crea su PAR, **Entonces** hay 1 sola llamada.
+- **RF-04 — Lectura frontend solo GET directa a OCI:** el frontend no llama al backend para el histórico ni posee credenciales IAM. Lee directo la URL PAR con herramientas HTTP estándar (`GET`). Sin `PUT/DELETE` y sin `LIST` fuera del objeto autorizado. Sin exponer la URL PAR en logs.
+  - *Criterio:* **Dado** una `parUrlBase` vigente no expirada, **Cuando** el frontend hace `GET parUrlBase`, **Entonces** recibe `200 + application/json` del paquete. **Dado** PAR expirada o prefijo distinto, **Cuando** hace `GET`, **Entonces** OCI responde error sin exponer contenido.
+- **RF-05 — Idempotencia lote + PAR:** re-flush del mismo `batchId` lote no duplica objetos; re-solicitud de PAR de un lote con PAR vigente no expirada reutiliza la existente y responde `deduped:true`.
+  - *Criterio:* **Dado** `batchId` ya guardado, **Cuando** se re-guarda, **Entonces** hay 1 solo objeto en bucket y `deduped:true`. **Dado** `batchId` con PAR vigente, **Cuando** se pide de nuevo, **Entonces** no se crea duplicada y responde `deduped:true`.
+- **RF-06 — Aviso SSE sin contenido:** el backend avisa por el stream existente (`GET /api/v1/discord/messages` y `GET /api/v1/telegram/messages` por v1.7-dual-get, aislados por `source`) con `package.completed {type, batchId lote, payload:{assetsCount, parUrlBase, expiresAt}}`. No envía el contenido del paquete ni PII por SSE; el contenido se obtiene por RF-04.
+  - *Criterio:* **Dado** dashboard suscrito con `Last-Event-ID`, **Cuando** se guarda un paquete, **Entonces** recibe `package.completed` en el stream de su `source` con `parUrlBase + expiresAt`. **Dado** fallo OCI en flush, **Cuando** ocurre, **Entonces** no hay `package.completed`, solo `LOG + ⚠️`.
+
+## 3. RNF
+
+- **RNF-01:** objeto `<1MB` (`1048576 bytes`), `Content-Type: application/json`, cifrado del lado OCI por defecto Always Free. Buffer cierra por `REDIS_BUFFER_MAX_BYTES=921600 (900KB)` para dejar `~100KB` de margen de envelope `AssetPackage` bajo el 1MB.
+- **RNF-02:** cero secretos en git/env/imagen: prohibido `.env`, `*-local.yaml/yml`, `*.pem`, `*.key`, `token*.json`, `.oci/`. Solo env no-secreta: `OCI_BUCKET`, `OCI_REGION`, `OCI_NAMESPACE`, `OCI_PREFIX=paquetes/` (valores TBD por dev cuenta, ver §6). Nunca `OCI_*_KEY`.
+- **RNF-03:** PAR read con expiración explícita `PAR_TTL_DAYS=7` (propuesta inicial, TBD §6). No se edita una PAR: ante cambio de acceso se crea nueva y se revoca la anterior. Prohibido borrar el bucket con PARs asociadas. PAR sin `listing enabled` (innecesario en opción A de 1 objeto).
+- **RNF-04:** ingesta sin LLM `p95 < 300ms` local (R6); `PUT` OCI documenta latencia externa aparte (no computa en el `p95` local); `GET` vía PAR intrarregión `p95 < 800ms` como objetivo de demo; arranque local `< 15s`; `GET /actuator/health -> {"status":"UP"}` `p95 < 100ms` intacto.
+- **RNF-05:** despliegue mismo ecosistema: VM Compute + bucket en misma región/compartment. El Docker del backend debe permitir egress a endpoint de metadata de instancia (`169.254.169.254`) y a `objectstorage.{region}.oraclecloud.com`. Sin claves se reducen brechas de configuración entre sistemas.
+- **RNF-06:** privacidad y logs (Q3/R5): anonimato solo ante el LLM (solo `text + type`); OCI conserva `authorId/authorName/channelId/messageId` para trazabilidad; logs prod solo `messageId/batchId/source` (sin `authorId`); en local/test se permite `authorId` a `DEBUG`, nunca `authorName/contenido/tokens`. URL PAR nunca en logs.
+
+## 4. Dominio y Glosario
+
+- **Lote:** conjunto de mensajes procesados acumulados en Redis bajo `batchId=uuid` lote abierto (`buffer:current:id/list/ids/bytes`). Unidad de flush `N:1`.
+- **Paquete (opción A):** `paquetes/paquete-{batchId lote}.json` — 1 objeto con `{batchId, generatedAt, source: DISCORD|TELEGRAM, assets: Asset[] (LINKEDIN/X/FAQ, 1 duda = 1 post sin consolidado), enriched: EnrichedComment[] con usuario para trazabilidad, stats:{received, analyzed, fallbackCount, assetsCount}, promptVersion: "v1", packageUrl?}`. Anonimato solo ante LLM; OCI conserva usuario.
+- **Prefijo:** `paquetes/` (en opción A no se usa PAR por prefijo, solo PAR por objeto; el prefijo solo organiza keys).
+- **PAR read por objeto:** URL única generada por `CreatePreauthenticatedRequest` con scope = ese objeto + `accessType=ObjectRead` + `expiresAt=now+PAR_TTL_DAYS`. Es la única forma de acceso del frontend; se muestra una sola vez al crearla y no es recuperable después (se conserva su URL emitida en `package.completed`, no el secreto de creación).
+- **Instance Principal:** identidad de la VM OCI (dynamic-group + políticas). El SDK la resuelve transparente sin ficheros de clave.
+- **parUrlBase/expiresAt:** campos de `package.completed`; `parUrlBase` es la URL PAR a hacer `GET`, `expiresAt` ISO-8601 de expiración para que el frontend renueve/repida.
+- **Envelope:** cabecera `AssetPackage` que envuelve `assets[]`; su tamaño justifica el margen `900KB -> 1MB`.
+
+## 5. Fuera de Alcance
+
+- Directorio por lote (opción B: `paquetes/{batchId}/manifest.json + asset-*.json` con 1 PAR por prefijo + `listing enabled`): descartado en Fase 1 por `más PUTs sin beneficio si el lote ya cabe en <1MB`. Queda como evolución si se necesitan lotes >1MB o lectura parcial por asset.
+- PAR global `paquetes/` para todos los lotes: descartado por blast-radius (un leak expone todo, no revocable por lote).
+- Proxy `GET` vía backend (`GET /packages*`): prohibido por single-get/dual-get (004 RF-08); el histórico solo se lee directo a OCI, el backend solo emite SSE vivo + aviso.
+- Newsletter batch (004 RF-09), multi-bucket/multi-tenant, CDN público, versionado histórico, métricas Prometheus/Grafana, `OBJECT_READ/ListObjects` en runtime de negocio, auth con API Key.
+- Cambiar el conteo Redis (`SADD/RPUSH/INCRBY`): 006 no toca ingesta, solo consume el cierre por `bytes`.
+
+## 6. Trazabilidad y supuestos TBD (fija el plan, no el código)
+
+- Deriva de: `constitution.md` v1.7-dual-get §2 Storage/Buffer, R4-R6, Q3, Fase 1 + `spec 004` RF-01/RF-02/RNF-01/RNF-02 (guardado batch, idempotencia, `<1MB`, env) + decisión fijada `opción A + PAR directo + Instance Principal`.
+- TBD por dev cuenta antes de `plan.md`: `OCI_BUCKET` (propuesta `communitylab-assets`), `OCI_REGION` (propuesta `sa-saopaulo-1`), `OCI_NAMESPACE`, `compartment`, nombre del `dynamic-group` de la VM + regla que incluya la instancia Docker-host, `PAR_TTL_DAYS` (propuesta `7`), `OCI_PREFIX=paquetes/`.
+- Conflicto resuelto con 004 RF-08: `sin GET /packages*` sigue vigente para backend; la lectura directa es frontend→OCI vía PAR, no frontend→backend, por lo que no viola single-get/dual-get (el backend sigue exponiendo solo `GET SSE + health`).
+- `sdd-audit` obligatorio antes de `plan.md`.
