@@ -43,7 +43,8 @@ import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentExce
  * Mockito only at port boundaries; domain records are real.
  * Derivado de: plan 003 §3 (tolerancia a fallos, fork SSE + buffer) +
  * spec 002 RF-04 (LLM_FALLBACK nunca 500) + spec 004 RF-06 (fallback
- * bufferizado y audible por SSE, post inválido descartado con LOG).
+ * bufferizado y audible por SSE, post inválido descartado con LOG) +
+ * spec 005 RF-05,RF-06 (reuso pipeline para source TELEGRAM).
  */
 @DisplayName("EnrichmentListener")
 class EnrichmentListenerTest {
@@ -106,6 +107,28 @@ class EnrichmentListenerTest {
         order.verify(publisher).publish(clientCaptor.capture());
         order.verify(buffer).appendToBatch(post);
         assertThat(clientCaptor.getValue()).isEqualTo(expectedClient(post));
+    }
+
+    @Test
+    @DisplayName("Dado un post valido de Telegram, cuando se procesa, entonces se publica y bufferiza con source TELEGRAM")
+    void publishesAndBuffersTelegramPost() {
+        // Dado el LLM responde y el conversor construye un post valido TELEGRAM
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        EnrichedComment post = validTelegramPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(post);
+
+        // Cuando se procesa un evento TELEGRAM
+        listener.on(telegramEvent("Consegui mi primer empleo como dev Java, gracias comunidad"));
+
+        // Entonces fork: SSE primero y buffer segundo, con fuente preservada
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
+        InOrder order = inOrder(publisher, buffer);
+        order.verify(publisher).publish(clientCaptor.capture());
+        order.verify(buffer).appendToBatch(post);
+        assertThat(clientCaptor.getValue()).isEqualTo(expectedClient(post));
+        assertThat(clientCaptor.getValue().source()).isEqualTo(Source.TELEGRAM);
+        assertThat(post.source()).isEqualTo(Source.TELEGRAM);
     }
 
     @Test
@@ -191,6 +214,12 @@ class EnrichmentListenerTest {
                 content, Instant.now(), false, Source.DISCORD));
     }
 
+    private IngestAcceptedEvent telegramEvent(String content) {
+        return new IngestAcceptedEvent(new ChannelMessage(
+                BATCH_ID, MESSAGE_ID, "555", "777", "cos_dev",
+                content, Instant.now(), false, Source.TELEGRAM));
+    }
+
     private ResponseModel validResponse() {
         return new ResponseModel(
                 "Consegui mi primer empleo como dev Java, gracias comunidad",
@@ -219,6 +248,17 @@ class EnrichmentListenerTest {
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
                 Channels.FAQ, null, null, List.of(), null);
+    }
+
+    private EnrichedComment validTelegramPost() {
+        return new EnrichedComment(
+                BATCH_ID, MESSAGE_ID, "555", "777", "cos_dev",
+                "Consegui mi primer empleo como dev Java, gracias comunidad",
+                Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
+                List.of("empleo", "java"), 85, null, null, Instant.now(), Source.TELEGRAM,
+                Channels.FAQ, "Primer empleo dev",
+                "Conseguiste tu primer empleo como dev gracias a la comunidad?",
+                List.of("#EmpleoTech"), null);
     }
 
     // Mirror of the listener's EnrichedComment -> ResponseClient mapping; a record
