@@ -1,7 +1,191 @@
 <section id="inicio" class="relative px-4 pb-16 pt-32 sm:px-6 sm:pt-40 lg:pb-24">
-  <div class="landing-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-[640px]" aria-hidden="true"></div>
-  <div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-10">
-    <div appReveal><span class="landing-badge"><i class="pi pi-users text-[11px]"></i> {{ 'landing.hero.badge' | t }}</span><h1 class="mt-6 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-espresso dark:text-white sm:text-5xl lg:text-[3.6rem]">{{ 'landing.hero.title1' | t }} <span class="landing-highlight">{{ 'landing.hero.highlight' | t }}</span> {{ 'landing.hero.title2' | t }}</h1><p class="mt-6 max-w-xl text-base leading-relaxed text-stone-600 dark:text-stone-300 sm:text-lg">{{ 'landing.hero.lead' | t }}</p><div class="mt-8 flex flex-wrap items-center gap-3"><a routerLink="/app" class="landing-btn landing-btn-primary landing-btn-lg">{{ 'landing.hero.cta' | t }} <i class="pi pi-arrow-right text-sm"></i></a><a href="#como-funciona" (click)="navigate.emit({ id: 'como-funciona', event: $event })" class="landing-btn landing-btn-ghost landing-btn-lg"><span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"><i class="pi pi-arrow-down text-[10px]"></i></span>{{ 'landing.hero.secondary' | t }}</a></div><p class="mt-8 text-sm font-semibold text-stone-500 dark:text-stone-400"><i class="pi pi-sparkles mr-1.5 text-amber-500"></i>{{ 'brand.tagline' | t }}</p></div>
-    <div class="relative mx-auto w-full max-w-md lg:max-w-none" appReveal="120"><div class="landing-mascot relative overflow-hidden rounded-clay"><app-bear pose="laptop" fallback="image/logo/osoLogo.png" [eager]="true" [alt]="'landing.hero.alt' | t" [width]="733" [height]="885" imgClass="landing-float relative z-10 mx-auto h-[360px] w-auto object-contain drop-shadow-[0_24px_36px_rgb(28_25_23/0.35)] sm:h-[440px]" /></div><div class="landing-chip absolute -left-2 top-8 sm:-left-8"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300"><i class="pi pi-sparkles text-xs"></i></span>{{ 'landing.hero.chip.analysis' | t }}</div><div class="landing-chip absolute -right-2 top-[24%] sm:-right-6"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[#5865f2] dark:bg-indigo-500/15"><i class="pi pi-discord text-xs"></i></span>{{ 'landing.hero.chip.sources' | t }}</div><div class="landing-chip absolute -bottom-4 left-6 sm:left-10"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-[#c74634] dark:bg-orange-500/15 dark:text-orange-300"><i class="pi pi-cloud text-xs"></i></span>{{ 'landing.hero.chip.oci' | t }}</div></div>
+  <div class="landing-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-[680px]" aria-hidden="true"></div>
+  <div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-12">
+    <!-- LEFT COLUMN: Editorial Typography, Floating 3D Badge, & Keyword Pills -->
+    <div appReveal>
+      <div class="inline-flex items-center gap-2 rounded-full border border-blue-200/70 bg-blue-50/80 px-4 py-1.5 text-xs font-bold text-blue-700 shadow-sm backdrop-blur-sm dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+        <span class="flex h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse"></span>
+        <span>{{ 'landing.hero.badge' | t }}</span>
+        <i class="pi pi-arrow-up-right text-[10px] opacity-70"></i>
+      </div>
+
+      <h1 class="mt-6 font-display text-4xl font-extrabold leading-[1.12] tracking-tight text-espresso dark:text-white sm:text-5xl lg:text-[3.5rem]">
+        <span class="font-serif italic font-normal text-stone-700 dark:text-stone-300">
+          {{ 'landing.hero.title1' | t }}
+        </span>
+        <span class="inline-flex items-center align-middle mx-1.5 px-3.5 py-0.5 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white text-2xl sm:text-3xl lg:text-4xl font-extrabold shadow-[0_10px_25px_rgba(37,99,235,0.45)] ring-2 ring-white/80 dark:ring-stone-800 transform -rotate-2 hover:rotate-0 transition-transform">
+          {{ 'landing.hero.highlight' | t }}
+        </span>
+        <span class="block mt-1 text-espresso dark:text-white">
+          {{ 'landing.hero.title2' | t }}
+        </span>
+      </h1>
+
+      <!-- Gradient accent underline -->
+      <div class="mt-4 h-[3px] w-48 rounded-full bg-gradient-to-r from-blue-600 via-amber-500 to-transparent"></div>
+
+      <p class="mt-6 max-w-xl text-base leading-relaxed text-stone-600 dark:text-stone-300 sm:text-lg">
+        {{ 'landing.hero.lead' | t }}
+      </p>
+
+      <!-- Keyword Highlight Pills inspired by reference design [ trust ], [ engagement ], [ growth ] -->
+      <div class="mt-5 flex flex-wrap items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 rounded-xl border border-blue-200/80 bg-blue-50/90 px-3 py-1 text-xs font-bold text-blue-700 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+          <i class="pi pi-shield text-[11px]"></i> Confianza
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-xl border border-fuchsia-200/80 bg-fuchsia-50/90 px-3 py-1 text-xs font-bold text-fuchsia-700 shadow-sm dark:border-fuchsia-500/30 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
+          <i class="pi pi-heart text-[11px]"></i> Engagement
+        </span>
+        <span class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <i class="pi pi-chart-line text-[11px]"></i> Crecimiento
+        </span>
+        <span class="inline-flex items-center text-amber-500 animate-pulse text-base ml-1" title="Kora AI">✦</span>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a routerLink="/app" class="landing-btn landing-btn-primary landing-btn-lg">
+          {{ 'landing.hero.cta' | t }} <i class="pi pi-arrow-right text-sm"></i>
+        </a>
+        <a
+          href="#como-funciona"
+          (click)="navigate.emit({ id: 'como-funciona', event: $event })"
+          class="landing-btn landing-btn-ghost landing-btn-lg"
+        >
+          <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+            <i class="pi pi-arrow-down text-[10px]"></i>
+          </span>
+          {{ 'landing.hero.secondary' | t }}
+        </a>
+      </div>
+      <p class="mt-8 text-sm font-semibold text-stone-500 dark:text-stone-400">
+        <i class="pi pi-sparkles mr-1.5 text-amber-500"></i>{{ 'brand.tagline' | t }}
+      </p>
+    </div>
+
+    <!-- RIGHT COLUMN: 3D Stage with Video, Fluted Glass Podium, & Floating Glass Cards -->
+    <div class="relative mx-auto w-full max-w-lg lg:max-w-none" appReveal="120">
+      <!-- Soft ambient backdrop light -->
+      <div class="pointer-events-none absolute -inset-4 -z-10 rounded-[44px] bg-gradient-to-tr from-amber-400/20 via-sky-400/15 to-indigo-500/20 blur-2xl dark:from-amber-500/10 dark:via-sky-500/10 dark:to-indigo-500/10"></div>
+
+      <!-- Main Mascot Stage Container -->
+      <div class="landing-mascot relative overflow-hidden rounded-[36px] min-h-[460px] sm:min-h-[520px] flex items-center justify-center">
+        <!-- Hero Video: Autoplays once on page open or refresh, no loop -->
+        <video
+          #heroVideo
+          autoplay
+          muted
+          playsinline
+          preload="auto"
+          poster="image/bear/oso-laptop.webp"
+          class="relative z-10 mx-auto h-[400px] sm:h-[480px] w-full object-contain drop-shadow-[0_24px_36px_rgba(28,25,23,0.3)]"
+        >
+          <source src="https://res.cloudinary.com/dx6ehwl5/video/upload/v1790986252/osolandingpage.mp4" type="video/mp4" />
+        </video>
+
+        <!-- Fluted Glass Podium Bar at the bottom (matching the reference image) -->
+        <div class="glass-fluted pointer-events-none absolute bottom-0 inset-x-0 h-20 rounded-b-[36px] z-20 flex items-center justify-between px-5 sm:px-6">
+          <div class="flex items-center gap-2.5">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <div>
+              <p class="text-[12px] font-bold text-espresso dark:text-white leading-tight">Motor Kora en vivo</p>
+              <p class="text-[10px] text-stone-500 dark:text-stone-400 leading-tight">Discord &amp; Telegram → Redes sociales</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 dark:bg-stone-800/90 text-[#5865f2] shadow-sm" title="Discord">
+              <i class="pi pi-discord text-xs"></i>
+            </span>
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 dark:bg-stone-800/90 text-[#229ed9] shadow-sm" title="Telegram">
+              <i class="pi pi-telegram text-xs"></i>
+            </span>
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-sm" title="OCI Cloud">
+              <i class="pi pi-cloud text-xs"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLOATING GLASS CARDS (Referenced from user image) -->
+
+      <!-- 1. Top-Right: Dual Chat Exchange Bubbles -->
+      <div class="landing-chip absolute -top-4 -right-2 sm:-right-8 z-30 !p-0 !bg-transparent !border-0 !shadow-none !rounded-none">
+        <div class="flex flex-col gap-1.5 items-end">
+          <div class="flex items-center gap-2 rounded-2xl rounded-br-sm bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.4)] ring-1 ring-white/30">
+            <i class="pi pi-comments text-xs"></i>
+            <span>Dudas en comunidad</span>
+          </div>
+          <div class="flex items-center gap-1.5 rounded-2xl rounded-tl-sm bg-white/95 dark:bg-stone-800/95 px-3 py-1.5 text-[11px] font-bold text-espresso dark:text-white shadow-lg border border-white/80 dark:border-stone-700">
+            <span class="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span>Post LinkedIn &amp; X</span>
+            <i class="pi pi-arrow-right text-[9px] text-amber-500"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Mid-Right: Interconnected Community Nodes Card -->
+      <div class="landing-chip absolute -right-3 sm:-right-10 top-[40%] z-30 !p-0 !bg-transparent !border-0 !shadow-none !rounded-none" style="animation-delay: -2s;">
+        <div class="rounded-2xl border border-white/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-3 shadow-[0_14px_30px_rgba(28,25,23,0.12)] backdrop-blur-md flex flex-col items-center gap-1.5">
+          <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="7" r="4" fill="#3b82f6" fill-opacity="0.2" stroke="#2563eb" stroke-width="2" />
+            <circle cx="7" cy="23" r="4" fill="#10b981" fill-opacity="0.2" stroke="#059669" stroke-width="2" />
+            <circle cx="25" cy="23" r="4" fill="#f59e0b" fill-opacity="0.2" stroke="#d97706" stroke-width="2" />
+            <line x1="14" y1="10" x2="9" y2="20" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2 2" />
+            <line x1="18" y1="10" x2="23" y2="20" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2 2" />
+            <line x1="11" y1="23" x2="21" y2="23" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2 2" />
+          </svg>
+          <span class="text-[10px] font-extrabold text-stone-700 dark:text-stone-200">Comunidad</span>
+        </div>
+      </div>
+
+      <!-- 3. Lower-Right: Donut / Pie Analytics Card -->
+      <div class="landing-chip absolute -right-2 sm:-right-6 bottom-20 z-30 !p-0 !bg-transparent !border-0 !shadow-none !rounded-none" style="animation-delay: -3.5s;">
+        <div class="rounded-2xl border border-white/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-2.5 shadow-[0_14px_30px_rgba(28,25,23,0.12)] backdrop-blur-md flex items-center gap-2.5">
+          <div class="relative w-8 h-8 flex items-center justify-center">
+            <svg class="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" stroke-width="5" />
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#2563eb" stroke-width="5" stroke-dasharray="35 100" stroke-linecap="round" />
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" stroke-width="5" stroke-dasharray="25 100" stroke-dashoffset="-35" stroke-linecap="round" />
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" stroke-width="5" stroke-dasharray="28 100" stroke-dashoffset="-60" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-[11px] font-black text-espresso dark:text-white leading-tight">94% IA</p>
+            <p class="text-[9px] font-semibold text-stone-500 dark:text-stone-400">Relevancia</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Bottom-Left: Target / Niche Audience Card -->
+      <div class="landing-chip absolute -left-3 sm:-left-8 bottom-16 z-30 !p-0 !bg-transparent !border-0 !shadow-none !rounded-none" style="animation-delay: -2.8s;">
+        <div class="rounded-2xl border border-white/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 px-3.5 py-2.5 shadow-[0_14px_30px_rgba(28,25,23,0.12)] backdrop-blur-md flex items-center gap-2.5">
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+            <i class="pi pi-bullseye text-base"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-espresso dark:text-white leading-tight">Niche Audience</p>
+            <p class="text-[10px] text-stone-500 dark:text-stone-400">Alto engagement</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Floating Sparkle Golden Star -->
+      <div class="landing-chip absolute left-4 sm:left-6 top-16 z-30 pointer-events-none !p-0 !bg-transparent !border-0 !shadow-none !rounded-none" style="animation-delay: -0.7s;">
+        <svg class="w-8 h-8 text-amber-400 filter drop-shadow-[0_2px_10px_rgba(245,158,11,0.6)]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z" />
+        </svg>
+      </div>
+
+      <!-- 6. Top-Left Analysis Pill -->
+      <div class="landing-chip absolute -left-2 top-6 sm:-left-8 z-30">
+        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
+          <i class="pi pi-sparkles text-xs"></i>
+        </span>
+        <span>{{ 'landing.hero.chip.analysis' | t }}</span>
+      </div>
+    </div>
   </div>
 </section>

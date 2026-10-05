@@ -21,6 +21,7 @@ export const LANDING_PT = {
 	'landing.hero.chip.sources': 'Discord e Telegram',
 	'landing.hero.chip.oci': 'Salvo no OCI Always Free',
 	'landing.hero.alt': 'Kora, o urso-de-óculos que escuta sua comunidade',
+	'landing.brands.title': 'Ecossistema do hackathon e tecnologias integradas',
 
 	// Funcionalidades
 	'landing.features.eyebrow': 'O que a Kora faz',

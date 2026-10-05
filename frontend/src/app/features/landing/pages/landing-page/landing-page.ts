@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, signal } from '@angular/core';
 import { I18n, LANGS, Lang } from '../../../../core/i18n/i18n.service';
 import { ThemeService } from '../../../../core/theme.service';
+import { BrandSlider } from '../../components/brand-slider/brand-slider';
 import { LandingCtaBanner } from '../../components/cta-banner/cta-banner';
 import { LandingExample } from '../../components/example/example';
 import { LandingFeatures } from '../../components/features/features';
@@ -13,7 +14,7 @@ interface Section { id: string; key: string; }
 
 @Component({
   selector: 'app-landing',
-  imports: [LandingLayout, LandingHero, LandingFeatures, LandingHowItWorks, LandingExample, LandingPlatform, LandingCtaBanner],
+  imports: [LandingLayout, LandingHero, BrandSlider, LandingFeatures, LandingHowItWorks, LandingExample, LandingPlatform, LandingCtaBanner],
   templateUrl: './landing-page.html',
   host: { '(window:scroll)': 'onScroll()', '(document:keydown.escape)': 'menuOpen.set(false)' },
 })

@@ -1,0 +1,74 @@
+<section class="relative py-7 sm:py-9 border-y border-stone-200/70 dark:border-stone-800/80 bg-white/40 dark:bg-stone-900/30 backdrop-blur-sm overflow-hidden" appReveal>
+  <!-- Subtle Section Header / Eyebrow -->
+  <div class="mx-auto max-w-6xl px-4 text-center mb-5">
+    <p class="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+      {{ 'landing.brands.title' | t }}
+    </p>
+  </div>
+
+  <!-- Marquee Container with lateral soft gradient fading -->
+  <div class="marquee-mask relative w-full overflow-hidden select-none py-1">
+    <div class="animate-marquee flex items-center">
+      <!-- Repeated strips to ensure an infinite seamless loop across all screen sizes -->
+      @for (loop of [1, 2]; track loop) {
+        <div class="flex items-center gap-14 sm:gap-20 pr-14 sm:pr-20 shrink-0">
+          <!-- 1. Alura -->
+          <div class="group/brand flex items-center gap-2 cursor-pointer select-none transition-all duration-300 hover:scale-105 shrink-0 opacity-75 hover:opacity-100" title="Alura Latam">
+            <div class="text-stone-700 dark:text-stone-300 group-hover/brand:text-[#0070f3] dark:group-hover/brand:text-[#38bdf8] transition-colors duration-300">
+              <svg class="h-6 sm:h-7 w-auto fill-current" viewBox="0 0 56 26">
+                <path fill-rule="evenodd" d="M9.1 15.887a.73.73 0 0 1-.36.52c-.192.124-.36.186-.53.248-.362.125-.743.25-1.146.395-.425.145-.806.29-1.146.395-.424.145-.827.27-1.21.415a3.6 3.6 0 0 0-.805.478 3.4 3.4 0 0 0-.594.706c-.17.29-.277.664-.277 1.1 0 .873.212 1.537.637 1.952.424.437 1.21.644 2.375.644q1.781 0 2.42-.685.635-.685.635-1.93zm-3.055-9.2c2.08 0 3.607.395 4.582 1.205.976.79 1.464 1.806 1.464 3.01v10.26c0 .415-.084.872-.232 1.37-.15.5-.446.956-.913 1.37-.445.417-1.06.77-1.845 1.04s-1.803.415-3.055.415c-1.25 0-2.27-.145-3.054-.415s-1.4-.623-1.845-1.04a3.3 3.3 0 0 1-.912-1.37C.085 22.035 0 21.578 0 21.163v-1.64c0-.873.233-1.683.7-2.39.467-.726 1.124-1.224 1.973-1.536.424-.145.912-.29 1.463-.477.552-.188 1.06-.375 1.57-.54.51-.167.955-.334 1.336-.48a9 9 0 0 1 .7-.248l.382-.187q.224-.125.446-.374.222-.248.382-.56a1.6 1.6 0 0 0 .17-.726v-.665a1.7 1.7 0 0 0-.15-.707c-.084-.25-.254-.478-.487-.685s-.552-.374-.933-.5c-.382-.123-.89-.186-1.464-.186-1.188 0-1.973.23-2.397.706-.36.416-.572.935-.614 1.516 0 .125-.106.208-.234.208l-2.587.042a.233.233 0 0 1-.234-.23v-.6c0-.583.107-1.123.34-1.642.234-.52.595-.955 1.082-1.33.488-.373 1.125-.684 1.888-.892.743-.25 1.655-.353 2.715-.353zm46.9 9.2a.73.73 0 0 1-.36.52c-.19.124-.36.186-.53.248-.36.125-.743.25-1.146.395-.425.145-.807.29-1.146.395-.425.145-.828.27-1.21.415a3.6 3.6 0 0 0-.806.478 3.4 3.4 0 0 0-.593.706c-.17.29-.276.664-.276 1.1 0 .873.21 1.537.635 1.952.424.437 1.21.644 2.376.644q1.784 0 2.42-.685t.635-1.93v-4.238zm-3.054-9.2c2.08 0 3.607.395 4.583 1.205.975.79 1.463 1.806 1.463 3.01v10.26c0 .415-.084.872-.233 1.37-.148.5-.445.956-.912 1.37-.445.417-1.06.77-1.845 1.04s-1.803.415-3.054.415-2.27-.145-3.054-.415-1.4-.623-1.845-1.04a3.3 3.3 0 0 1-.91-1.37c-.15-.498-.235-.955-.235-1.37v-1.64c0-.873.234-1.683.7-2.39.467-.726 1.125-1.224 1.973-1.536.424-.145.912-.29 1.464-.477.55-.188 1.06-.375 1.57-.54.51-.167.954-.334 1.336-.48a9 9 0 0 1 .7-.248l.382-.187q.222-.125.445-.374a2.5 2.5 0 0 0 .382-.56 1.6 1.6 0 0 0 .17-.726v-.665a1.7 1.7 0 0 0-.15-.707c-.084-.25-.253-.478-.487-.685s-.55-.374-.933-.5c-.382-.123-.89-.186-1.464-.186-1.188 0-1.972.23-2.397.706-.36.416-.572.935-.615 1.516 0 .125-.105.208-.232.208H44.12a.233.233 0 0 1-.232-.228v-.603c0-.58.106-1.12.34-1.64.233-.518.593-.955 1.08-1.328.49-.374 1.125-.686 1.89-.893.72-.21 1.632-.313 2.693-.313zm-9.1.083h1.698c.148 0 .254.146.212.29l-.573 2.16c-.02.105-.127.167-.212.167h-1.188c-.636 0-1.145.083-1.548.25-.383.165-.7.352-.913.58-.212.23-.34.457-.403.686a2.7 2.7 0 0 0-.085.685v13.354a.233.233 0 0 1-.235.228H35a.233.233 0 0 1-.233-.228V10.985c0-.248.042-.622.148-1.1.085-.477.34-.934.743-1.412.403-.457.997-.872 1.803-1.204.807-.334 1.91-.5 3.33-.5zm-8.57 13.935v.623c0 .27-.04.644-.147 1.122-.085.456-.34.934-.743 1.39-.403.458-.997.873-1.803 1.205s-1.91.5-3.33.5-2.524-.167-3.33-.5-1.4-.726-1.803-1.204c-.403-.456-.658-.934-.743-1.41-.084-.48-.147-.832-.147-1.102V7.352c0-.125.106-.23.233-.23h2.524c.128 0 .234.105.234.23v13.083c0 .436.063.748.127.997.065.25.192.498.383.706q.286.342.89.56c.382.146.913.23 1.57.23.68 0 1.23-.084 1.634-.23.403-.145.7-.332.912-.54.21-.207.36-.435.423-.685.064-.25.15-.456.15-1.06V7.332c0-.124.105-.228.232-.228h2.524c.126 0 .232.104.232.23v13.373h-.02zM14.85.105h2.525c.127 0 .233.103.233.227v24.734a.233.233 0 0 1-.233.23H14.85a.233.233 0 0 1-.233-.23V.332c.02-.124.106-.228.233-.228z"/>
+              </svg>
+            </div>
+            <span class="text-xs font-bold tracking-tight text-stone-400 dark:text-stone-500 group-hover/brand:text-stone-600 dark:group-hover/brand:text-stone-300 transition-colors">LATAM</span>
+          </div>
+
+          <!-- 2. No Country -->
+          <div class="group/brand flex items-center gap-2.5 cursor-pointer select-none transition-all duration-300 hover:scale-105 shrink-0 opacity-75 hover:opacity-100" title="No Country">
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-900 dark:bg-stone-800 text-white shadow-sm ring-1 ring-stone-950/10 dark:ring-white/10 group-hover/brand:shadow-md transition-shadow">
+              <span class="text-[11px] font-black tracking-tighter bg-gradient-to-r from-[#ec4899] to-[#06b6d4] bg-clip-text text-transparent">NC</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="font-display font-extrabold tracking-wider text-stone-800 dark:text-stone-200 group-hover/brand:text-espresso dark:group-hover/brand:text-white text-sm sm:text-base leading-none transition-colors">NO COUNTRY</span>
+              <span class="text-[9px] font-semibold text-stone-400 dark:text-stone-500 leading-tight">Simulation</span>
+            </div>
+          </div>
+
+          <!-- 3. Oracle Cloud -->
+          <div class="group/brand flex items-center gap-2 cursor-pointer select-none transition-all duration-300 hover:scale-105 shrink-0 opacity-75 hover:opacity-100" title="Oracle Cloud (OCI)">
+            <div class="flex items-center text-[#c74634] group-hover/brand:brightness-110 transition-all">
+              <svg class="h-5 sm:h-6 w-auto" viewBox="0 0 125 28" fill="none">
+                <path d="M14 2C7.37 2 2 7.37 2 14s5.37 12 12 12 12-5.37 12-12S20.63 2 14 2zm0 18.5c-3.59 0-6.5-2.91-6.5-6.5s2.91-6.5 6.5-6.5 6.5 2.91 6.5 6.5-2.91 6.5-6.5 6.5z" fill="currentColor"/>
+                <text x="32" y="20.5" font-family="'Outfit', 'Plus Jakarta Sans', sans-serif" font-size="18" font-weight="900" letter-spacing="1.2" fill="currentColor">ORACLE</text>
+              </svg>
+            </div>
+            <span class="rounded-md bg-[#c74634]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#c74634] dark:bg-[#c74634]/20">Cloud</span>
+          </div>
+
+          <!-- 4. Telegram -->
+          <div class="group/brand flex items-center gap-2 cursor-pointer select-none transition-all duration-300 hover:scale-105 shrink-0 opacity-75 hover:opacity-100" title="Telegram">
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#229ed9]/15 text-[#229ed9] group-hover/brand:bg-[#229ed9] group-hover/brand:text-white transition-all duration-300">
+              <i class="pi pi-telegram text-base"></i>
+            </div>
+            <span class="font-display font-extrabold tracking-tight text-stone-800 dark:text-stone-200 group-hover/brand:text-[#229ed9] dark:group-hover/brand:text-[#42b7ef] text-sm sm:text-base transition-colors">Telegram</span>
+          </div>
+
+          <!-- 5. Discord -->
+          <div class="group/brand flex items-center gap-2 cursor-pointer select-none transition-all duration-300 hover:scale-105 shrink-0 opacity-75 hover:opacity-100" title="Discord">
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#5865f2]/15 text-[#5865f2] group-hover/brand:bg-[#5865f2] group-hover/brand:text-white transition-all duration-300">
+              <i class="pi pi-discord text-base"></i>
+            </div>
+            <span class="font-display font-extrabold tracking-tight text-stone-800 dark:text-stone-200 group-hover/brand:text-[#5865f2] dark:group-hover/brand:text-[#7983f5] text-sm sm:text-base transition-colors">Discord</span>
+          </div>
+
+          <!-- 6. ONE (Oracle Next Education) Partner Badge -->
+          <div class="group/brand flex items-center gap-1.5 cursor-pointer select-none transition-all duration-300 hover:scale-105 shrink-0 opacity-75 hover:opacity-100" title="Oracle Next Education">
+            <span class="flex h-6 items-center px-2 rounded-md bg-stone-200/70 dark:bg-stone-800 text-[10px] font-black tracking-wider text-stone-700 dark:text-stone-300 group-hover/brand:bg-amber-500/20 group-hover/brand:text-amber-600 dark:group-hover/brand:text-amber-400 transition-colors">
+              ONE
+            </span>
+            <span class="text-xs font-semibold text-stone-500 dark:text-stone-400">Education</span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

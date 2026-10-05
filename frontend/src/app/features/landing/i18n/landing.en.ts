@@ -21,6 +21,7 @@ export const LANDING_EN = {
   'landing.hero.chip.sources': 'Discord and Telegram',
   'landing.hero.chip.oci': 'Stored on OCI Always Free',
   'landing.hero.alt': 'Kora, the spectacled bear that listens to your community',
+  'landing.brands.title': 'Hackathon ecosystem & integrated platforms',
 
   // Features
   'landing.features.eyebrow': 'What Kora does',
