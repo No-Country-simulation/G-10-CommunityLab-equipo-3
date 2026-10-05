@@ -89,14 +89,17 @@ export const appConfig: ApplicationConfig = {
       },
     },
     MessageService,
-    // Real backend. It only exposes the SSE stream for now: until the REST endpoints of
-    // API_CONTRACT.md exist, lists load empty and manual ingestion shows an error toast.
+    // Real backend. It only exposes the SSE streams for now: until the REST endpoints of
+    // API_CONTRACT.md exist, asset and storage lists load empty.
     // Set useMocks to true for the simulated demo.
     // '/api' is proxied to http://localhost:8080 by proxy.conf.json (ng serve).
     provideCommunityLabApi({
       baseUrl: '/api/v1',
       useMocks: false,
-      liveFeedUrl: '/api/v1/discord/messages',
+      liveFeeds: {
+        Discord: '/api/v1/discord/messages',
+        Telegram: '/api/v1/telegram/messages',
+      },
     }),
     providePrimeNG({
       ripple: true,

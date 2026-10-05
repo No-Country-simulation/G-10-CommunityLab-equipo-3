@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import {
   AssetPatch,
   GeneratedAsset,
+  InteractionSource,
   ProcessResult,
   StoredObject,
 } from './api.models';
@@ -13,10 +14,11 @@ export interface ApiConfig {
   /** true → simulated responses (no backend needed for the demo) */
   useMocks: boolean;
   /**
-   * SSE stream of processed Discord posts (GET /api/v1/discord/messages).
-   * Works in both modes: live posts are added on top of the mock/HTTP data.
+   * SSE stream of processed posts per network (GET /api/v1/discord/messages,
+   * GET /api/v1/telegram/messages). Works in both modes: live posts are added on top
+   * of the mock/HTTP data.
    */
-  liveFeedUrl?: string;
+  liveFeeds?: Partial<Record<InteractionSource, string>>;
 }
 
 export const API_CONFIG = new InjectionToken<ApiConfig>('API_CONFIG');

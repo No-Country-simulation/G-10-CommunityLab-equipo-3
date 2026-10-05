@@ -9,7 +9,7 @@ import {
   StoredObject,
 } from './api/api.models';
 import { CommunityLabApi } from './api/community-lab.api';
-import { DiscordLiveFeed, LIVE_ASSET_PREFIX } from './api/discord-live-feed';
+import { LIVE_ASSET_PREFIX, LiveFeed } from './api/live-feed';
 
 const SOURCE_KEY = 'active-source';
 
@@ -17,7 +17,7 @@ const SOURCE_KEY = 'active-source';
 @Injectable({ providedIn: 'root' })
 export class WorkspaceStore {
   private readonly api = inject(CommunityLabApi);
-  private readonly liveFeed = inject(DiscordLiveFeed);
+  private readonly liveFeed = inject(LiveFeed);
 
   private readonly _assets = signal<GeneratedAsset[]>([]);
   private readonly _objects = signal<StoredObject[]>([]);
@@ -75,8 +75,11 @@ export class WorkspaceStore {
     this.liveFeed.connect();
   }
 
-  /** Connection state of the backend SSE stream. */
-  readonly liveStatus = this.liveFeed.status;
+  /** Connection state of the selected network's SSE stream. */
+  readonly liveStatus = computed(() => this.liveFeed.status()[this._activeSource()]);
+
+  /** SSE endpoint of the selected network, if it has one. */
+  readonly liveUrl = computed(() => this.liveFeed.urlOf(this._activeSource()));
 
   isBusy(id: string) {
     return this._busyIds().has(id);
