@@ -44,3 +44,24 @@ Contrato interno: entrada `Comment` de `#Listen` (`type=OTRO`, quizá `truncated
 
 * `./mvnw test -Dtest=*Analyze*,*Relevance*`
 * `./mvnw test` verde.
+
+## Apéndice A — Rate-limit + concurrencia LLM (implementado `feature/optimization-backend-001`)
+
+> Decisiones confirmadas por el dev (2026-10-06). `Derivado de: spec 002 RF-04 + plan §2/§4`.
+
+* **Qué:** doble gate en `AnalyzeMessageLlmAdapter.callLimited`: `Semaphore(3)` + Bucket4j `Bucket(3 cap / refillIntervally 3 cada 60s)` vía `RateLimitAiConfig` (`infrastructure/config/bucket`). `processMessage` mantiene `timeout 15s + 1 reintento + fallback LLM_FALLBACK, nunca 500`; el port `RequestToLLMProcess` ahora declara `throws InterruptedException` y `EnrichmentListener` lo mapea a `LLM_FALLBACK`.
+* **Decisión librería:** Bucket4j.
+  Alternativa descartada: Resilience4j / Redis distribuido / contador atómico artesanal.
+  Razón (dev): simpleza single-VM demo, sin infra extra para 1 instancia.
+* **Decisión valores:** `3 / 3 por 60s + Semaphore(3)` por cuota real del proveedor (no inventado). Quedan como constantes iniciales; evolución a env (`LLM_MAX_RPS`) registrada como pendiente.
+* **Decisión bloqueo:** se deja `asBlocking().consume(1)` bloqueante aunque puede esperar hasta 60s si se agota. Decisión consciente (el pool `@Async` lo absorbe en demo). Deuda: evaluar `tryConsume + LLM_FALLBACK inmediato` si hay agotamiento del pool.
+* **Decisión logs:** 4 logs de gate en español claro, nivel `debug` en prod (antes `info` en demo) + `warn` solo en `intento 1/2 fallido` y saturación. Sin PII: solo `semaforos disponibles/libres + tokens disponibles/restantes`, nunca `message/author/ids`. Tabla:
+  | Cuándo | Mensaje | Nivel |
+  |---|---|---|
+  | Antes de `acquire` | `LLM puerta de entrada, antes de pedir permiso: semaforos disponibles={} tokens disponibles={}` | `debug` |
+  | Tras `acquire` | `LLM permiso concedido: semaforos libres={} tokens disponibles={}` | `debug` |
+  | Tras `consume` | `LLM turno consumido, llamando al modelo: semaforos libres={} tokens restantes={}` | `debug` |
+  | En `finally` tras `release` | `LLM permiso liberado: semaforos disponibles={}` | `debug` |
+* **Incidencia resuelta:** colisión `bean 'rateLimitAi'` (`@Configuration RateLimitAi` + `@Bean rateLimitAi()` con `overriding=false`) → renombrado a `RateLimitAiConfig` (bean `rateLimitAiConfig` vs bean `rateLimitAi`).
+* **Tests (solo `src/test/`, verdes):** `AnalyzeMessageLlmAdapterTest` (mock `RateLimitAiConfig` con bucket generoso `100/s` para no bloquear suite + nuevos `semaphoreReleasedAfterFailure`, `interruptedRateLimitThenThrows`) + `EnrichmentListenerTest` (`throws Exception` x6 por checked + nuevo `interruptedLlmThenFallback`). Verificado `16/16` objetivo y `81/81` unitarios sin contexto.
+* **Pendientes:** externalizar límites a env, `tryAcquire/tryConsume` no bloqueante, restaurar interrupt-flag, encapsular en `LlmRateGate`, enmienda constitución §2 por nueva dependencia `bucket4j_jdk17-core:8.20.0`.
