@@ -60,6 +60,19 @@ class CommentTest {
     }
 
     @Test
+    @DisplayName("Dado 3500 chars de Telegram, cuando se valida, entonces trunca a 2000 con flag y source TELEGRAM")
+    void truncatesLongTelegramContent() {
+        // Dado contenido largo de Telegram (spec 005 RF-02: truncado uniforme 2000 + flag)
+        var comment = Comment.create(
+                "msg-tg-1", "555", "author-1", "author-name", "a".repeat(3500), SENT, Source.TELEGRAM);
+
+        // Entonces truncado a 2000 con flag y fuente preservada
+        assertThat(comment.content()).hasSize(2000);
+        assertThat(comment.truncated()).isTrue();
+        assertThat(comment.source()).isEqualTo(Source.TELEGRAM);
+    }
+
+    @Test
     @DisplayName("Given exact 2000 chars, when validated, then it is kept intact")
     void keepsExactLength() {
         String content = "a".repeat(2000);

@@ -43,7 +43,8 @@ import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentExce
  * Mockito only at port boundaries; domain records are real.
  * Derivado de: plan 003 §3 (tolerancia a fallos, fork SSE + buffer) +
  * spec 002 RF-04 (LLM_FALLBACK nunca 500) + spec 004 RF-06 (fallback
- * bufferizado y audible por SSE, post inválido descartado con LOG).
+ * bufferizado y audible por SSE, post inválido descartado con LOG) +
+ * spec 005 RF-05,RF-06 (reuso pipeline para source TELEGRAM).
  */
 @DisplayName("EnrichmentListener")
 class EnrichmentListenerTest {
@@ -90,7 +91,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given a valid post, when processed, then it is published first and buffered second")
-    void publishesAndBuffersValidPost() {
+    void publishesAndBuffersValidPost() throws Exception {
         // Given the LLM answers and the converter builds a valid post
         when(llm.processMessage(any())).thenReturn(validResponse());
         EnrichedComment post = validPost();
@@ -109,8 +110,30 @@ class EnrichmentListenerTest {
     }
 
     @Test
+    @DisplayName("Dado un post valido de Telegram, cuando se procesa, entonces se publica y bufferiza con source TELEGRAM")
+    void publishesAndBuffersTelegramPost() throws Exception {
+        // Dado el LLM responde y el conversor construye un post valido TELEGRAM
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        EnrichedComment post = validTelegramPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(post);
+
+        // Cuando se procesa un evento TELEGRAM
+        listener.on(telegramEvent("Consegui mi primer empleo como dev Java, gracias comunidad"));
+
+        // Entonces fork: SSE primero y buffer segundo, con fuente preservada
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
+        InOrder order = inOrder(publisher, buffer);
+        order.verify(publisher).publish(clientCaptor.capture());
+        order.verify(buffer).appendToBatch(post);
+        assertThat(clientCaptor.getValue()).isEqualTo(expectedClient(post));
+        assertThat(clientCaptor.getValue().source()).isEqualTo(Source.TELEGRAM);
+        assertThat(post.source()).isEqualTo(Source.TELEGRAM);
+    }
+
+    @Test
     @DisplayName("Given an LLM failure, when processed, then the fallback trace is published and buffered, never a 500")
-    void flagsLlmFallbackOnLlmFailure() {
+    void flagsLlmFallbackOnLlmFailure() throws Exception {
         // Given the LLM call fails
         when(llm.processMessage(any())).thenThrow(new RuntimeException("llm down"));
         EnrichedComment fallbackPost = fallbackPost();
@@ -135,7 +158,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given a copy with a company absent from the source, when processed, then the Guard blocks it")
-    void guardBlocksHallucinatedPost() {
+    void guardBlocksHallucinatedPost() throws Exception {
         // Given a valid-looking post whose copy invents a company the source never mentions
         when(llm.processMessage(any())).thenReturn(validResponse());
         when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
@@ -150,7 +173,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given an invalid non-fallback post, when processed, then it is silently discarded")
-    void invalidPostDiscardedSilently() {
+    void invalidPostDiscardedSilently() throws Exception {
         // Given the converter rejects the post (record validation: invalid asset)
         when(llm.processMessage(any())).thenReturn(validResponse());
         when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
@@ -164,7 +187,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given a fallback trace with empty copy, when processed, then it is still published (flag-first)")
-    void fallbackPublishesEvenWithEmptyPost() {
+    void fallbackPublishesEvenWithEmptyPost() throws Exception {
         // Given an LLM failure mapped to a real fallback record (copy null, content null)
         when(llm.processMessage(any())).thenThrow(new RuntimeException("llm down"));
         EnrichedComment fallbackPost = new EnrichedComment(
@@ -185,10 +208,35 @@ class EnrichmentListenerTest {
         assertThat(clientCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
     }
 
+    @Test
+    @DisplayName("Given an interrupted LLM call, when processed, then the fallback trace is published and buffered, never a 500")
+    void interruptedLlmThenFallback() throws Exception {
+        // Given the LLM blocking gate is interrupted (Semaphore/Bucket4j path)
+        when(llm.processMessage(any())).thenThrow(new InterruptedException("rate-limit interrupted"));
+        EnrichedComment fallbackPost = fallbackPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(fallbackPost);
+
+        // When processed then no exception escapes (listener maps to LLM_FALLBACK)
+        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+
+        // Then the flagged trace still goes out and into the buffer
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
+        verify(publisher).publish(clientCaptor.capture());
+        verify(buffer).appendToBatch(fallbackPost);
+        assertThat(clientCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
+    }
+
     private IngestAcceptedEvent event(String content) {
         return new IngestAcceptedEvent(new ChannelMessage(
                 BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
                 content, Instant.now(), false, Source.DISCORD));
+    }
+
+    private IngestAcceptedEvent telegramEvent(String content) {
+        return new IngestAcceptedEvent(new ChannelMessage(
+                BATCH_ID, MESSAGE_ID, "555", "777", "cos_dev",
+                content, Instant.now(), false, Source.TELEGRAM));
     }
 
     private ResponseModel validResponse() {
@@ -219,6 +267,17 @@ class EnrichmentListenerTest {
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
                 Channels.FAQ, null, null, List.of(), null);
+    }
+
+    private EnrichedComment validTelegramPost() {
+        return new EnrichedComment(
+                BATCH_ID, MESSAGE_ID, "555", "777", "cos_dev",
+                "Consegui mi primer empleo como dev Java, gracias comunidad",
+                Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
+                List.of("empleo", "java"), 85, null, null, Instant.now(), Source.TELEGRAM,
+                Channels.FAQ, "Primer empleo dev",
+                "Conseguiste tu primer empleo como dev gracias a la comunidad?",
+                List.of("#EmpleoTech"), null);
     }
 
     // Mirror of the listener's EnrichedComment -> ResponseClient mapping; a record
