@@ -91,7 +91,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given a valid post, when processed, then it is published first and buffered second")
-    void publishesAndBuffersValidPost() {
+    void publishesAndBuffersValidPost() throws Exception {
         // Given the LLM answers and the converter builds a valid post
         when(llm.processMessage(any())).thenReturn(validResponse());
         EnrichedComment post = validPost();
@@ -111,7 +111,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Dado un post valido de Telegram, cuando se procesa, entonces se publica y bufferiza con source TELEGRAM")
-    void publishesAndBuffersTelegramPost() {
+    void publishesAndBuffersTelegramPost() throws Exception {
         // Dado el LLM responde y el conversor construye un post valido TELEGRAM
         when(llm.processMessage(any())).thenReturn(validResponse());
         EnrichedComment post = validTelegramPost();
@@ -133,7 +133,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given an LLM failure, when processed, then the fallback trace is published and buffered, never a 500")
-    void flagsLlmFallbackOnLlmFailure() {
+    void flagsLlmFallbackOnLlmFailure() throws Exception {
         // Given the LLM call fails
         when(llm.processMessage(any())).thenThrow(new RuntimeException("llm down"));
         EnrichedComment fallbackPost = fallbackPost();
@@ -158,7 +158,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given a copy with a company absent from the source, when processed, then the Guard blocks it")
-    void guardBlocksHallucinatedPost() {
+    void guardBlocksHallucinatedPost() throws Exception {
         // Given a valid-looking post whose copy invents a company the source never mentions
         when(llm.processMessage(any())).thenReturn(validResponse());
         when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
@@ -173,7 +173,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given an invalid non-fallback post, when processed, then it is silently discarded")
-    void invalidPostDiscardedSilently() {
+    void invalidPostDiscardedSilently() throws Exception {
         // Given the converter rejects the post (record validation: invalid asset)
         when(llm.processMessage(any())).thenReturn(validResponse());
         when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
@@ -187,7 +187,7 @@ class EnrichmentListenerTest {
 
     @Test
     @DisplayName("Given a fallback trace with empty copy, when processed, then it is still published (flag-first)")
-    void fallbackPublishesEvenWithEmptyPost() {
+    void fallbackPublishesEvenWithEmptyPost() throws Exception {
         // Given an LLM failure mapped to a real fallback record (copy null, content null)
         when(llm.processMessage(any())).thenThrow(new RuntimeException("llm down"));
         EnrichedComment fallbackPost = new EnrichedComment(
@@ -202,6 +202,25 @@ class EnrichmentListenerTest {
         listener.on(event("hola comunidad"));
 
         // Then the flag-first check lets the auditable trace through
+        var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
+        verify(publisher).publish(clientCaptor.capture());
+        verify(buffer).appendToBatch(fallbackPost);
+        assertThat(clientCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
+    }
+
+    @Test
+    @DisplayName("Given an interrupted LLM call, when processed, then the fallback trace is published and buffered, never a 500")
+    void interruptedLlmThenFallback() throws Exception {
+        // Given the LLM blocking gate is interrupted (Semaphore/Bucket4j path)
+        when(llm.processMessage(any())).thenThrow(new InterruptedException("rate-limit interrupted"));
+        EnrichedComment fallbackPost = fallbackPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(fallbackPost);
+
+        // When processed then no exception escapes (listener maps to LLM_FALLBACK)
+        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+
+        // Then the flagged trace still goes out and into the buffer
         var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
         verify(publisher).publish(clientCaptor.capture());
         verify(buffer).appendToBatch(fallbackPost);
