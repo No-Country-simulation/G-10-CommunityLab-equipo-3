@@ -32,6 +32,8 @@ export interface InteractionAnalysis {
   route: ContentRoute;
   /** Short LLM explanation of the decision */
   reason: string;
+  /** Mascot expression picked by the LLM (one of the labels in core/mascot.ts, e.g. "celebrando") */
+  expression?: string;
 }
 
 export interface AnalyzedInteraction extends Interaction {
@@ -51,6 +53,8 @@ export interface AssetOrigin {
   sentiment: Sentiment;
   relevance: number;
   route: ContentRoute;
+  /** Mascot expression picked by the LLM for the source message */
+  expression?: string;
 }
 
 export interface GeneratedAsset {

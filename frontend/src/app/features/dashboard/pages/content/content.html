@@ -178,6 +178,7 @@
                   <span class="chip bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ 'content.relevance' | t: { pct: (a.origin.relevance | percent) } }}</span>
                 </div>
               </div>
+              <app-mascot [expression]="a.origin.expression ?? routeExpression[a.origin.route]" [size]="56" class="shrink-0 flex-col !gap-1 text-center" />
             </div>
           </div>
         </div>

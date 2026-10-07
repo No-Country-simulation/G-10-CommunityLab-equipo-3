@@ -26,6 +26,8 @@ import {
 } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { AssetPreview } from '../../../../shared/asset-preview/asset-preview';
+import { Mascot } from '../../../../shared/mascot/mascot';
+import { ROUTE_EXPRESSION } from '../../../../core/mascot';
 
 type Filter = 'pending' | 'approved' | 'published' | 'rejected' | 'all';
 
@@ -49,6 +51,7 @@ const FILTER_STATUSES: Record<Filter, AssetStatus[] | null> = {
     FormsModule,
     PercentPipe,
     AssetPreview,
+    Mascot,
     TranslatePipe,
     LocalizedDatePipe,
   ],
@@ -67,6 +70,7 @@ export class Content {
   protected readonly statusDot = ASSET_STATUS_DOT;
   protected readonly routeTint = ROUTE_TINT;
   protected readonly sentimentTint = SENTIMENT_TINT;
+  protected readonly routeExpression = ROUTE_EXPRESSION;
   protected readonly sourceIcon = SOURCE_ICON;
   protected readonly sourceTint = SOURCE_TINT;
 

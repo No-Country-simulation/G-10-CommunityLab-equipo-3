@@ -9,6 +9,7 @@ import {
   Sentiment,
   StorageReceipt,
 } from './api.models';
+import { ROUTE_EXPRESSION } from '../mascot';
 
 /**
  * Deterministic stand-in for the LLM + orchestrator. It reproduces the behaviour the
@@ -137,6 +138,7 @@ export function analyze(interaction: Interaction): InteractionAnalysis {
     relevance: round(relevance),
     route,
     reason,
+    expression: ROUTE_EXPRESSION[route],
   };
 }
 
@@ -210,6 +212,7 @@ function generateAsset(
       sentiment: i.analysis.sentiment,
       relevance: i.analysis.relevance,
       route: i.analysis.route,
+      expression: i.analysis.expression,
     },
     type,
     tone: TYPE_TONE[type],
