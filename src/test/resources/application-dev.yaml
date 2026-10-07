@@ -29,3 +29,10 @@ management:
   health:
     redis:
       enabled: false
+
+# No hourly flush during tests (spec 006): the scheduler would hit the mocked
+# buffer on its own thread; flush behavior is covered by PackageRunServiceTest.
+buffer:
+  flush:
+    scheduler:
+      enabled: false
