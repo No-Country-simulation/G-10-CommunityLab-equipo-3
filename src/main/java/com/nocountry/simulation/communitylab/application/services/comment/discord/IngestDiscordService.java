@@ -35,7 +35,7 @@ public class IngestDiscordService implements IngestUseCaseDiscord {
                     command.sentTime(),
                     Source.DISCORD);
 
-            String batchId = bufferPort.getCurrentBatchId();
+            String batchId = bufferPort.getCurrentBatchId(Source.DISCORD);
 
             ChannelMessage message = ChannelMessage.from(comment, batchId);
 

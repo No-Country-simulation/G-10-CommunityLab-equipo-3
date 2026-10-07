@@ -3,10 +3,12 @@ package com.nocountry.simulation.communitylab.application.services.ai;
 import com.nocountry.simulation.communitylab.application.dtos.RequestToLLM;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
+import com.nocountry.simulation.communitylab.application.port.in.PackageRunUseCase;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommentFromAi;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
 import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMProcess;
+import com.nocountry.simulation.communitylab.application.services.storage.PackageRunService;
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
@@ -27,6 +29,7 @@ public class EnrichmentListener {
     private final EnrichedCommentFromAi converter;
     private final BufferPort buffer;
     private final EventPublishPost eventPublishPost;
+    private final PackageRunUseCase packageRunUseCase;
 
 
     @Async
@@ -113,8 +116,8 @@ public class EnrichmentListener {
             // Sent message to client
             eventPublishPost.publish(responseToClient);
 
-            // Storage message in Redis
-            buffer.appendToBatch(messageProcessed);
+            long batchBytes = buffer.appendToBatch(messageProcessed);
+            packageRunUseCase.flushIfFull(messageProcessed.source(), batchBytes);
 
             log.info("pipeline done: messageId={} batchId={} channelPost={} flag={}",
                     comment.messageId(), event.message().batchId(),

@@ -26,3 +26,11 @@ telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
     listen-group-id: ${TELEGRAM_LISTEN_GROUP_ID}
+
+# Configuration Scheduler
+buffer:
+  flush:
+    cron: ${BUFFER_FLUSH_CRON:0 0 * * * *}
+    min-messages: ${BUFFER_FLUSH_MIN_MESSAGES:5}
+    scheduler:
+      enabled: ${BUFFER_FLUSH_SCHEDULER_ENABLED:true}

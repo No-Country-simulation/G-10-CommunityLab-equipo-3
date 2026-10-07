@@ -3,7 +3,9 @@ package com.nocountry.simulation.communitylab.application.services.ai;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -23,6 +25,7 @@ import org.mockito.InOrder;
 import com.nocountry.simulation.communitylab.application.dtos.ChannelMessage;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
+import com.nocountry.simulation.communitylab.application.port.in.PackageRunUseCase;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommentFromAi;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
@@ -44,7 +47,8 @@ import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentExce
  * Derivado de: plan 003 §3 (tolerancia a fallos, fork SSE + buffer) +
  * spec 002 RF-04 (LLM_FALLBACK nunca 500) + spec 004 RF-06 (fallback
  * bufferizado y audible por SSE, post inválido descartado con LOG) +
- * spec 005 RF-05,RF-06 (reuso pipeline para source TELEGRAM).
+ * spec 005 RF-05,RF-06 (reuso pipeline para source TELEGRAM) +
+ * spec 006 RF-01 (disparador por tamaño: append devuelve bytes y se evalúa flush por fuente).
  */
 @DisplayName("EnrichmentListener")
 class EnrichmentListenerTest {
@@ -56,6 +60,7 @@ class EnrichmentListenerTest {
     private EnrichedCommentFromAi converter;
     private BufferPort buffer;
     private EventPublishPost publisher;
+    private PackageRunUseCase packageRun;
     private EnrichmentListener listener;
 
     @BeforeEach
@@ -64,7 +69,8 @@ class EnrichmentListenerTest {
         converter = mock(EnrichedCommentFromAi.class);
         buffer = mock(BufferPort.class);
         publisher = mock(EventPublishPost.class);
-        listener = new EnrichmentListener(llm, converter, buffer, publisher);
+        packageRun = mock(PackageRunUseCase.class);
+        listener = new EnrichmentListener(llm, converter, buffer, publisher, packageRun);
     }
 
     @Test
@@ -75,7 +81,7 @@ class EnrichmentListenerTest {
 
         // When processed then no exception escapes and no port is touched
         assertThatCode(() -> listener.on(event)).doesNotThrowAnyException();
-        verifyNoInteractions(llm, converter, buffer, publisher);
+        verifyNoInteractions(llm, converter, buffer, publisher, packageRun);
     }
 
     @Test
@@ -86,7 +92,7 @@ class EnrichmentListenerTest {
 
         // When processed then no exception escapes and no port is touched
         assertThatCode(() -> listener.on(event)).doesNotThrowAnyException();
-        verifyNoInteractions(llm, converter, buffer, publisher);
+        verifyNoInteractions(llm, converter, buffer, publisher, packageRun);
     }
 
     @Test
@@ -168,7 +174,7 @@ class EnrichmentListenerTest {
         listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
 
         // Then the post never reaches SSE nor the buffer
-        verifyNoInteractions(publisher, buffer);
+        verifyNoInteractions(publisher, buffer, packageRun);
     }
 
     @Test
@@ -183,6 +189,7 @@ class EnrichmentListenerTest {
         assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
         verify(publisher, never()).publish(any());
         verify(buffer, never()).appendToBatch(any());
+        verifyNoInteractions(packageRun);
     }
 
     @Test
@@ -225,6 +232,66 @@ class EnrichmentListenerTest {
         verify(publisher).publish(clientCaptor.capture());
         verify(buffer).appendToBatch(fallbackPost);
         assertThat(clientCaptor.getValue().flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
+    }
+
+    @Test
+    @DisplayName("Given a buffered post, when processed, then the size trigger receives its source and the batch bytes")
+    void appendThenSizeTriggerWithReturnedBytes() throws Exception {
+        // Given a valid post and a buffer that reports 921600 bytes after the append
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        EnrichedComment post = validPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(post);
+        when(buffer.appendToBatch(post)).thenReturn(921_600L);
+
+        // When processed
+        listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
+
+        // Then SSE -> append -> size trigger, with the exact bytes returned by the buffer
+        InOrder order = inOrder(publisher, buffer, packageRun);
+        order.verify(publisher).publish(any());
+        order.verify(buffer).appendToBatch(post);
+        order.verify(packageRun).flushIfFull(Source.DISCORD, 921_600L);
+    }
+
+    @Test
+    @DisplayName("Dado un post de Telegram, cuando se procesa, entonces el disparador por tamaño evalúa el lote TELEGRAM")
+    void sizeTriggerUsesTelegramSource() throws Exception {
+        // Dado un post TELEGRAM cuyo append devuelve 1200 bytes
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        EnrichedComment post = validTelegramPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(post);
+        when(buffer.appendToBatch(post)).thenReturn(1_200L);
+
+        // Cuando se procesa
+        listener.on(telegramEvent("Consegui mi primer empleo como dev Java, gracias comunidad"));
+
+        // Entonces se evalúa el lote de su propia fuente, nunca el de Discord
+        verify(packageRun).flushIfFull(Source.TELEGRAM, 1_200L);
+        verify(packageRun, never()).flushIfFull(eq(Source.DISCORD), anyLong());
+    }
+
+    @Test
+    @DisplayName("Given a failing flush, when processed, then the live SSE already went out and nothing escapes")
+    void flushFailureDoesNotHideLiveEvent() throws Exception {
+        // Given a valid post and a flush that blows up
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        EnrichedComment post = validPost();
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(post);
+        when(buffer.appendToBatch(post)).thenReturn(921_600L);
+        doThrow(new RuntimeException("oci down"))
+                .when(packageRun).flushIfFull(Source.DISCORD, 921_600L);
+
+        // When processed then no exception escapes the async listener
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad")))
+                .doesNotThrowAnyException();
+
+        // Then the live asset was published before the flush was attempted
+        InOrder order = inOrder(publisher, packageRun);
+        order.verify(publisher).publish(any());
+        order.verify(packageRun).flushIfFull(Source.DISCORD, 921_600L);
     }
 
     private IngestAcceptedEvent event(String content) {
