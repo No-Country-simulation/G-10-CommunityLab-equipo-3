@@ -8,4 +8,12 @@ public record StoreResult(
     public static StoreResult failed(){
         return new StoreResult(false, false);
     }
+
+    public static StoreResult stored(){
+        return new StoreResult(true, false);
+    }
+
+    public static StoreResult alreadyStored(){
+        return new StoreResult(true, true);
+    }
 }
