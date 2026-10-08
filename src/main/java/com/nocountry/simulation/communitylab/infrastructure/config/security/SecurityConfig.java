@@ -26,6 +26,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/telegram/messages").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/interactions/process", "/api/v1/batch/process").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/publish/**").permitAll()
                         .anyRequest()
                         .denyAll())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
