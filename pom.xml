@@ -29,7 +29,12 @@
     <properties>
         <java.version>21</java.version>
         <spring-ai.version>2.0.1</spring-ai.version>
+        <oci-sdk.version>3.97.0</oci-sdk.version>
+        <!-- This is to version that declare and approve OCI -->
+        <jersey.version>3.0.8</jersey.version>
+        <jakarta-ws-rs.version>3.0.0</jakarta-ws-rs.version>
     </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -39,8 +44,16 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.oracle.oci.sdk</groupId>
+                <artifactId>oci-java-sdk-bom</artifactId>
+                <version>${oci-sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -147,6 +160,16 @@
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j_jdk17-core</artifactId>
             <version>8.20.0</version>
+        </dependency>
+
+        <!-- Dependency of OCI SDK -->
+        <dependency>
+            <groupId>com.oracle.oci.sdk</groupId>
+            <artifactId>oci-java-sdk-objectstorage</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.oci.sdk</groupId>
+            <artifactId>oci-java-sdk-common-httpclient-jersey3</artifactId>
         </dependency>
 
     </dependencies>
