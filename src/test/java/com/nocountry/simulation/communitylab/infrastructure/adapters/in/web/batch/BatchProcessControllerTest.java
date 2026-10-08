@@ -51,6 +51,7 @@ class BatchProcessControllerTest {
                 new CommunitySummaryDto(2, "Altamente Positivo", List.of("Logros", "LangGraph")),
                 new GeneratedAssetsDto(
                         new LinkedInPostDto("Titulo", "Copy", "LinkedIn Oficial", "Alto"),
+                        new com.nocountry.simulation.communitylab.application.dtos.batch.PostXDto("Post X", List.of("#ONE"), 6, "X (Twitter)"),
                         new NewsletterHighlightDto("Logro", "Titular", "Resumen"),
                         new FaqSuggestionDto("FAQ", "Origen", "status")
                 ),
@@ -81,6 +82,8 @@ class BatchProcessControllerTest {
                 .andExpect(jsonPath("$.status").value("exito"))
                 .andExpect(jsonPath("$.resumen_comunidad.total_interacciones_procesadas").value(2))
                 .andExpect(jsonPath("$.activos_distribucion_generados.post_linkedin.titulo").value("Titulo"))
+                .andExpect(jsonPath("$.activos_distribucion_generados.post_x.copy").value("Post X"))
+                .andExpect(jsonPath("$.activos_distribucion_generados.post_x.caracteres").value(6))
                 .andExpect(jsonPath("$.almacenamiento_oci.bucket").value("communitylab-activos-marketing"))
                 .andExpect(jsonPath("$.almacenamiento_oci.status").value("guardado_con_exito"));
 
@@ -93,7 +96,7 @@ class BatchProcessControllerTest {
         BatchProcessResponse expectedResponse = new BatchProcessResponse(
                 "exito",
                 new CommunitySummaryDto(1, "Positivo", List.of()),
-                new GeneratedAssetsDto(null, null, null),
+                new GeneratedAssetsDto(null, null, null, null),
                 new OciStorageDto("bucket", "path", "guardado_con_exito")
         );
 

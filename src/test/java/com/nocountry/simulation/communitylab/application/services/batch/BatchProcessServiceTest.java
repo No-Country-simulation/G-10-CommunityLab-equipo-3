@@ -105,6 +105,10 @@ class BatchProcessServiceTest {
         // Validate assets
         assertThat(response.activos_distribucion_generados().post_linkedin()).isNotNull();
         assertThat(response.activos_distribucion_generados().post_linkedin().titulo()).contains("De la Comunidad al Mercado");
+        assertThat(response.activos_distribucion_generados().post_x()).isNotNull();
+        assertThat(response.activos_distribucion_generados().post_x().caracteres()).isLessThanOrEqualTo(280);
+        assertThat(response.activos_distribucion_generados().post_x().copy()).isNotBlank();
+        assertThat(response.activos_distribucion_generados().post_x().canal_recomendado()).isEqualTo("X (Twitter)");
         assertThat(response.activos_distribucion_generados().destaque_newsletter_semanal()).isNotNull();
         assertThat(response.activos_distribucion_generados().sugerencia_contenido_faq()).isNotNull();
         assertThat(response.activos_distribucion_generados().sugerencia_contenido_faq().tema()).contains("LangGraph");

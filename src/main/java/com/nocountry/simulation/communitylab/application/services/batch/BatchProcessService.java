@@ -10,6 +10,7 @@ import com.nocountry.simulation.communitylab.application.dtos.batch.GeneratedAss
 import com.nocountry.simulation.communitylab.application.dtos.batch.LinkedInPostDto;
 import com.nocountry.simulation.communitylab.application.dtos.batch.NewsletterHighlightDto;
 import com.nocountry.simulation.communitylab.application.dtos.batch.OciStorageDto;
+import com.nocountry.simulation.communitylab.application.dtos.batch.PostXDto;
 import com.nocountry.simulation.communitylab.application.port.in.BatchProcessUseCase;
 import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMProcess;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
@@ -54,6 +55,7 @@ public class BatchProcessService implements BatchProcessUseCase {
         Set<String> allTopics = new LinkedHashSet<>();
 
         LinkedInPostDto linkedInPost = null;
+        PostXDto postX = null;
         NewsletterHighlightDto newsletterHighlight = null;
         FaqSuggestionDto faqSuggestion = null;
 
@@ -117,6 +119,11 @@ public class BatchProcessService implements BatchProcessUseCase {
                 );
             }
 
+            boolean isXCandidate = model.channelPost() == Channels.X || isAchievement;
+            if (isXCandidate && postX == null) {
+                postX = buildPostX(model, item);
+            }
+
             if (isQuestion && faqSuggestion == null) {
                 String tema = (model.titlePost() != null && !model.titlePost().isBlank())
                         ? model.titlePost()
@@ -167,6 +174,11 @@ public class BatchProcessService implements BatchProcessUseCase {
             );
         }
 
+        if (postX == null) {
+            ResponseModel first = processedModels.getFirst();
+            postX = buildPostX(first, request.interacciones().getFirst());
+        }
+
         if (faqSuggestion == null) {
             faqSuggestion = new FaqSuggestionDto(
                     "Tip Técnico de la Semana",
@@ -187,6 +199,7 @@ public class BatchProcessService implements BatchProcessUseCase {
 
         GeneratedAssetsDto assets = new GeneratedAssetsDto(
                 linkedInPost,
+                postX,
                 newsletterHighlight,
                 faqSuggestion
         );
@@ -210,6 +223,38 @@ public class BatchProcessService implements BatchProcessUseCase {
         );
     }
 
+    private PostXDto buildPostX(ResponseModel model, BatchInteractionDto item) {
+        List<String> hashtags = (model.hashtags() != null && !model.hashtags().isEmpty())
+                ? model.hashtags().stream().limit(2).toList()
+                : List.of("#ONE", "#TalentosTech");
+
+        String tagsText = " " + String.join(" ", hashtags);
+        int maxBodyLen = 280 - tagsText.length();
+
+        String rawBody = (model.outputContentProcessed() != null && !model.outputContentProcessed().isBlank())
+                ? model.outputContentProcessed()
+                : (item != null && item.texto() != null)
+                    ? item.texto()
+                    : "Gran avance de la comunidad celebrando nuevos logros y proyectos prácticos.";
+
+        String body = rawBody.strip();
+        if (body.length() > maxBodyLen) {
+            body = body.substring(0, Math.max(0, maxBodyLen - 3)).strip() + "...";
+        }
+
+        String fullCopy = (body + tagsText).strip();
+        if (fullCopy.length() > 280) {
+            fullCopy = fullCopy.substring(0, 277) + "...";
+        }
+
+        return new PostXDto(
+                fullCopy,
+                hashtags,
+                fullCopy.length(),
+                "X (Twitter)"
+        );
+    }
+
     private BatchProcessResponse emptyResponse(BatchProcessRequest request) {
         String periodo = (request != null && request.periodo_referencia() != null)
                 ? request.periodo_referencia().toLowerCase()
@@ -219,6 +264,7 @@ public class BatchProcessService implements BatchProcessUseCase {
                 new CommunitySummaryDto(0, "Neutral", List.of()),
                 new GeneratedAssetsDto(
                         new LinkedInPostDto("Sin contenido", "No se recibieron interacciones para procesar.", "LinkedIn Oficial", "Bajo"),
+                        new PostXDto("Sin interacciones registradas en este lote. #ComunidadTech", List.of("#ComunidadTech"), 56, "X (Twitter)"),
                         new NewsletterHighlightDto("General", "Sin novedades", "No hay interacciones registradas."),
                         new FaqSuggestionDto("General", "Sin origen", "completado")
                 ),
