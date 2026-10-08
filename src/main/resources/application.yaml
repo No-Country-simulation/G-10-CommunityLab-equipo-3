@@ -34,3 +34,13 @@ buffer:
     min-messages: ${BUFFER_FLUSH_MIN_MESSAGES:5}
     scheduler:
       enabled: ${BUFFER_FLUSH_SCHEDULER_ENABLED:true}
+
+# Configuration OCI
+oci:
+  bucket: ${OCI_BUCKET}
+  region: ${OCI_REGION}
+  namespace: ${OCI_NAMESPACE}
+  prefix: ${OCI_PREFIX}
+  par-ttl-days: ${PAR_TTL_DAYS:1}
+  auth-mode: ${OCI_AUTH_MODE:none}
+  config-profile: ${OCI_CONFIG_PROFILE:dev}
