@@ -37,7 +37,7 @@ export class Topbar {
   constructor() {
     // Browser tab title follows both the page and the language
     effect(() => {
-      document.title = `${this.i18n.t(this.current.page().titleKey)} · Kora`;
+      document.title = `${this.i18n.t(this.current.page().titleKey)} · Ukuku AI`;
     });
   }
 

@@ -10,7 +10,7 @@ export function buildBannerSvg(asset: GeneratedAsset): string {
         ? { from: '#047857', to: '#10b981', label: 'VOZ DE LA COMUNIDAD', icon: '♥' }
         : { from: '#b45309', to: '#f59e0b', label: 'LOGRO DE LA COMUNIDAD', icon: '★' };
 
-  const headline = route === 'faq' ? asset.title : asset.origin.author;
+  const headline = route === 'faq' ? asset.title || asset.origin.excerpt : asset.origin.author;
   const sub =
     route === 'faq'
       ? 'Respuesta completa en nuestro FAQ'
@@ -41,7 +41,7 @@ export function buildBannerSvg(asset: GeneratedAsset): string {
     )
     .join('\n  ')}
   <text x="80" y="${startY + lines.length * size * 1.1 + 20}" font-family="Inter, Segoe UI, sans-serif" font-size="28" fill="#fff" opacity=".85">${esc(sub)}</text>
-  <text x="80" y="560" font-family="Inter, Segoe UI, sans-serif" font-size="24" font-weight="700" fill="#fff">Kora · <tspan font-weight="400" opacity=".85">Tu comunidad habla. Kora publica.</tspan></text>
+  <text x="80" y="560" font-family="Inter, Segoe UI, sans-serif" font-size="24" font-weight="700" fill="#fff">Ukuku AI · <tspan font-weight="400" opacity=".85">Tu comunidad habla. Ukuku AI publica.</tspan></text>
   <text x="1120" y="560" text-anchor="end" font-family="Inter, Segoe UI, sans-serif" font-size="20" fill="#fff" opacity=".8">${esc(asset.hashtags.slice(0, 3).join('  '))}</text>
 </svg>`;
 }

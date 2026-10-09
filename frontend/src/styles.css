@@ -116,6 +116,37 @@
   animation: gradient-pan 14s ease infinite;
 }
 
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-scroll 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation-duration: 90s;
+  }
+}
+
 .live-dot::after {
   content: '';
   position: absolute;
@@ -800,6 +831,16 @@ html:not(.dark) .p-toast-message {
   transition: color 150ms ease, background-color 150ms ease, box-shadow 200ms ease;
 }
 
+/* Flag inside the language switchers: whole-pixel size (24x18 = viewBox) so stripes stay sharp */
+.lang-flag {
+  display: block;
+  width: 24px;
+  height: 18px;
+  margin: 0 auto;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.15);
+}
+
 .lang-switch-option:hover {
   color: #1c1917;
   background: rgb(255 255 255 / 0.6);
@@ -842,7 +883,7 @@ html:not(.dark) .p-toast-message {
   background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
 }
 
-/* ── Resumen welcome card: warm gradient panel with the floating Kora bear ── */
+/* ── Resumen welcome card: warm gradient panel with the floating Ukuku bear ── */
 @keyframes bear-float {
   0%, 100% { transform: translateY(0) rotate(-2deg); }
   50% { transform: translateY(-5px) rotate(1deg); }
@@ -1202,16 +1243,50 @@ html:not(.dark) .p-toast-message {
   }
 
   .landing-mascot {
-    @apply border border-clay-border shadow-clay dark:border-stone-800;
+    @apply border border-white/80 shadow-[0_24px_60px_-15px_rgba(28,25,23,0.12),0_10px_20px_-8px_rgba(217,119,6,0.16)] dark:border-stone-800;
     background:
+      radial-gradient(circle at 80% 20%, rgb(56 189 248 / 0.15), transparent 45%),
       radial-gradient(circle at 50% 38%, rgb(251 191 36 / 0.35), transparent 58%),
       linear-gradient(160deg, #fbf3e4 0%, #f1e6d3 100%);
   }
 
   .dark .landing-mascot {
     background:
+      radial-gradient(circle at 80% 20%, rgb(56 189 248 / 0.1), transparent 45%),
       radial-gradient(circle at 50% 38%, rgb(217 119 6 / 0.28), transparent 58%),
       linear-gradient(160deg, #292524 0%, #1c1917 100%);
+  }
+
+  .glass-fluted {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.12) 0px,
+        rgba(255, 255, 255, 0.12) 6px,
+        rgba(255, 255, 255, 0.35) 7px,
+        rgba(0, 0, 0, 0.03) 8px
+      ),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.35) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.9),
+      0 -4px 20px rgba(0, 0, 0, 0.03);
+  }
+
+  .dark .glass-fluted {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 0px,
+        rgba(255, 255, 255, 0.04) 6px,
+        rgba(255, 255, 255, 0.12) 7px,
+        rgba(0, 0, 0, 0.25) 8px
+      ),
+      linear-gradient(180deg, rgba(41, 37, 36, 0.8) 0%, rgba(28, 25, 23, 0.5) 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.1),
+      0 -4px 20px rgba(0, 0, 0, 0.2);
   }
 
   .landing-mascot-soft {
@@ -1242,8 +1317,9 @@ html:not(.dark) .p-toast-message {
 
   .landing-glow {
     background:
+      radial-gradient(700px 420px at 85% 15%, rgb(56 189 248 / 0.16), transparent 70%),
       radial-gradient(700px 360px at 18% 20%, rgb(251 191 36 / 0.22), transparent 70%),
-      radial-gradient(600px 340px at 85% 30%, rgb(217 119 6 / 0.14), transparent 70%);
+      radial-gradient(600px 340px at 85% 35%, rgb(217 119 6 / 0.14), transparent 70%);
   }
 
   .landing-cta {

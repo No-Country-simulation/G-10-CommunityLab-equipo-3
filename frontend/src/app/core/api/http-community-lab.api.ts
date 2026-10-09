@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import {
   AssetPatch,
   GeneratedAsset,
-  ProcessRequest,
   ProcessResult,
   StoredObject,
 } from './api.models';
@@ -15,10 +14,6 @@ import { API_CONFIG, CommunityLabApi } from './community-lab.api';
 export class HttpCommunityLabApi extends CommunityLabApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_CONFIG).baseUrl;
-
-  processInteractions(req: ProcessRequest): Observable<ProcessResult> {
-    return this.http.post<ProcessResult>(`${this.base}/interactions/process`, req);
-  }
 
   listAssets(): Observable<GeneratedAsset[]> {
     return this.http.get<GeneratedAsset[]>(`${this.base}/assets`);

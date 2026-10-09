@@ -17,10 +17,10 @@
     <div class="mb-5 flex items-center gap-3" [class.lg:justify-center]="c">
       <div class="h-16 w-16 shrink-0 overflow-hidden rounded-[18px] border border-amber-500/30 bg-gradient-to-br from-amber-100 to-amber-200 shadow-[0_6px_14px_rgb(217_119_6/0.3)] transition-all duration-300 hover:-rotate-6 hover:scale-105"
         [class.lg:h-14]="c" [class.lg:w-14]="c">
-        <img src="image/logo/oso-head.png" alt="Kora" width="64" height="64" class="h-full w-full object-cover" />
+        <img src="image/logo/oso-head.png" alt="Ukuku AI" width="64" height="64" class="h-full w-full object-cover" />
       </div>
       <div class="min-w-0" [class.lg:hidden]="c">
-        <p class="font-display text-[1.3rem] font-extrabold leading-none text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></p>
+        <p class="font-display text-[1.3rem] font-extrabold leading-none text-espresso dark:text-white">Ukuku <span class="text-amber-600 dark:text-amber-400">AI</span></p>
         <p class="mt-1 text-[11px] leading-snug text-stone-500 dark:text-stone-400">{{ 'brand.tagline' | t }}</p>
       </div>
       <button type="button" class="ml-auto rounded-full p-2 text-stone-400 hover:bg-white/60 dark:hover:bg-white/5 lg:hidden"
@@ -110,13 +110,13 @@
     <!-- System status widget: explicit backend mode so nobody confuses the demo with the real integration -->
     <div class="mt-5 flex flex-col gap-2 rounded-3xl border border-clay-subtle bg-white p-4 shadow-[0_4px_12px_rgb(28_25_23/0.03)] dark:border-stone-700 dark:bg-stone-900"
       [class.lg:hidden]="c">
-      <div class="flex items-center justify-between text-[0.8rem] font-bold text-espresso dark:text-white">
-        <span>{{ (api.useMocks ? 'sidebar.mode.demo' : 'sidebar.mode.live') | t }}</span>
-        <span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.7rem] font-extrabold"
-          [class]="api.useMocks
-            ? 'border-amber-500/20 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
-            : 'border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'">
-          <span class="live-dot relative h-[7px] w-[7px] rounded-full" [class]="api.useMocks ? 'bg-amber-500' : 'bg-emerald-500'"></span>
+      <!-- Live mode: the title and badge follow the stream of the selected network (connected / connecting / offline) -->
+      @let mode = api.useMocks ? 'demo' : store.liveUrl() ? store.liveStatus() : 'open';
+      <div class="flex items-center justify-between gap-2 text-[0.8rem] font-bold text-espresso dark:text-white">
+        <span class="min-w-0 truncate">{{ (mode === 'demo' ? 'sidebar.mode.demo' : 'sidebar.mode.live.' + mode) | t: { name: store.activeSource() } }}</span>
+        <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.7rem] font-extrabold"
+          [class]="modeBadge[mode]">
+          <span class="live-dot relative h-[7px] w-[7px] rounded-full" [class]="modeDot[mode]"></span>
           {{ api.useMocks ? 'MOCK' : 'LIVE' }}
         </span>
       </div>
@@ -126,6 +126,20 @@
       <p class="truncate border-t border-dashed border-stone-200 pt-1.5 font-mono text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
         {{ api.useMocks ? 'mock-engine' : api.baseUrl }}
       </p>
+      @if (store.liveUrl(); as liveUrl) {
+        @let live = store.liveStatus();
+        <div class="flex items-center justify-between gap-2 text-[0.72rem] text-stone-500 dark:text-stone-400"
+          [title]="liveUrl">
+          <span class="inline-flex items-center gap-1.5 font-semibold">
+            <i [class]="store.activeSource() === 'Telegram' ? 'pi pi-telegram' : 'pi pi-discord'"></i> {{ 'sidebar.live.title' | t }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 font-bold">
+            <span class="h-[7px] w-[7px] rounded-full"
+              [class]="live === 'open' ? 'bg-emerald-500' : live === 'connecting' ? 'bg-amber-500' : 'bg-rose-500'"></span>
+            {{ 'sidebar.live.' + live | t }}
+          </span>
+        </div>
+      }
     </div>
   </div>
 

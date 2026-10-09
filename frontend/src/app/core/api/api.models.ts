@@ -32,6 +32,8 @@ export interface InteractionAnalysis {
   route: ContentRoute;
   /** Short LLM explanation of the decision */
   reason: string;
+  /** Mascot expression picked by the LLM (one of the labels in core/mascot.ts, e.g. "celebrando") */
+  expression?: string;
 }
 
 export interface AnalyzedInteraction extends Interaction {
@@ -51,6 +53,8 @@ export interface AssetOrigin {
   sentiment: Sentiment;
   relevance: number;
   route: ContentRoute;
+  /** Mascot expression picked by the LLM for the source message */
+  expression?: string;
 }
 
 export interface GeneratedAsset {
@@ -91,7 +95,7 @@ export interface BatchSummary {
   mainTopics: string[];
 }
 
-/** Response of POST /api/v1/interactions/process — the heart of the MVP. */
+/** A processed batch, as stored in OCI (GET /api/v1/storage/objects/{name}). */
 export interface ProcessResult {
   batchId: string;
   processedAt: string;
@@ -100,12 +104,6 @@ export interface ProcessResult {
   interactions: AnalyzedInteraction[];
   assets: GeneratedAsset[];
   storage: StorageReceipt;
-}
-
-export interface ProcessRequest {
-  interactions: Interaction[];
-  /** Asset types the orchestrator should produce when the route allows it. */
-  formats?: AssetType[];
 }
 
 /** An object listed from the OCI bucket (one per processed batch). */

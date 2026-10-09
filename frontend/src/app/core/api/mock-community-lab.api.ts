@@ -4,7 +4,6 @@ import {
   AssetPatch,
   AssetStatus,
   GeneratedAsset,
-  ProcessRequest,
   ProcessResult,
   StoredObject,
 } from './api.models';
@@ -30,23 +29,13 @@ export class MockCommunityLabApi extends CommunityLabApi {
     // Older batches already went through curation, so give them realistic statuses
     const seededStatus: AssetStatus[] = ['published', 'published', 'approved', 'in_review', 'draft'];
     SEED_BATCHES.forEach((b, bi) => {
-      const result = process(b.interactions, undefined, b.processedAt);
+      const result = process(b.interactions, b.processedAt);
       result.assets.forEach((a, ai) => {
         a.status = seededStatus[(ai + bi) % seededStatus.length];
         if (a.status === 'published') a.publishedAt = b.processedAt;
       });
       this.save(result);
     });
-  }
-
-  processInteractions(req: ProcessRequest): Observable<ProcessResult> {
-    if (!req.interactions?.length) {
-      return throwError(() => new Error('La solicitud no contiene interacciones.'));
-    }
-    const result = process(req.interactions, req.formats);
-    this.save(result);
-    // Latency similar to a real LLM round-trip, so the pipeline UI can be shown
-    return of(clone(result)).pipe(delay(2600));
   }
 
   listAssets(): Observable<GeneratedAsset[]> {
