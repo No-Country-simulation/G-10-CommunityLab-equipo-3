@@ -12,11 +12,13 @@ import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnExpression("!'${telegram.bot.token:}'.isEmpty() && !'${telegram.bot.token:}'.startsWith('REPLACE_')")
 public class TelegramMessageListener implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 
     private final TelegramBotProperties properties;
