@@ -53,7 +53,7 @@ export class LandingPage implements AfterViewInit {
     { icon: 'pi pi-cloud', key: 'landing.example.oci', tint: 'bg-orange-50 text-[#c74634] dark:bg-orange-500/10 dark:text-orange-300' },
   ];
 
-  constructor() { effect(() => { document.title = `Kora AI · ${this.i18n.t('brand.tagline')}`; }); }
+  constructor() { effect(() => { document.title = `Ukuku AI · ${this.i18n.t('brand.tagline')}`; }); }
 
   ngAfterViewInit() {
     if (typeof IntersectionObserver === 'undefined') return;

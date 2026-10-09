@@ -54,7 +54,7 @@
               <i [class]="typeIcon[a.type]" class="text-sm"></i>
             </div>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a.title }}</p>
+              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a | assetTitle }}</p>
               <p class="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{{ a.body }}</p>
               <div class="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">
                 <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full" [class]="statusDot[a.status]"></span>{{ 'status.' + a.status | t }}</span>
@@ -87,7 +87,7 @@
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <span class="chip" [class]="typeTint[a.type]"><i [class]="typeIcon[a.type]" class="text-[10px]"></i>{{ 'assetType.' + a.type | t }}</span>
-              <span class="text-xs text-slate-400">{{ 'content.tone' | t: { tone: a.tone.toLowerCase() } }}</span>
+              <span class="text-xs text-slate-400">{{ 'content.tone' | t: { tone: (a.tone | tone).toLowerCase() } }}</span>
             </div>
             <p class="mt-1 text-xs text-slate-400">
               {{ a.id }} · {{ 'content.created' | t: { date: (a.createdAt | ldate: 'short') } }}
@@ -106,7 +106,7 @@
             <div class="space-y-4">
               <label class="block text-sm">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">{{ 'content.field.title' | t }}</span>
-                <input [(ngModel)]="draft.title"
+                <input [(ngModel)]="draft.title" [placeholder]="'assetTitle.' + a.type | t"
                   class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
               </label>
               <label class="block text-sm">
@@ -120,7 +120,7 @@
               </label>
               <label class="block text-sm">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">{{ 'content.field.hashtags' | t }}</span>
-                <input [(ngModel)]="draft.hashtags" placeholder="#Kora #OCI"
+                <input [(ngModel)]="draft.hashtags" placeholder="#UkukuAI #OCI"
                   class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
               </label>
               <div class="flex justify-end gap-2">
@@ -178,7 +178,9 @@
                   <span class="chip bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ 'content.relevance' | t: { pct: (a.origin.relevance | percent) } }}</span>
                 </div>
               </div>
-              <app-mascot [expression]="a.origin.expression ?? routeExpression[a.origin.route]" [size]="56" class="shrink-0 flex-col !gap-1 text-center" />
+              <!-- The bear follows the message sentiment (feliz / neutro / triste) unless the LLM sends its own expression -->
+              <app-mascot [expression]="a.origin.expression ?? sentimentExpression[a.origin.sentiment]"
+                [label]="a.origin.expression ? null : ('mood.' + a.origin.sentiment | t)" [size]="56" class="shrink-0 flex-col !gap-1 text-center" />
             </div>
           </div>
         </div>

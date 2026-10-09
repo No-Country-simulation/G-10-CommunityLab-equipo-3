@@ -4,7 +4,7 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { GeneratedAsset } from '../../../../core/api/api.models';
 import { I18n } from '../../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { AssetTitlePipe, LocalizedDatePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
 import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { StatCard, StatItem } from '../../../../shared/stat-card/stat-card';
@@ -12,7 +12,7 @@ import { Bear } from '../../../../shared/bear/bear';
 
 @Component({
   selector: 'app-summary',
-  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, Bear],
+  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, AssetTitlePipe, Bear],
   templateUrl: './summary.html',
   styleUrl: './summary.css',
 })
@@ -101,7 +101,7 @@ export class Summary {
         return next;
       });
     }, 280);
-    this.toast.add({ severity: 'success', summary: this.i18n.t('summary.toast.approved'), detail: a.title, life: 2500 });
+    this.toast.add({ severity: 'success', summary: this.i18n.t('summary.toast.approved'), detail: assetTitle(a, this.i18n), life: 2500 });
   }
 
   fileName(objectName: string) {

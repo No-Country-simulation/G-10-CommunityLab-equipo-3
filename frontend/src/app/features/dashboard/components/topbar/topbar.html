@@ -11,7 +11,7 @@
   <a routerLink="/app" class="flex min-w-0 items-center gap-2 lg:hidden">
     <img src="image/logo/oso-head.png" alt="" width="32" height="32"
       class="h-8 w-8 shrink-0 rounded-[10px] border border-amber-500/30 bg-amber-100 object-cover" />
-    <span class="font-display text-base font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></span>
+    <span class="font-display text-base font-extrabold text-espresso dark:text-white">Ukuku <span class="text-amber-600 dark:text-amber-400">AI</span></span>
   </a>
 
   <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -20,8 +20,8 @@
       <i class="pi pi-globe lang-switch-globe" aria-hidden="true"></i>
       @for (l of langs; track l.code) {
         <button type="button" role="radio" class="lang-switch-option" [class.is-active]="i18n.lang() === l.code"
-          [attr.aria-checked]="i18n.lang() === l.code" [attr.lang]="l.code"
-          [pTooltip]="l.label" tooltipPosition="bottom" (click)="setLang(l.code)">{{ l.short }}</button>
+          [attr.aria-checked]="i18n.lang() === l.code" [attr.lang]="l.code" [attr.aria-label]="l.label"
+          [pTooltip]="l.label" tooltipPosition="bottom" (click)="setLang(l.code)"><img class="lang-flag" [src]="l.flag" alt="" /></button>
       }
     </div>
 
@@ -30,7 +30,7 @@
       <button type="button" class="lang-dropdown-trigger" [class.is-open]="langMenuOpen()"
         (click)="langMenuOpen.set(!langMenuOpen())" [attr.aria-label]="'topbar.language' | t"
         aria-haspopup="listbox" [attr.aria-expanded]="langMenuOpen()">
-        <span class="lang-dropdown-code">{{ currentLang().short }}</span>
+        <span class="lang-dropdown-code"><img class="lang-flag" [src]="currentLang().flag" [alt]="currentLang().label" /></span>
         <i class="pi pi-chevron-down lang-dropdown-chevron"></i>
       </button>
 
@@ -40,7 +40,7 @@
           @for (l of langs; track l.code) {
             <button type="button" role="option" class="lang-dropdown-option" [class.is-active]="i18n.lang() === l.code"
               [attr.aria-selected]="i18n.lang() === l.code" [attr.lang]="l.code" (click)="setLang(l.code)">
-              <span class="lang-dropdown-badge">{{ l.short }}</span>
+              <span class="lang-dropdown-badge"><img class="lang-flag" [src]="l.flag" alt="" /></span>
               <span class="flex-1 text-left">{{ l.label }}</span>
               @if (i18n.lang() === l.code) {
                 <i class="pi pi-check text-[11px]"></i>

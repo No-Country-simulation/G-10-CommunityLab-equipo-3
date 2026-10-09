@@ -1,4 +1,4 @@
-# Contrato de API — Kora (reto CommunityLab)
+# Contrato de API — Ukuku AI (reto CommunityLab)
 
 Endpoints que el frontend Angular consume. Hoy se simulan en el navegador (`MockCommunityLabApi`);
 cuando el backend Spring Boot esté listo, basta con cambiar `useMocks: false` en
@@ -106,7 +106,7 @@ por canal, guarda el paquete en OCI Object Storage y devuelve todo.
       "tone": "Inspirador",
       "title": "Celebramos a Mariana López",
       "body": "🎉 ¡Celebramos a Mariana! …",
-      "hashtags": ["#Kora", "#LangChain", "#OCI"],
+      "hashtags": ["#UkukuAI", "#LangChain", "#OCI"],
       "status": "in_review",
       "createdAt": "2026-09-22T19:00:00Z"
     }

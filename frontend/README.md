@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="public/image/logo/oso-full.png" alt="Kora" width="140" />
+  <img src="public/image/logo/oso-full.png" alt="Ukuku AI" width="140" />
 </p>
 
-<h1 align="center">Kora · Frontend</h1>
+<h1 align="center">Ukuku AI · Frontend</h1>
 
 <p align="center">
-  <b>Tu comunidad habla. Kora publica.</b><br />
+  <b>Tu comunidad habla. Ukuku AI publica.</b><br />
   Panel web del motor de IA que convierte las conversaciones de Discord y Telegram en contenido listo para publicar.
 </p>
 
@@ -34,7 +34,7 @@
 
 ## Qué hace
 
-Kora sigue el flujo del reto en cuatro pasos:
+Ukuku AI sigue el flujo del reto en cuatro pasos:
 
 ```text
 Mensaje de la comunidad  →  Análisis con LLM  →  Orquestación  →  OCI Object Storage

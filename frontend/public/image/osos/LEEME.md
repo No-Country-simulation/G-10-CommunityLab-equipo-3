@@ -46,3 +46,19 @@ Con `<img>` el navegador cachea cada archivo. Para animar el cambio de estado ba
 ## Paleta
 Pelaje `#1C1917` → `#4A3A40` · marcas `#FBE0BE` → `#BC7E4B` · hocico `#FFF4E4` · luz de borde `#A78BFA` · acento `#EA580C`
 Fondos: éxito `#FDBA74` · actividad `#BAE6FD` · neutro `#E7E5E4` · aviso `#FCD34D` · error `#FCA5A5` · vacío `#D6D3D1`
+
+## Animaciones
+La app inserta el SVG en la página (no como `<img>`) y lo anima desde un solo archivo:
+`src/app/shared/mascot/mascot.css`, con comentarios en español.
+
+Las piezas que se mueven llevan un nombre (`class`) dentro del SVG:
+
+| Pieza | Nombre | Archivos |
+|---|---|---|
+| Cada ojo abierto | `ojo` | 01-neutral, 02-contento, 28-triste |
+| Boca y lengua | `boca` | 02-contento |
+| Mejillas | `rubor` | 02-contento |
+| Lágrima | `lagrima` | 28-triste |
+
+Si se vuelven a exportar estos SVG desde el diseño, hay que conservar esos nombres.
+Para animar otra expresión: poner `class="…"` en la pieza de su SVG y añadir su bloque en `mascot.css`.

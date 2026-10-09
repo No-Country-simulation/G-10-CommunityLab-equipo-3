@@ -1,4 +1,4 @@
-import { ContentRoute, Sentiment } from './api/api.models';
+import { Sentiment } from './api/api.models';
 
 /**
  * Expressions of the mascot in public/image/osos/ (see LEEME.md there).
@@ -27,7 +27,7 @@ export function toExpression(raw: string | null | undefined): Expression | null 
   if (!raw) return null;
   const key = raw
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim()
     .replace(/\.svg$/, '')
@@ -40,22 +40,11 @@ export function toExpression(raw: string | null | undefined): Expression | null 
 export const expressionSrc = (raw: string | null | undefined) =>
   `image/osos/${OSOS[toExpression(raw) ?? DEFAULT_EXPRESSION]}.svg`;
 
-/** "sin-resultados" → "Sin resultados", "guino" → "Guiño" */
-export function expressionLabel(raw: string | null | undefined): string {
-  const e = toExpression(raw) ?? DEFAULT_EXPRESSION;
-  const text = e === 'guino' ? 'guiño' : e.replace(/-/g, ' ');
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
+/** i18n key of an expression's display name (messages.ts); unknown labels read as neutral */
+export const expressionKey = (raw: string | null | undefined) =>
+  `mascot.${toExpression(raw) ?? DEFAULT_EXPRESSION}`;
 
-/** Used when the backend sends no label (older batches): pick one from the analysis. */
-export const ROUTE_EXPRESSION: Record<ContentRoute, Expression> = {
-  success_story: 'celebrando',
-  testimonial: 'encantado',
-  faq: 'pensativo',
-  alert: 'preocupado',
-  discard: 'sin-resultados',
-};
-
+/** Bear shown for each sentiment when the backend sends no expression label: feliz / neutro / triste. */
 export const SENTIMENT_EXPRESSION: Record<Sentiment, Expression> = {
   positive: 'contento',
   neutral: 'neutral',

@@ -146,20 +146,13 @@ const TYPE: Record<string, AssetType> = {
   FAQ: 'faq',
 };
 
+/** Tone per channel; translated in the UI by the `tone` pipe. */
 const TONE: Record<AssetType, string> = {
   linkedin_post: 'Inspirador',
   x_post: 'Conciso',
   newsletter_highlight: 'Cercano',
   faq: 'Didáctico',
   success_story: 'Inspirador',
-};
-
-const DEFAULT_TITLE: Record<AssetType, string> = {
-  linkedin_post: 'Post para LinkedIn',
-  x_post: 'Post para X',
-  newsletter_highlight: 'Destacado de newsletter',
-  faq: 'Pregunta frecuente',
-  success_story: 'Historia de éxito',
 };
 
 function toRoute(post: BackendPost): ContentRoute {
@@ -201,7 +194,8 @@ export function toGeneratedAsset(post: BackendPost, stream: InteractionSource): 
     },
     type,
     tone: TONE[type],
-    title: post.titlePost?.trim() || DEFAULT_TITLE[type],
+    // Empty when the backend sends none: the UI shows a translated default (assetTitle pipe)
+    title: post.titlePost?.trim() ?? '',
     body,
     hashtags: post.hashtags ?? [],
     // LLM fallback records are traces, not publishable content

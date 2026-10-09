@@ -1,7 +1,7 @@
 import { Component, computed, input, linkedSignal } from '@angular/core';
 
 /**
- * Poses of Kora, the spectacled bear, in public/image/bear/:
+ * Poses of Ukuku, the spectacled bear, in public/image/bear/:
  *   laptop     → oso-laptop      working on a laptop          (landing hero)
  *   mensajes   → oso-mensajes    reading messages on a tablet (landing "Cómo funciona")
  *   curaduria  → oso-curaduria   thumbs up at a desk          (landing "Plataforma")
