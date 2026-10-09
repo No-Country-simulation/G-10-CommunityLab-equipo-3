@@ -1,6 +1,18 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "frontend", "runtimeExecutable": "npm", "runtimeArgs": ["start", "--prefix", "frontend"], "port": 4200 }
+    { "name": "frontend", "runtimeExecutable": "npm", "runtimeArgs": ["start", "--prefix", "frontend"], "port": 4200 },
+    {
+      "name": "backend",
+      "runtimeExecutable": "C:/Program Files/Git/bin/bash.exe",
+      "runtimeArgs": ["-c", "export JAVA_HOME=\"D:/Librerias Java/JDK/jdk-21.0.12.1+1\" && cd /d/Hackaton/CommunityLab-main-backend/backend && set -a && . <(sed 's/\\r$//' .env) && set +a && ./mvnw spring-boot:run"],
+      "port": 8080
+    },
+    {
+      "name": "sse-mock",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Users/Jog/AppData/Local/Temp/claude/D--Hackaton-G-10-CommunityLab-equipo-3/eb972344-87dc-45ad-9ab6-942f2a7ec47b/scratchpad/sse-contract-mock.js"],
+      "port": 8080
+    }
   ]
 }

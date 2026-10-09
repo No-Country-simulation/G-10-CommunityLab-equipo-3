@@ -4,7 +4,7 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { GeneratedAsset } from '../../../../core/api/api.models';
 import { I18n } from '../../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { AssetTitlePipe, LocalizedDatePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
 import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { StatCard, StatItem } from '../../../../shared/stat-card/stat-card';
@@ -12,7 +12,7 @@ import { Bear } from '../../../../shared/bear/bear';
 
 @Component({
   selector: 'app-summary',
-  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, Bear],
+  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, AssetTitlePipe, Bear],
   templateUrl: './summary.html',
   styleUrl: './summary.css',
 })
@@ -30,7 +30,7 @@ export class Summary {
       title: 'step.ingest',
       text: 'summary.step.ingest',
       icon: 'pi pi-inbox',
-      link: '/app/ingest',
+      link: '/app/content',
       color: '#d97706',
       colorTo: '#b45309',
     },
@@ -38,7 +38,7 @@ export class Summary {
       title: 'step.analysis',
       text: 'summary.step.analysis',
       icon: 'pi pi-sparkles',
-      link: '/app/ingest',
+      link: '/app/content',
       color: '#8b5cf6',
       colorTo: '#6d28d9',
     },
@@ -72,7 +72,7 @@ export class Summary {
     const objects = this.store.objects();
     const t = (key: string) => this.i18n.t(key);
     return [
-      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/ingest' },
+      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/storage' },
       { label: t('summary.stat.generated'), value: this.store.assets().length, icon: 'pi pi-file-edit', link: '/app/content' },
       { label: t('summary.stat.pending'), value: this.store.pendingReview(), icon: 'pi pi-eye', link: '/app/content' },
       { label: t('summary.stat.packages'), value: objects.length, icon: 'pi pi-cloud', link: '/app/storage' },
@@ -101,7 +101,7 @@ export class Summary {
         return next;
       });
     }, 280);
-    this.toast.add({ severity: 'success', summary: this.i18n.t('summary.toast.approved'), detail: a.title, life: 2500 });
+    this.toast.add({ severity: 'success', summary: this.i18n.t('summary.toast.approved'), detail: assetTitle(a, this.i18n), life: 2500 });
   }
 
   fileName(objectName: string) {

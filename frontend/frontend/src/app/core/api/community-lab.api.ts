@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import {
   AssetPatch,
   GeneratedAsset,
-  ProcessRequest,
+  InteractionSource,
   ProcessResult,
   StoredObject,
 } from './api.models';
@@ -13,13 +13,18 @@ export interface ApiConfig {
   baseUrl: string;
   /** true → simulated responses (no backend needed for the demo) */
   useMocks: boolean;
+  /**
+   * SSE stream of processed posts per network (GET /api/v1/discord/messages,
+   * GET /api/v1/telegram/messages). Works in both modes: live posts are added on top
+   * of the mock/HTTP data.
+   */
+  liveFeeds?: Partial<Record<InteractionSource, string>>;
 }
 
 export const API_CONFIG = new InjectionToken<ApiConfig>('API_CONFIG');
 
 /** Every call the UI makes to the backend. Swap implementations via `useMocks`. */
 export abstract class CommunityLabApi {
-  abstract processInteractions(req: ProcessRequest): Observable<ProcessResult>;
   abstract listAssets(): Observable<GeneratedAsset[]>;
   abstract updateAsset(id: string, patch: AssetPatch): Observable<GeneratedAsset>;
   abstract publishAsset(id: string): Observable<GeneratedAsset>;

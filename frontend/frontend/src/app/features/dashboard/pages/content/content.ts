@@ -13,7 +13,7 @@ import { AssetStatus, GeneratedAsset } from '../../../../core/api/api.models';
 import { buildBannerSvg, downloadBannerPng, svgDataUrl } from '../../../../core/banner';
 import { confetti, originOf } from '../../../../core/confetti';
 import { I18n } from '../../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { AssetTitlePipe, LocalizedDatePipe, TonePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
 import {
   ASSET_STATUS_DOT,
   ASSET_STATUS_SEVERITY,
@@ -26,6 +26,8 @@ import {
 } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { AssetPreview } from '../../../../shared/asset-preview/asset-preview';
+import { Mascot } from '../../../../shared/mascot/mascot';
+import { SENTIMENT_EXPRESSION } from '../../../../core/mascot';
 
 type Filter = 'pending' | 'approved' | 'published' | 'rejected' | 'all';
 
@@ -49,8 +51,11 @@ const FILTER_STATUSES: Record<Filter, AssetStatus[] | null> = {
     FormsModule,
     PercentPipe,
     AssetPreview,
+    Mascot,
     TranslatePipe,
     LocalizedDatePipe,
+    AssetTitlePipe,
+    TonePipe,
   ],
   templateUrl: './content.html',
   styleUrl: './content.css',
@@ -67,6 +72,7 @@ export class Content {
   protected readonly statusDot = ASSET_STATUS_DOT;
   protected readonly routeTint = ROUTE_TINT;
   protected readonly sentimentTint = SENTIMENT_TINT;
+  protected readonly sentimentExpression = SENTIMENT_EXPRESSION;
   protected readonly sourceIcon = SOURCE_ICON;
   protected readonly sourceTint = SOURCE_TINT;
 
@@ -113,7 +119,7 @@ export class Content {
     return this.store.assets().filter(
       (a) =>
         (!statuses || statuses.includes(a.status)) &&
-        (!q || `${a.title} ${a.body} ${a.origin.author} ${a.origin.channel}`.toLowerCase().includes(q)),
+        (!q || `${assetTitle(a, this.i18n)} ${a.body} ${a.origin.author} ${a.origin.channel}`.toLowerCase().includes(q)),
     );
   });
 

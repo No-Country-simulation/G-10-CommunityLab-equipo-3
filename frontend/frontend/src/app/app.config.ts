@@ -89,8 +89,18 @@ export const appConfig: ApplicationConfig = {
       },
     },
     MessageService,
-    // Set useMocks to false once the Spring Boot API is running
-    provideCommunityLabApi({ baseUrl: 'http://localhost:8080/api/v1', useMocks: true }),
+    // Real backend. It only exposes the SSE streams for now: until the REST endpoints of
+    // API_CONTRACT.md exist, asset and storage lists load empty.
+    // Set useMocks to true for the simulated demo.
+    // '/api' is proxied to http://localhost:8080 by proxy.conf.json (ng serve).
+    provideCommunityLabApi({
+      baseUrl: '/api/v1',
+      useMocks: false,
+      liveFeeds: {
+        Discord: '/api/v1/discord/messages',
+        Telegram: '/api/v1/telegram/messages',
+      },
+    }),
     providePrimeNG({
       ripple: true,
       theme: {

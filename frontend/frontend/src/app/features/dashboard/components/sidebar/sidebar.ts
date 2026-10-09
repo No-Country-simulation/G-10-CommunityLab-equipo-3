@@ -32,6 +32,22 @@ export class Sidebar {
   private readonly router = inject(Router);
   protected readonly api = inject(API_CONFIG);
 
+  /** Status card badge per mode: demo, or the live stream state of the selected network */
+  protected readonly modeBadge: Record<string, string> = {
+    demo: 'border-amber-500/20 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    open: 'border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+    connecting: 'border-amber-500/20 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    error: 'border-rose-500/20 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
+    off: 'border-stone-300/60 bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400',
+  };
+  protected readonly modeDot: Record<string, string> = {
+    demo: 'bg-amber-500',
+    open: 'bg-emerald-500',
+    connecting: 'bg-amber-500',
+    error: 'bg-rose-500',
+    off: 'bg-stone-400',
+  };
+
   /** Mobile drawer visibility */
   readonly open = input(false);
   /** Desktop icon-only mode */
@@ -39,10 +55,9 @@ export class Sidebar {
   readonly close = output<void>();
   readonly toggleCollapse = output<void>();
 
-  /** Mirrors the challenge flow: ingest + analyze → curate → store in OCI. */
+  /** Curate → store in OCI; ingestion and analysis happen in the backend. */
   protected readonly items: NavItem[] = [
     { label: 'nav.summary', path: '/app', emoji: PAGE_ICON.summary },
-    { label: 'nav.ingest', path: '/app/ingest', emoji: PAGE_ICON.ingest },
     { label: 'nav.content', path: '/app/content', emoji: PAGE_ICON.content, badge: this.store.pendingReview },
     { label: 'nav.storage', path: '/app/storage', emoji: PAGE_ICON.storage },
   ];

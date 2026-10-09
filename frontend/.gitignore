@@ -1,2 +1,9 @@
 # IDE settings (IntelliJ / WebStorm)
 .idea/
+
+# Leftovers from main's layout when switching branches (this branch only holds frontend/)
+/backend/
+/frontend/frontend/
+
+# Local secrets
+.env

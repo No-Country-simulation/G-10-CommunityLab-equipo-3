@@ -1,0 +1,96 @@
+/*
+ * Animaciones del oso.
+ *
+ * El SVG se inserta dentro de .oso, que lleva la expresión como clase: .oso.contento, .oso.triste…
+ * Las piezas que se mueven tienen nombre dentro de los SVG (public/image/osos/):
+ *   .ojo      → cada ojo abierto        (01-neutral, 02-contento, 28-triste)
+ *   .boca     → boca y lengua           (02-contento)
+ *   .rubor    → mejillas sonrosadas     (02-contento)
+ *   .lagrima  → la lágrima              (28-triste)
+ * Para animar otra expresión: ponle class="…" a la pieza en su SVG y añade aquí su bloque.
+ */
+
+/* El SVG ocupa todo el hueco del oso */
+.oso {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  animation: aparece 0.35s ease-out;
+}
+
+.oso svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Las piezas giran y se escalan desde su propio centro */
+.oso .ojo,
+.oso .boca,
+.oso .lagrima {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Si el sistema pide "reducir movimiento", el oso se queda quieto */
+@media (prefers-reduced-motion: no-preference) {
+  /* Neutro (y cualquier oso con ojos abiertos): parpadea cada 5 segundos */
+  .oso .ojo {
+    animation: parpadeo 5s infinite;
+  }
+
+  /* Feliz: la boca rebota y las mejillas se encienden */
+  .oso.contento .boca {
+    transform-origin: 50% 20%;
+    animation: rebote 1.6s ease-in-out infinite;
+  }
+
+  .oso.contento .rubor {
+    animation: latido 1.6s ease-in-out infinite;
+  }
+
+  /* Triste: la lágrima baja por la mejilla y desaparece */
+  .oso.triste .lagrima {
+    animation: lagrima 2.8s ease-in infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oso {
+    animation: none;
+  }
+}
+
+/* ── Movimientos ── */
+
+/* Entrada del oso al cambiar de expresión */
+@keyframes aparece {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* Los ojos se cierran un instante */
+@keyframes parpadeo {
+  0%, 93%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.1); }
+}
+
+/* La boca se estira un poco y vuelve */
+@keyframes rebote {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.07, 1.14); }
+}
+
+/* Las mejillas se ponen más rosadas */
+@keyframes latido {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+
+/* La lágrima aparece, baja 10 px y se desvanece */
+@keyframes lagrima {
+  0%   { transform: translateY(-3px); opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translateY(7px);  opacity: 0; }
+}

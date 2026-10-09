@@ -1,0 +1,10 @@
+node_modules
+dist
+.angular
+.vscode
+.idea
+design
+*.log
+Dockerfile
+.dockerignore
+compose.yaml

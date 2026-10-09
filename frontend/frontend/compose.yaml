@@ -1,0 +1,15 @@
+services:
+  frontend:
+    build: .
+    image: communitylab-frontend
+    container_name: communitylab-frontend
+    ports:
+      - "4200:80"
+    environment:
+      # Backend running on the host (./mvnw spring-boot:run). Point it elsewhere to use
+      # a deployed API, e.g. BACKEND_URL=https://api.example.com docker compose up
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8080}
+    extra_hosts:
+      # Makes host.docker.internal resolve on Linux too (Docker Desktop already provides it)
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -72,7 +72,7 @@
               <div class="flex justify-end gap-1">
                 <p-button icon="pi pi-eye" [text]="true" [rounded]="true" size="small" [pTooltip]="'storage.view' | t" tooltipPosition="top"
                   [loading]="loadingObject() === o.objectName" (onClick)="open(o)" [ariaLabel]="'storage.viewAria' | t" />
-                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" [pTooltip]="'ingest.oci.copyUrl' | t"
+                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" [pTooltip]="'storage.copyUrl' | t"
                   tooltipPosition="top" (onClick)="copy(o.url)" [ariaLabel]="'storage.copyUrlAria' | t" />
               </div>
             </td>
