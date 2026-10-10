@@ -28,7 +28,7 @@
   - *Derivado de:* `spec.md RF-04,RF-06,RNF-06 + plan.md §1,§2`
   - *Verificación:* `./mvnw test -Dtest=GetMessagesProcessedDiscordTest,GetMessageProcessedTelegramTest,HealthTest,SwaggerDocsTest,SseEventPublisherAdapterTest`
 - [ ] **TASK-006-05**: Despliegue en VM + demo (peldaños 3–4).
-  - IAM: `dynamic-group` de la VM + política sobre `MessagesUsers` (compartment `communityLab`): `OBJECT_CREATE + PAR_MANAGE + OBJECT_READ` (solo para otorgar PAR). Revisar si `OBJECT_OVERWRITE` sigue haciendo falta: el `PUT` es create-only (`If-None-Match: *`).
+  - IAM: `dynamic-group` de la VM + política sobre `MessagesUsers` (compartment `communityLab`): `OBJECT_CREATE + PAR_MANAGE + OBJECT_READ` (solo para otorgar PAR). ~~Revisar si `OBJECT_OVERWRITE` sigue haciendo falta~~ **resuelto 2026-10-09: sí**, lo exige la reescritura con `If-Match` de spec 007 (el flush de 006 sigue create-only). `OBJECT_READ` cubre además el `GetObject` de revisión. Bucket con Object Versioning (TASK-007-00).
   - Peldaño 3: en la VM, `oci os ns get --auth instance_principal` + `object put` de prueba antes del contenedor (aísla IAM del código; un `404` aquí = políticas, no bucket).
   - Peldaño 4: contenedor con egress a `169.254.169.254` + `objectstorage.sa-saopaulo-1.oraclecloud.com`; env prod `OCI_AUTH_MODE=instance-principal` sin `OCI_CONFIG_PROFILE`; hoy no existe `application-prod.yaml` (plan §1): las claves `oci.*` viven en `application.yaml` base y los valores llegan por env.
   - Demo: `package.completed` con `parUrlBase` vigente; `GET parUrlBase → 200 application/json`; re-flush mismo `batchId` → `deduped:true` sin re-PUT ni nueva PAR; PAR expirada → error OCI sin contenido; OCI caído → `LOG + ⚠️` sin evento.
