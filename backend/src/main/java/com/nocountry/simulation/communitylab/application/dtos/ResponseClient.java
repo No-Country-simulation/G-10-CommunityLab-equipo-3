@@ -26,5 +26,7 @@ public record ResponseClient(
         String titlePost,
         String outputContentProcessed,
         List<String> hashtags,
-        String cta) {
+        String cta,
+        Boolean approved,
+        Integer versionMessage) {
 }

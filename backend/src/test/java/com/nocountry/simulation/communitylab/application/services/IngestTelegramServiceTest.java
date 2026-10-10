@@ -2,20 +2,20 @@ package com.nocountry.simulation.communitylab.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.nocountry.simulation.communitylab.application.command.IngestTelegramCommand;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.services.comment.telegram.IngestTelegramService;
-import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,7 @@ import org.springframework.context.ApplicationEventPublisher;
  * Mirror of {@code IngestDiscordServiceTest}: same Given/When/Then style.
  *
  * <p>Derivado de: spec 005 RF-01,RF-04 + plan §1 (espejo Discord, sin SDKs).
- * No Spring context: BufferPort fake, events mock (puerto owned en 004).
+ * No Spring context: BufferPort mock, events mock (puerto owned en 004).
  */
 @DisplayName("IngestTelegramService")
 class IngestTelegramServiceTest {
@@ -38,25 +38,16 @@ class IngestTelegramServiceTest {
 
     private IngestTelegramService useCase;
     private ApplicationEventPublisher events;
-    private List<EnrichedComment> appended;
+    private BufferPort buffer;
 
     @BeforeEach
     void setUp() {
-        // Dado un BufferPort fake con lote abierto estable (sin Redis real).
-        appended = new ArrayList<>();
-        BufferPort fakeBuffer = new BufferPort() {
-            @Override
-            public String getCurrentBatchId() {
-                return FIXED_BATCH_ID;
-            }
-
-            @Override
-            public void appendToBatch(EnrichedComment enrichedComment) {
-                appended.add(enrichedComment);
-            }
-        };
+        // Given un BufferPort mock con lote abierto estable para su fuente (sin Redis real).
+        // La ingesta solo pide el batchId; el EnrichmentListener async bufferiza después.
+        buffer = mock(BufferPort.class);
+        when(buffer.getCurrentBatchId(Source.TELEGRAM)).thenReturn(FIXED_BATCH_ID);
         events = mock(ApplicationEventPublisher.class);
-        useCase = new IngestTelegramService(fakeBuffer, events);
+        useCase = new IngestTelegramService(buffer, events);
     }
 
     @Test
@@ -83,6 +74,9 @@ class IngestTelegramServiceTest {
         assertThat(result.get().authorId()).isEqualTo("777");
         assertThat(result.get().source()).isEqualTo(Source.TELEGRAM);
         assertThat(result.get().batchId()).isEqualTo(FIXED_BATCH_ID);
+        // Then el lote pedido es el de su propia fuente (lote por fuente, spec 006)
+        verify(buffer).getCurrentBatchId(Source.TELEGRAM);
+        verify(buffer, never()).getCurrentBatchId(Source.DISCORD);
         // Entonces se dispara 002 en background sin bloquear ingesta
         var published = forClass(IngestAcceptedEvent.class);
         verify(events).publishEvent(published.capture());
@@ -90,7 +84,7 @@ class IngestTelegramServiceTest {
         assertThat(published.getValue().message().batchId()).isEqualTo(FIXED_BATCH_ID);
         assertThat(published.getValue().message().source()).isEqualTo(Source.TELEGRAM);
         // Entonces nada bufferizado en ingesta: el EnrichmentListener async lo hace despues
-        assertThat(appended).isEmpty();
+        verify(buffer, never()).appendToBatch(any());
     }
 
     @Test
@@ -108,7 +102,7 @@ class IngestTelegramServiceTest {
         // Cuando se ingiere entonces se descarta en silencio sin disparar 002
         assertThat(useCase.ingest(command)).isEmpty();
         verifyNoInteractions(events);
-        assertThat(appended).isEmpty();
+        verify(buffer, never()).appendToBatch(any());
     }
 
     @Test
@@ -132,7 +126,7 @@ class IngestTelegramServiceTest {
         assertThat(result.get().content()).hasSize(2000);
         assertThat(result.get().truncated()).isTrue();
         assertThat(result.get().batchId()).isEqualTo(FIXED_BATCH_ID);
-        assertThat(appended).isEmpty();
+        verify(buffer, never()).appendToBatch(any());
     }
 
     @Test

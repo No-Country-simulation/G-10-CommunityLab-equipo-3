@@ -1,7 +1,7 @@
 # Plan 006: Almacenamiento OCI opción A + lectura directa PAR
 
-Derivado de: `spec.md RF-01..RF-06 + RNF-01..RNF-06` + `constitution.md v1.7-dual-get R1,R4-R6,Q3-Q4,Fase 1` + `004-paquete-oci-health RF-01/RF-02/RNF-01/RNF-02`.
-Alcance: `Bot → LLM por mensaje (002) → etiquetas (003) → fork SSE vivo + RPUSH Redis (004 intacto) → flush por bytes 1 PUT → 1 CreatePAR read → SSE package.completed con URL → frontend GET directo a OCI`. Solo `DISCORD #Listen` para demo, `TELEGRAM` mismo patrón. Redis no se toca salvo completar su flush pendiente (`maxBatchSize` hoy reservado). Opción A fijada: `1 lote = 1 objeto = 1 PAR read por objeto`.
+Derivado de: `spec.md RF-01..RF-07 + RNF-01..RNF-06` + `constitution.md v1.8-buffer-por-fuente R1,R4-R6,Q3-Q4,Fase 1` + `004-paquete-oci-health RF-01/RF-02/RNF-01/RNF-02`.
+Alcance: `Bot → LLM por mensaje (002) → etiquetas (003) → fork SSE vivo + RPUSH Redis **al lote de su fuente** → cierre por bytes o por hora (>=5) → sellado atómico → 1 PUT → 1 CreatePAR read → SSE package.completed con URL → frontend GET directo a OCI`. Solo `DISCORD #Listen` para demo, `TELEGRAM` mismo patrón. Redis: keys por fuente `buffer:{SOURCE}:*` + sellado y pendientes; el umbral de bytes vive en `PackageRunService` (no en el adapter). Opción A fijada: `1 lote = 1 objeto = 1 PAR read por objeto`.
 
 > Nota TTL: el TTL es solo de la URL PAR, no del objeto. El objeto persiste hasta borrado/lifecycle; la PAR vence y se renueva (`List + reuse`).
 
@@ -9,55 +9,85 @@ Alcance: `Bot → LLM por mensaje (002) → etiquetas (003) → fork SSE vivo + 
 
 ```mermaid
 flowchart LR
-  RED[RedisBuffer LIST+SET+bytes] -->|bytes>=921600| FLUSH[PackageRunService flush synchronized]
-  FLUSH -->|LRANGE+envelope| AP[ArtifactStorePort put+exists+createReadPar+listPars]
+  LIS[EnrichmentListener append] -->|bytes>=921600| FLUSH[PackageRunService flush lock por fuente]
+  SCH[BufferFlushScheduler cron 0 0 * * * *] -->|count>=5 o pendientes| FLUSH
+  FLUSH -->|MULTI RENAME -> sealed + pending| RED[RedisBuffer por fuente LIST+SET+bytes]
+  FLUSH -->|readSealed+AssetPackage| AP[ArtifactStore save]
   AP -.implementa.-> OCI[OciObjectStorageAdapter SDK + Instance Principal]
   OCI -->|etag+size| FLUSH
   FLUSH -->|parUrlBase+expiresAt| SSE[SseEventPublisher package.completed por source]
   SSE --> FE[Frontend GET directo PAR]
-  FLUSH -->|OCI fail| LOG[LOG sin PII, sin package.completed, vivo ya emitido]
+  FLUSH -->|OCI fail| LOG[LOG sin PII, lote queda en pending, sin package.completed, vivo ya emitido]
 ```
 
-* `domain` (puro, sin `org.springframework`/`jakarta.persistence`, R1-R3): `AssetPackage{batchId lote, generatedAt, source: DISCORD|TELEGRAM, assets: Asset[] vivo LINKEDIN/X/FAQ (1 duda = 1 post), enriched: EnrichedComment[] con authorId/authorName/channelId/messageId para trazabilidad, stats:{received, analyzed, fallbackCount, assetsCount}, promptVersion: "v1", packageUrl?}` + `PackageStats` + validación `<1048576 bytes` y `assets[]` no vacío. Dueño único 006 (`Asset` vive en 003). Anonimato solo ante el LLM; OCI conserva usuario; logs prod solo `messageId/batchId/source`.
-* `application` (sin `@Controller`, sin SDKs): `ports/in PackageRunUseCase.flush(batchId)` + `ports/out ArtifactStorePort{put, exists, createReadPar, listPars}` + `ports/out BufferPort{getCurrentBatchId, append, flushIfNeeded, readBatch, rotate}` (extiende `BufferPort` actual de 2 métodos) + `services BufferService + PackageRunService` (solo Java sin Lua: `SADD ids messageId` dedup → `RPUSH list json` → `INCRBY bytes len` → si `>=900KB` flush `synchronized`: `LRANGE` → envuelve en `assets[]` → `put paquete-{batchId}.json` → `exists? deduped:true` → `listPars? reuse deduped:true : create` → `SSE package.completed` → `DEL + nuevo uuid lote`; `LLM_FALLBACK` entra como traza auditable, vacío/post-inválido aborta sin OCI).
+* `domain` (puro, sin `org.springframework`/`jakarta.persistence`, R1-R3): `AssetPackage{batchId lote, generatedAt, source: DISCORD|TELEGRAM, enriched: EnrichedComment[] (cada registro con su post LINKEDIN/X/FAQ, 1 duda = 1 post, + authorId/authorName/channelId/messageId para trazabilidad), stats:{received, analyzed, fallbackCount, assetsCount}, promptVersion: "v1"}` + `PackageStats` + validación `enriched[]` no vacío. Sin `assets[]` (enmienda spec §4 2026-10-08: duplicaría el post que ya lleva cada `EnrichedComment`). La guarda `<1048576 bytes` vive en el adapter OCI (bytes reales tras serializar; el dominio no tiene serializador). Anonimato solo ante el LLM; OCI conserva usuario; logs prod solo `messageId/batchId/source`.
+* `application` (sin `@Controller`, sin SDKs) — *diseño original; el flujo `synchronized` + `LRANGE → DEL` queda reemplazado por §1.1 (lock por fuente + sellado `MULTI/RENAME` + pendientes)*: `ports/in PackageRunUseCase.flush(batchId)` + `ports/out ArtifactStorePort{put, exists, createReadPar, listPars}` + `ports/out BufferPort{getCurrentBatchId, append, flushIfNeeded, readBatch, rotate}` (extiende `BufferPort` actual de 2 métodos) + `services BufferService + PackageRunService` (solo Java sin Lua: `SADD ids messageId` dedup → `RPUSH list json` → `INCRBY bytes len` → si `>=900KB` flush `synchronized`: `LRANGE` → envuelve en `assets[]` → `put paquete-{batchId}.json` → `exists? deduped:true` → `listPars? reuse deduped:true : create` → `SSE package.completed` → `DEL + nuevo uuid lote`; `LLM_FALLBACK` entra como traza auditable, vacío/post-inválido aborta sin OCI).
 * `infrastructure` (adapters implementan ports, P2): `OciObjectStorageAdapter` (único que toca SDK: `PutObject + GetNamespace auto + CreatePreauthenticatedRequest ObjectRead + ListPreauthenticatedRequests` solo en re-flush) + `OciConfig` (`InstancePrincipalsAuthenticationDetailsProvider` en prod, bean desactivado en local/test → `OCI_NOT_CONFIGURED` con SSE vivo intacto, mismo patrón que `REDIS_NOT_CONFIGURED`) + `RedisBufferAdapter` completado (`LRANGE/DEL/nuevo uuid`; hoy sin flush) + `SseEventPublisherAdapter` extendido a `package.completed {type, batchId, payload:{assetsCount, parUrlBase, expiresAt}}` por `source` (dual-get, `Last-Event-ID` replay intacto).
 * `infrastructure/adapters/in/web`: `GetMessagesProcessedDiscord + GetMessageProcessedTelegram` existentes emiten `asset.created` + `package.completed` por su stream; `GET /actuator/health -> UP`; Swagger solo `GET SSE + health`, sin `GET /packages*` (004 RF-08 sigue: lectura histórica es frontend→OCI, no frontend→backend).
-* `config / despliegue`: base `application.yaml` solo no-secretos `${OCI_BUCKET/OCI_REGION/OCI_NAMESPACE/OCI_PREFIX:paquetes//PAR_TTL_DAYS:7/REDIS_BUFFER_MAX_BYTES:921600}`; `application-prod.yaml` mismos keys con valores OCI reales; nunca `.env/*-local.yaml/*.pem/*.key/token*.json/.oci/` (R4). Docker en VM permite egress a `169.254.169.254` + `objectstorage.{region}.oraclecloud.com`.
-* `IAM (propuesta + TBD cuenta §6 spec)`: `dynamic-group communitylab-vm` + `Allow dynamic-group to manage objects in compartment where target.bucket.name='communitylab-assets'` recortado a `OBJECT_CREATE + OBJECT_OVERWRITE + PAR_MANAGE (+ OBJECT_READ solo para otorgar PAR read, sin Get/List en negocio)`; región propuesta `sa-saopaulo-1`.
+* `config / despliegue`: base `application.yaml` solo no-secretos `${OCI_BUCKET/OCI_REGION/OCI_NAMESPACE/OCI_PREFIX:paquetes//PAR_TTL_DAYS:1/REDIS_BUFFER_MAX_BYTES:921600}`; `application-prod.yaml` mismos keys con valores OCI reales; nunca `.env/*-local.yaml/*.pem/*.key/token*.json/.oci/` (R4). Docker en VM permite egress a `169.254.169.254` + `objectstorage.{region}.oraclecloud.com`.
+* `IAM (propuesta + TBD cuenta §6 spec)`: `dynamic-group communitylab-vm` + `Allow dynamic-group to manage objects in compartment where target.bucket.name='MessagesUsers'` (compartment `communityLab`) recortado a `OBJECT_CREATE + OBJECT_OVERWRITE + PAR_MANAGE (+ OBJECT_READ solo para otorgar PAR read, sin Get/List en negocio)`; región propuesta `sa-saopaulo-1`. *Enmienda 2026-10-09 (spec 007):* `GetObject` permitido solo en la revisión de posts y `OBJECT_OVERWRITE` obligatorio; bucket con Object Versioning. El flush de 006 sigue create-only.
+
+### 1.1 Componentes implementados (fase buffer, 2026-10-06)
+
+* `domain`: `AssetPackage{batchId, source, generatedAt, enriched[], stats, promptVersion}` + `PackageStats{received, analyzed, fallbackCount, assetsCount}` + `objectName() -> "{source}/paquete-{batchId}.json"` (validación: `batchId`, `source` y `enriched` no vacíos). El campo `assets[]` (Asset de 003) aún no existe: el paquete lleva `enriched[]` (1 duda = 1 post).
+* `application/port/out/BufferPort`: `getCurrentBatchId(Source)`, `long appendToBatch(EnrichedComment)` (devuelve bytes del lote; `0` si dedup/error), `countMessages(Source)`, `Optional<String> sealCurrentBatch(Source)`, `pendingBatches(Source)`, `readSealed(Source, batchId)`, `discardSealed(Source, batchId)`.
+* `application/port/out/ArtifactStore`: `StoreResult save(AssetPackage)` (`StoreResult{ok, deduped}`).
+* `application/port/in/PackageRunUseCase` + `services/storage/PackageRunService`: `flushIfFull(Source, bytes)` (`>= maxBytes`) y `flushScheduled()` (por cada `Source`, `count >= minMessages`; un fallo de una fuente no corta a la otra). Flujo: `tryLock(source)` → reintenta `pending` → `sealCurrentBatch` → `readSealed` → `save` → `discardSealed` solo si `ok`.
+* `infrastructure/adapters/out/buffer/RedisBufferAdapter`: keys `buffer:{SOURCE}:current:{id|ids|list|bytes}`, `buffer:{SOURCE}:sealed:{batchId}`, `buffer:{SOURCE}:pending`; sellado con `SessionCallback` + `MULTI/EXEC`.
+* `infrastructure/adapters/out/storage/ArtifactStoreAdapter`: modo degradado `OCI_NOT_CONFIGURED` (devuelve `StoreResult.failed()` → el lote queda pendiente). Lo reemplaza el adapter OCI real (TASK-006-03).
+* `infrastructure/adapters/in/scheduler/BufferFlushScheduler` (`@Scheduled(cron)`, solo delega) + `infrastructure/config/scheduling/SchedulingConfig` (`@EnableScheduling`), ambos `@ConditionalOnProperty(buffer.flush.scheduler.enabled, matchIfMissing=true)`; `false` en tests.
+* `EnrichmentListener`: tras SSE `asset.created` → `appendToBatch` → `flushIfFull(source, bytes)`.
 
 ## 2. Contratos de Datos / Interfaces
 
-* Key: `paquetes/paquete-{batchId lote}.json`, `Content-Type: application/json`, `<1MB`, cifrado OCI default Always Free.
+* Key: `paquetes/{source}/paquete-{batchId lote}.json` (`{source}` en minúsculas, lo da `AssetPackage.objectName()`; el prefijo `paquetes/` lo añade infraestructura), `Content-Type: application/json`, `<1MB`, cifrado OCI default Always Free.
 * `ArtifactStorePort`: `put(key,bytes)->{etag,sizeBytes}`, `exists(key)->bool`, `createReadPar(object,ttlDays)->{parUrl,expiresAt}`, `listPars(bucket)->[{parId,object,expiresAt}]` (solo re-flush para `deduped:true`, no en path caliente).
 * SSE: `{type:"package.completed", batchId, payload:{assetsCount:N, parUrlBase:"https://...", expiresAt:"ISO-8601"}}`, `id=batchId`, sin contenido ni PII ni PAR en logs. Fallo OCI → sin evento.
 * Re-flush mismo `batchId`: objeto existe → `deduped:true` sin re-PUT; PAR vigente existe → `deduped:true` sin `CreatePAR`.
-* Env: `OCI_BUCKET`, `OCI_REGION`, `OCI_NAMESPACE`, `OCI_PREFIX=paquetes/`, `PAR_TTL_DAYS=7`, `REDIS_BUFFER_MAX_BYTES=921600`, `REDIS_HOST/PORT`.
+  - *Implementado 2026-10-08:* `exists(key)` + `put` se sustituye por **un** `PutObject` con `If-None-Match: *` (create-only atómico en OCI): `412` = ya guardado → `StoreResult.alreadyStored()` (`ok:true, deduped:true`, el lote se descarta). Razón: `exists → put` deja un hueco TOCTOU (dos intentos ven "no existe" y ambos escriben) y cuesta 2 llamadas; el caso real es el reintento tras `PUT` ok + `discardSealed` fallido. Puerto actual `ArtifactStore.save(AssetPackage) -> StoreResult{ok, deduped}`; crece con `parUrl/expiresAt` al implementar la PAR.
+* Env: `OCI_AUTH_MODE=none|session-token|instance-principal` (default `none`), `OCI_CONFIG_PROFILE` (solo `session-token`), `OCI_BUCKET`, `OCI_REGION`, `OCI_NAMESPACE`, `OCI_PREFIX=paquetes/`, `PAR_TTL_DAYS=1`, `REDIS_BUFFER_MAX_BYTES=921600`, `BUFFER_FLUSH_CRON=0 0 * * * *`, `BUFFER_FLUSH_MIN_MESSAGES=5`, `BUFFER_FLUSH_SCHEDULER_ENABLED=true`, `REDIS_HOST/PORT`.
+* Keys Redis por fuente: `buffer:{SOURCE}:current:id|ids|list|bytes`, `buffer:{SOURCE}:sealed:{batchId}`, `buffer:{SOURCE}:pending`.
 
 ## 3. Decisiones técnicas y trade-offs
 
 * Decisión: añadir `com.oracle.oci.sdk:oci-java-sdk-objectstorage` tras `ArtifactStorePort`.
   Alternativa descartada: REST manual / CLI / placeholder `InMemory/FileSystem`.
   Razón: en tabla constitucional Storage; `Put + CreatePAR + ListPARs` sin deuda; tests mockean cliente. Requiere verificar compatibilidad `Boot 4.1.1 + Java 21` en `TASK-006-00`.
+* Decisión (TASK-006-00): SDK modular `oci-java-sdk-bom 3.97.0` + `oci-java-sdk-objectstorage` + cliente HTTP `oci-java-sdk-common-httpclient-jersey3` (Jakarta, no `javax`), con override en `pom.xml` de `jersey.version=3.0.8` y `jakarta-ws-rs.version=3.0.0` (valores que pide `oci-java-sdk-common-httpclient-jersey3:3.97.0`).
+  Alternativa descartada: (B) `oci-java-sdk-shaded-full` (~186MB, trae todos los servicios OCI: imagen Docker, arranque `<15s` y superficie de CVEs); (C) `<exclusions>` + versiones fijadas a mano por artefacto Jersey (N líneas a mantener en cada subida del SDK); dejar las versiones de Boot (Jersey `4.0.2` + `hk2 4.0.0-M3` milestone mezclado con `jersey-apache-connector 3.0.8`: combinación que OCI no declara ni prueba; un `GetNamespace` firmado contra stub local funciona también con ella (`OciConfigTest`, 2026-10-08), así que es riesgo no soportado, no fallo demostrado).
+  Razón: el BOM de Boot hereda prioridad sobre el BOM importado de OCI y sobreescribe transitivas; el override por propiedad es el mecanismo idiomático de Boot. Seguro porque Jersey y `jakarta.ws.rs` solo los trae OCI (verificado con `dependency:tree`; Spring MVC usa Servlet, no JAX-RS). `jakarta-annotation.version` **no** se sobreescribe (OCI pide `2.1.1`, Boot `3.0.0`): la usa Spring Framework y la 3.0 es compatible hacia atrás. Mantenimiento: al subir `oci-sdk.version`, realinear ambas propiedades con las del pom `jersey3` del SDK.
 * Decisión: `InstancePrincipalsAuthenticationDetailsProvider` transparente en prod, degradado `OCI_NOT_CONFIGURED` en local/test.
   Alternativa descartada: API Key con `OCI_*_KEY` en env.
   Razón: mismo ecosistema VM + bucket, cero secretos/rotación/brechas de config; no tumba SSE vivo en local.
+* Decisión (enmienda 2026-10-08): selector `oci.auth-mode` (`OciProperties.authMode: OciAuthMode`, env `OCI_AUTH_MODE`; enum para fail-fast ante valor inválido) = `none` (default) | `session-token` (dev) | `instance-principal` (prod). `none` → sin cliente OCI, `ArtifactStoreAdapter` degradado `OCI_NOT_CONFIGURED`; `session-token` → `SessionTokenAuthenticationDetailsProvider` con perfil `oci.config-profile` (`OCI_CONFIG_PROFILE`) de `~/.oci/config`.
+  Alternativa descartada: activar OCI por presencia de `OCI_BUCKET` (no distingue portátil probando de VM; Instance Principal fuera de OCI reintenta contra `169.254.169.254` y falla tarde); API Key `~/.oci/config + .pem` en local (secreto permanente, fuera de alcance spec §5); probar solo en la VM (un fallo mezcla código, Jersey, Docker, auth e IAM; cada intento = build + push + deploy).
+  Razón: escalera de depuración por capas — (1) CLI local `oci os object put` con sesión → bucket/namespace/región/permisos; (2) app local `session-token` → código del adapter, Jersey, JSON, Content-Type; (3) CLI en VM `--auth instance_principal` → dynamic-group + políticas; (4) contenedor en VM → red Docker/egress. Token de sesión caduca (~1h), fuera de repo/env/imagen (R4). Límite: (2) usa permisos del usuario, no los de la VM; (3) cubre IAM real.
 * Decisión: 1 PAR read por objeto/lote, sin `listing enabled`.
   Alternativa descartada: PAR por asset interno, PAR global `paquetes/`, PAR por prefijo con list (opción B).
   Razón: `N lotes = N PUTs + N PARs` (mínimo en opción A); blast-radius por lote revocable; sin `ListObjects` para leer.
 * Decisión: `List + reuse` solo en re-flush para `deduped:true`.
   Alternativa descartada: crear siempre nueva o cache local en memoria/Redis.
   Razón: 1 llamada extra solo en idempotencia, no en path caliente; fuente de verdad OCI (cache local se pierde al reiniciar).
-* Decisión: flush `synchronized` sin Lua, hereda 004.
-  Alternativa descartada: scripts Lua atómicos, `STREAM`/consumer groups, `HASH` por messageId.
-  Razón: simplicidad MVP; `LIST` es la envoltura válida (`LRANGE → assets[]`); `SET` da dedup; doble flush cubierto por `exists + deduped:true`.
-* Decisión: PAR TTL explícito `7d`, no editable (crear nueva + revocar anterior).
-  Alternativa descartada: TTL largo implícito o sin expiración.
-  Razón: Q3 + rotación por lote; el objeto persiste aunque la PAR expire; prohibido borrar bucket con PARs asociadas.
+* Decisión: un lote por fuente (`buffer:{SOURCE}:*`).
+  Alternativa descartada: lote único mixto Discord+Telegram.
+  Razón: `AssetPackage.source` y `package.completed` son por fuente (dual-get); cada fuente con su ritmo y límites; un fallo no arrastra a la otra.
+* Decisión: sellar con `MULTI/EXEC` + `RENAME current:list → sealed:{batchId}` + `SADD pending`, sin Lua.
+  Alternativa descartada: `LRANGE → PUT → DEL` (plan original), scripts Lua, `STREAM`/consumer groups.
+  Razón: `LRANGE + DEL` borra mensajes llegados entre ambas órdenes; `RENAME` aparta el lote de un golpe y los nuevos caen en el lote nuevo; `pending` permite reintentar sin perder datos.
+* Decisión: lock por fuente (`EnumMap<Source, ReentrantLock>` + `tryLock`), no `synchronized` global.
+  Alternativa descartada: `synchronized` en el método, lock distribuido.
+  Razón: evita doble flush tamaño/hora sobre el mismo lote sin que Discord bloquee a Telegram. Límite: válido con una sola instancia del backend.
+* Decisión: cierre horario por reloj fijo (`0 0 * * * *`) si `count >= 5` (configurable), además del cierre por `900KB`.
+  Alternativa descartada: solo tamaño; antigüedad del lote (timestamp de apertura).
+  Razón: con poco tráfico un lote no llegaría nunca a 900KB; el reloj fijo es más simple que guardar timestamp por lote. Cada tick reintenta pendientes aunque haya `<5` mensajes.
+* Decisión (2026-10-08): PAR TTL explícito `1d` (`PAR_TTL_DAYS=1`), no editable (crear nueva + revocar anterior).
+  Alternativa descartada: `7d` (propuesta inicial); TTL largo implícito o sin expiración.
+  Razón: Q3 + rotación por lote; el paquete lleva `authorName/authorId`, menor ventana si la URL se filtra; el objeto persiste aunque la PAR expire; prohibido borrar bucket con PARs asociadas. Límite: sin renovación bajo demanda (no hay `GET /packages*`), un paquete de más de 1 día no es legible por el frontend hasta definir cómo renovar.
 
 ## 4. Estrategia de pruebas y despliegue
 
-* Unit `AssetPackageTest` (`<1MB`, `assets[]` vacío aborta, `relevance clamp 0..100`, `topics/hashtags null→[]`).
-* Unit `BufferServiceTest, PackageRunServiceTest` con puertos mockeados (Mockito solo en boundaries): dedup `messageId` sin `RPUSH/INCRBY`; `bytes<900KB` sin flush; `>=900KB` → `1 PUT + 1 PAR + SSE + DEL + nuevo uuid`; `OCI-fail` → `LOG` sin `package.completed` con vivo ya emitido; re-`batchId` → `deduped:true` sin re-PUT ni `CreatePAR`.
+* Unit `AssetPackageTest` (`enriched[]` vacío aborta, stats separan `LLM_FALLBACK`, `objectName` por fuente); `relevance clamp 0..100` y `topics/hashtags null→[]` en `EnrichedCommentTest`; `<1MB` en `OciObjectStorageAdapterTest`.
+* Unit `PackageRunServiceTest` (16), `RedisBufferAdapterTest` (18), `AssetPackageTest` (9), `BufferFlushSchedulerTest` (2) + `EnrichmentListenerTest` / `Ingest*ServiceTest` ajustados al lote por fuente — ver §1.1. Previsto original: `BufferServiceTest, PackageRunServiceTest` con puertos mockeados (Mockito solo en boundaries): dedup `messageId` sin `RPUSH/INCRBY`; `bytes<900KB` sin flush; `>=900KB` → `1 PUT + 1 PAR + SSE + DEL + nuevo uuid`; `OCI-fail` → `LOG` sin `package.completed` con vivo ya emitido; re-`batchId` → `deduped:true` sin re-PUT ni `CreatePAR`.
 * Adapter `OciObjectStorageAdapterTest` mockeado (cliente SDK): `put/create/list`, `Content-Type`, keys `paquete-{batchId}`, re-put → `deduped:true`, sin creds → `OCI_NOT_CONFIGURED`.
 * Adapter `RedisBufferAdapterTest` mockeado (`RedisTemplate`): `SADD/RPUSH/INCRBY/LRANGE`, `DEL + nuevo uuid`, sin Redis → degradado con SSE intacto.
 * `webmvc-test`: `package.completed` por `source` con `Last-Event-ID` replay (`GetMessagesProcessedDiscordTest`, `GetMessageProcessedTelegramTest`), `HealthTest UP`, `SwaggerDocsTest` (solo `GET SSE + health`). Scheduler `enabled=false` en test. Sin PII/PAR en logs.

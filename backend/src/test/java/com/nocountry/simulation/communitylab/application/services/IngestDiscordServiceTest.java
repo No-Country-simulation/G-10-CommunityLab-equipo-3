@@ -2,9 +2,12 @@ package com.nocountry.simulation.communitylab.application.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -19,18 +22,15 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.nocountry.simulation.communitylab.application.command.IngestDiscordCommand;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
-import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Tests for the Discord use case.
  * Mirror of {@code IngestDiscordService}: same package as the source.
  *
  * <p>Derivado de: spec 001 RF-01a,RF-02,RF-04 + RNF-01 (p95 &lt;300ms) + plan §1,§3.
- * No Spring context: BufferPort se sustituye con fake (puerto owned en 004).
+ * No Spring context: BufferPort mock por fuente (puerto owned en 004, lote por fuente en 006).
  */
 @DisplayName("IngestDiscordService")
 class IngestDiscordServiceTest {
@@ -39,27 +39,16 @@ class IngestDiscordServiceTest {
 
     private IngestDiscordService useCase;
     private ApplicationEventPublisher events;
-    private List<EnrichedComment> appended;
+    private BufferPort buffer;
 
     @BeforeEach
     void setUp() {
-        // Given un BufferPort fake con lote abierto estable (no Redis real en 001).
-        // El buffer guarda EnrichedComment (punto 1); la ingesta solo publica el
-        // evento y el EnrichmentListener async bufferiza después (p95<300ms).
-        appended = new ArrayList<>();
-        BufferPort fakeBuffer = new BufferPort() {
-            @Override
-            public String getCurrentBatchId() {
-                return FIXED_BATCH_ID;
-            }
-
-            @Override
-            public void appendToBatch(EnrichedComment enrichedComment) {
-                appended.add(enrichedComment);
-            }
-        };
+        // Given un BufferPort mock con lote abierto estable para su fuente (sin Redis real).
+        // La ingesta solo pide el batchId; el EnrichmentListener async bufferiza después.
+        buffer = mock(BufferPort.class);
+        when(buffer.getCurrentBatchId(Source.DISCORD)).thenReturn(FIXED_BATCH_ID);
         events = mock(ApplicationEventPublisher.class);
-        useCase = new IngestDiscordService(fakeBuffer, events);
+        useCase = new IngestDiscordService(buffer, events);
     }
 
     @Test
@@ -84,6 +73,9 @@ class IngestDiscordServiceTest {
         assertThat(result.get().channelId()).isEqualTo("listen-123");
         assertThat(result.get().source()).isEqualTo(Source.DISCORD);
         assertThat(result.get().batchId()).isEqualTo(FIXED_BATCH_ID);
+        // Then el lote pedido es el de su propia fuente (lote por fuente, spec 006)
+        verify(buffer).getCurrentBatchId(Source.DISCORD);
+        verify(buffer, never()).getCurrentBatchId(Source.TELEGRAM);
         assertThat(result.get().messageId()).isEqualTo("msg-1");
         // Then 002 is triggered in background without blocking ingest
         var published = forClass(IngestAcceptedEvent.class);
@@ -92,7 +84,7 @@ class IngestDiscordServiceTest {
         assertThat(published.getValue().message().batchId()).isEqualTo(FIXED_BATCH_ID);
         // Then buffered nada en ingest: el EnrichmentListener async bufferiza
         // el EnrichedComment después (p95<300ms, sin LLM en el gateway)
-        assertThat(appended).isEmpty();
+        verify(buffer, never()).appendToBatch(any());
     }
 
     @Test
@@ -111,7 +103,7 @@ class IngestDiscordServiceTest {
         assertThat(useCase.ingest(command)).isEmpty();
         verifyNoInteractions(events);
         // Then nothing buffered on invalid input
-        assertThat(appended).isEmpty();
+        verify(buffer, never()).appendToBatch(any());
     }
 
     @Test
@@ -136,7 +128,7 @@ class IngestDiscordServiceTest {
         assertThat(result.get().content()).hasSize(2000);
         assertThat(result.get().truncated()).isTrue();
         assertThat(result.get().batchId()).isEqualTo(FIXED_BATCH_ID);
-        assertThat(appended).isEmpty();
+        verify(buffer, never()).appendToBatch(any());
     }
 
     @Test
