@@ -1,5 +1,6 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.discordMessage;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,7 +22,7 @@ import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
  * Public API docs (no Spring context slice: full Boot context with MockMvc).
  *
  * <p>Derivado de: spec 004 RF-04 (Swagger documenta el único GET) + spec 005 RF-07
- * (Swagger documenta el GET Telegram) + constitution P3.
+ * (Swagger documenta el GET Telegram) + spec 007 RF-02 (PATCH de revisión) + constitution P3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -107,5 +108,37 @@ class SwaggerDocsTest {
                         .exists())
                 .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.sentiment")
                         .exists());
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then the revision PATCH is documented with its source choices")
+    void documentsRevisionEndpoint() throws Exception {
+        String path = "$.paths['/api/v1/{source}/packages/{batchId}/messages/{messageId}'].patch";
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(path + ".summary").value("Revise a post"))
+                .andExpect(jsonPath(path + ".responses['202']").exists())
+                .andExpect(jsonPath(path + ".responses['400']").exists())
+                .andExpect(jsonPath(path + ".parameters[?(@.name == 'source')].schema.enum[*]",
+                        containsInAnyOrder("discord", "telegram")));
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then RevisePostRequest exposes only the editable contract")
+    void documentsRevisionRequestSchema() throws Exception {
+        String schema = "$.components.schemas.RevisePostRequest.properties";
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(schema + ".expectedVersion").exists())
+                .andExpect(jsonPath(schema + ".approved").exists())
+                .andExpect(jsonPath(schema + ".outputContentProcessed").exists())
+                .andExpect(jsonPath(schema + ".channelPost").exists())
+                // internal plumbing must not leak into the public contract
+                .andExpect(jsonPath(schema + ".unknownFields").doesNotExist())
+                .andExpect(jsonPath(schema + ".anyChange").doesNotExist())
+                .andExpect(jsonPath(schema + ".onlyEditableFields").doesNotExist())
+                // the AI analysis is not editable, so it is not part of the request
+                .andExpect(jsonPath(schema + ".sentiment").doesNotExist())
+                .andExpect(jsonPath(schema + ".relevance").doesNotExist());
     }
 }

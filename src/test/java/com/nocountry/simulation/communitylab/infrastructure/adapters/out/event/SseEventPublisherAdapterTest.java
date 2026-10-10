@@ -123,6 +123,8 @@ class SseEventPublisherAdapterTest {
                 null,
                 "De la comunidad al primer empleo Java!",
                 List.of("#ONE", "#Java"),
-                "Comparte tu historia");
+                "Comparte tu historia",
+                false,
+                1);
     }
 }

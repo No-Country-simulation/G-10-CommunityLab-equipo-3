@@ -191,7 +191,7 @@ class OciObjectStorageAdapterTest {
                 BATCH_ID, "m-1", "channel-1", "author-1", AUTHOR_NAME, MESSAGE,
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 80, null, EnrichedComment.PROMPT_VERSION, NOW, Source.DISCORD,
-                Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null);
+                Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null, false, 1);
         return AssetPackage.of(BATCH_ID, Source.DISCORD, List.of(post), NOW);
     }
 }

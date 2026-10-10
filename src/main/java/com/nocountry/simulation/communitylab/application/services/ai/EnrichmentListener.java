@@ -110,7 +110,9 @@ public class EnrichmentListener {
                     messageProcessed.titlePost(),
                     messageProcessed.outputContentProcessed(),
                     messageProcessed.hashtags(),
-                    messageProcessed.cta()
+                    messageProcessed.cta(),
+                    messageProcessed.approved(),
+                    messageProcessed.versionMessage()
             );
 
             // Sent message to client

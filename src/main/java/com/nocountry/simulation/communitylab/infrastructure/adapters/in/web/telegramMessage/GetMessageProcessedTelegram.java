@@ -64,7 +64,9 @@ public class GetMessageProcessedTelegram {
                                       "titlePost": null,
                                       "outputContentProcessed": "De la comunidad al primer empleo como dev Java. Gracias por el apoyo en el camino!",
                                       "hashtags": ["#ONE", "#EmpleoTech", "#Java"],
-                                      "cta": "Comparte tu historia en #logros"
+                                      "cta": "Comparte tu historia en #logros",
+                                      "approved": false,
+                                      "versionMessage": 1
                                     }""")))
     @GetMapping(value = "/api/v1/telegram/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter getMessagesProcessedTelegram(

@@ -32,7 +32,9 @@ public record EnrichedComment(
         String titlePost,
         String outputContentProcessed,
         List<String> hashtags,
-        String cta) {
+        String cta,
+        Boolean approved,
+        Integer versionMessage) {
 
     public static final String LLM_FALLBACK = "LLM_FALLBACK";
 
@@ -72,6 +74,8 @@ public record EnrichedComment(
         topics = topics == null ? List.of() : List.copyOf(topics);
         relevance = Math.min(100, Math.max(0, relevance));
         hashtags = hashtags == null ? List.of() : List.copyOf(hashtags);
+        approved = approved != null && approved;
+        versionMessage = versionMessage == null || versionMessage < 1 ? 1 : versionMessage;
         promptVersion = promptVersion == null ? PROMPT_VERSION : promptVersion;
         outputContentProcessed = outputContentProcessed == null ? null : outputContentProcessed.trim();
 
