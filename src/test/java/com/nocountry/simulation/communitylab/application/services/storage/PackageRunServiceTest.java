@@ -54,6 +54,9 @@ class PackageRunServiceTest {
 
     private static final long MAX_BYTES = 1_000L;
     private static final long MIN_MESSAGES = 5L;
+    // The flush only reads ok(); the PAR values are opaque here.
+    private static final StoreResult STORED = StoreResult.stored(
+            "https://par.example/p/token/o/paquete.json", Instant.parse("2026-10-07T10:00:00Z"));
 
     private BufferPort buffer;
     private ArtifactStore store;
@@ -83,7 +86,7 @@ class PackageRunServiceTest {
     void reachingMaxBytesSealsUploadsAndDiscards() {
         // Dado un lote DISCORD sellable con 2 registros y un store que confirma
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD), post("m-2", Source.DISCORD));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando el append deja el lote justo en el límite (>=, no >)
         service.flushIfFull(Source.DISCORD, MAX_BYTES);
@@ -105,7 +108,7 @@ class PackageRunServiceTest {
     void sizeFlushIsolatedBySource() {
         // Dado un lote DISCORD lleno
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando se dispara el flush por tamaño de DISCORD
         service.flushIfFull(Source.DISCORD, MAX_BYTES);
@@ -141,7 +144,7 @@ class PackageRunServiceTest {
         when(buffer.countMessages(Source.DISCORD)).thenReturn(MIN_MESSAGES);
         when(buffer.countMessages(Source.TELEGRAM)).thenReturn(0L);
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando corre el tick
         service.flushScheduled();
@@ -160,7 +163,7 @@ class PackageRunServiceTest {
         when(buffer.countMessages(any())).thenReturn(MIN_MESSAGES);
         sealable(Source.DISCORD, "b-d", post("m-1", Source.DISCORD));
         sealable(Source.TELEGRAM, "b-t", post("m-2", Source.TELEGRAM));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando corre el tick
         service.flushScheduled();
@@ -182,7 +185,7 @@ class PackageRunServiceTest {
         when(buffer.countMessages(Source.DISCORD)).thenReturn(1L);
         when(buffer.pendingBatches(Source.DISCORD)).thenReturn(Set.of("old"));
         when(buffer.readSealed(Source.DISCORD, "old")).thenReturn(List.of(post("m-1", Source.DISCORD)));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando corre el tick
         service.flushScheduled();
@@ -199,7 +202,7 @@ class PackageRunServiceTest {
         when(buffer.pendingBatches(Source.DISCORD)).thenReturn(Set.of("old"));
         when(buffer.readSealed(Source.DISCORD, "old")).thenReturn(List.of(post("m-1", Source.DISCORD)));
         sealable(Source.DISCORD, "new", post("m-2", Source.DISCORD));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando se dispara por tamaño
         service.flushIfFull(Source.DISCORD, MAX_BYTES);
@@ -218,7 +221,7 @@ class PackageRunServiceTest {
         when(buffer.countMessages(Source.DISCORD)).thenThrow(new IllegalStateException("redis broken"));
         when(buffer.countMessages(Source.TELEGRAM)).thenReturn(MIN_MESSAGES);
         sealable(Source.TELEGRAM, "b-t", post("m-1", Source.TELEGRAM));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
 
         // Cuando corre el tick, nada escapa al scheduler
         assertThatCode(() -> service.flushScheduled()).doesNotThrowAnyException();
@@ -299,7 +302,7 @@ class PackageRunServiceTest {
         when(store.save(any())).thenAnswer(inv -> {
             insideStore.countDown();
             release.await(3, TimeUnit.SECONDS);
-            return new StoreResult(true, false);
+            return STORED;
         });
         CompletableFuture<Void> first = CompletableFuture.runAsync(
                 () -> service.flushIfFull(Source.DISCORD, MAX_BYTES));
@@ -329,7 +332,7 @@ class PackageRunServiceTest {
                 insideStore.countDown();
                 release.await(3, TimeUnit.SECONDS);
             }
-            return new StoreResult(true, false);
+            return STORED;
         });
         CompletableFuture<Void> discord = CompletableFuture.runAsync(
                 () -> service.flushIfFull(Source.DISCORD, MAX_BYTES));
@@ -353,7 +356,7 @@ class PackageRunServiceTest {
                 .thenThrow(new IllegalStateException("redis broken"))
                 .thenReturn(Set.of());
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
-        when(store.save(any())).thenReturn(new StoreResult(true, false));
+        when(store.save(any())).thenReturn(STORED);
         try {
             service.flushIfFull(Source.DISCORD, MAX_BYTES);
         } catch (IllegalStateException expected) {
