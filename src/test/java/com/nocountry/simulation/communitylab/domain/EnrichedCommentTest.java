@@ -9,6 +9,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
@@ -41,7 +44,7 @@ class EnrichedCommentTest {
                 "Conseguí empleo como dev Java", sentiment, Language.ES, messageType,
                 topics, relevance, flag, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                channelPost, titlePost, copy, hashtags, cta);
+                channelPost, titlePost, copy, hashtags, cta, false, 1);
     }
 
     private static EnrichedComment linkedin(String copy, List<String> hashtags, String cta) {
@@ -294,14 +297,14 @@ class EnrichedCommentTest {
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, 1))
                 .isInstanceOf(InvalidAssetException.class);
         assertThatThrownBy(() -> new EnrichedComment(
                         "batch-1", null, "listen-123", "author-1", "author-name",
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, 1))
                 .isInstanceOf(InvalidAssetException.class);
     }
 
@@ -322,5 +325,51 @@ class EnrichedCommentTest {
 
     private static String words(int n) {
         return "word ".repeat(n).trim();
+    }
+
+    // ---------- spec 007 RF-01: review attributes ----------
+
+    // Valid X post where only the review attributes vary.
+    private static EnrichedComment reviewed(Boolean approved, Integer versionMessage) {
+        return new EnrichedComment(
+                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
+                "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
+                List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
+                SENT, Source.DISCORD,
+                Channels.X, null, "hello", List.of("#ONE"), null,
+                approved, versionMessage);
+    }
+
+    @Test
+    @DisplayName("Given no approval state (record written before spec 007), when built, then it is not approved")
+    void nullApprovedDefaultsToFalse() {
+        // Given / When a record without approved
+        var enriched = reviewed(null, 1);
+
+        // Then it reads as pending approval, never null
+        assertThat(enriched.approved()).isFalse();
+    }
+
+    @ParameterizedTest(name = "versionMessage={0}")
+    @NullSource
+    @ValueSource(ints = {0, -3})
+    @DisplayName("Given a missing or non-positive versionMessage, when built, then it is the AI original (1)")
+    void missingOrInvalidVersionDefaultsToOne(Integer versionMessage) {
+        // Given / When a record without a usable version
+        var enriched = reviewed(false, versionMessage);
+
+        // Then it is treated as the untouched AI output
+        assertThat(enriched.versionMessage()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given valid review attributes, when built, then they are kept as received")
+    void keepsValidReviewAttributes() {
+        // Given / When an approved post already edited twice
+        var enriched = reviewed(true, 3);
+
+        // Then nothing is reset
+        assertThat(enriched.approved()).isTrue();
+        assertThat(enriched.versionMessage()).isEqualTo(3);
     }
 }

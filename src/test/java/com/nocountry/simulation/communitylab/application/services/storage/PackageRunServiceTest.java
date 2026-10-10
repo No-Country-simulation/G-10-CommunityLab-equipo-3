@@ -382,6 +382,6 @@ class PackageRunServiceTest {
                 List.of("empleo"), 80, null, null, Instant.parse("2026-10-06T10:00:00Z"), source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null);
+                List.of("#EmpleoTech"), null, false, 1);
     }
 }

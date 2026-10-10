@@ -135,7 +135,7 @@ class AssetPackageTest {
                 List.of("empleo"), 80, null, null, NOW, source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null);
+                List.of("#EmpleoTech"), null, false, 1);
     }
 
     private static EnrichedComment fallback(String messageId) {
@@ -143,6 +143,6 @@ class AssetPackageTest {
                 BATCH_ID, messageId, "channel-1", "author-1", "tester",
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, NOW, Source.DISCORD,
-                Channels.FAQ, null, null, List.of(), null);
+                Channels.FAQ, null, null, List.of(), null, false, 1);
     }
 }

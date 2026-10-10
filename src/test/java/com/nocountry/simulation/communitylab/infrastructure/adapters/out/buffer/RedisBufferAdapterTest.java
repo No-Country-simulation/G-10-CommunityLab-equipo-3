@@ -40,6 +40,7 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Redis outbound adapter: one batch per source, atomic sealing and pending retry.
@@ -290,6 +291,25 @@ class RedisBufferAdapterTest {
     }
 
     @Test
+    @DisplayName("Dado un registro sellado antes de spec 007 (sin approved/versionMessage), cuando se lee, entonces no se descarta y queda false/1")
+    void readSealedKeepsRecordWrittenBeforeReviewAttributes() {
+        // Dado el JSON de un registro bufferizado antes del despliegue de 007
+        EnrichedComment current = post("m-1", Source.DISCORD);
+        ObjectNode legacy = (ObjectNode) objectMapper.valueToTree(current);
+        legacy.remove("approved");
+        legacy.remove("versionMessage");
+        when(listOps.range("buffer:DISCORD:sealed:b-1", 0, -1)).thenReturn(List.of(legacy.toString()));
+
+        // Cuando se lee el lote sellado
+        List<EnrichedComment> records = adapter.readSealed(Source.DISCORD, "b-1");
+
+        // Entonces el mensaje sigue en el lote (no "sealed record skipped") con los valores por defecto
+        assertThat(records).containsExactly(current);
+        assertThat(records.getFirst().approved()).isFalse();
+        assertThat(records.getFirst().versionMessage()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("Dado Redis caído, cuando se lee un lote sellado, entonces devuelve vacío sin lanzar")
     void readSealedRedisDownReturnsEmpty() {
         when(listOps.range(anyString(), eq(0L), eq(-1L))).thenThrow(new RedisConnectionFailureException("down"));
@@ -314,6 +334,6 @@ class RedisBufferAdapterTest {
                 List.of("empleo"), 80, null, null, Instant.parse("2026-10-06T10:00:00Z"), source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null);
+                List.of("#EmpleoTech"), null, false, 1);
     }
 }
