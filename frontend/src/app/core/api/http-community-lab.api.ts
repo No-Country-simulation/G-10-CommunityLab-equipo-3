@@ -33,7 +33,7 @@ export class HttpCommunityLabApi extends CommunityLabApi {
 
   getStoredObject(objectName: string): Observable<ProcessResult> {
     return this.http.get<ProcessResult>(
-      `${this.base}/storage/objects/${encodeURIComponent(objectName)}`,
+      `${this.base}/storage/objects/${objectName}`,
     );
   }
 }

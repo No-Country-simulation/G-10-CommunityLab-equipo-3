@@ -17,7 +17,7 @@ export class LandingHero {
       const video = this.heroVideo()?.nativeElement;
       if (video) {
         video.muted = true;
-        video.loop = false;
+        video.loop = true;
         video.play().catch(() => {
           // Permite que la reproducción automática inicie sin errores si el navegador restringe políticas
         });

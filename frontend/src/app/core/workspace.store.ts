@@ -86,13 +86,23 @@ export class WorkspaceStore {
   }
 
   update(id: string, patch: AssetPatch) {
-    if (id.startsWith(LIVE_ASSET_PREFIX)) return this.patchLocal(id, patch);
+    if (id.startsWith(LIVE_ASSET_PREFIX)) {
+      this.patchLocal(id, patch);
+      this.api.updateAsset(id, patch).subscribe({
+        error: (err) => console.warn('[workspace] live asset update failed on backend', err),
+      });
+      return;
+    }
     this.track(id, this.api.updateAsset(id, patch));
   }
 
   publish(id: string) {
     if (id.startsWith(LIVE_ASSET_PREFIX)) {
-      return this.patchLocal(id, { status: 'published' }, new Date().toISOString());
+      this.patchLocal(id, { status: 'published' }, new Date().toISOString());
+      this.api.publishAsset(id).subscribe({
+        error: (err) => console.warn('[workspace] live asset publish failed on backend', err),
+      });
+      return;
     }
     this.track(id, this.api.publishAsset(id));
   }
