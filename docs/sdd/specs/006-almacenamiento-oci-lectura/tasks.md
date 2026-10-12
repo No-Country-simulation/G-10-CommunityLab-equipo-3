@@ -42,7 +42,7 @@
 - [ ] **TASK-006-06**: Cierre de proceso y decisiones abiertas (antes de TASK-006-03 PAR).
   - `sdd-audit` de 006 (plan §4 lo exige antes de codificar; no ejecutado).
   - ~~Decidir `PAR_TTL_DAYS`~~ **resuelto 2026-10-08: `1` día** (spec RNF-03 y plan §3 enmendados; coincide con el default de `application.yaml`). Abierto: cómo renueva el frontend una PAR vencida sin `GET /packages*`.
-  - Pulido: comentario Jersey en `pom.xml`; constante `PRECONDITION_FAILED` en vez de `412` (`OciObjectStorageAdapter`); comentario del porqué en `ArtifactStoreAdapter` (modo degradado); mensaje de `requireConfigured` en `OciConfig` nombrando la variable y el modo; quitar default `dev` de `oci.config-profile` (perfil de un solo dev).
+  - Pulido *(hecho 2026-10-12)*: constante `PRECONDITION_FAILED` en vez de `412` (`OciObjectStorageAdapter`); `requireConfigured(value, envName, mode)` en `OciConfig` → `"<VAR> is required when OCI_AUTH_MODE=<MODE>"`; sin default `dev` en `oci.config-profile` y `session-token` valida `OCI_CONFIG_PROFILE` antes de crear el proveedor (sin la variable, el valor llega como `${OCI_CONFIG_PROFILE}` literal). Tests: `OciConfigTest` (+4). *Descartado por decisión del dev:* comentario Jersey en `pom.xml` y comentario del modo degradado en `ArtifactStoreAdapter`. *Pendiente:* alineación del Javadoc de `OciAuthMode`.
   - Borrar del bucket los paquetes de prueba del peldaño 2 si no se conservan (contienen `authorName` y mensajes reales, RNF-06).
   - *Derivado de:* `spec.md RNF-03,RNF-06 + plan.md §3,§4` + `AGENTS.md` (sdd-audit antes de cada spec)
   - *Verificación:* `./mvnw test` verde + `sdd-audit` sin hallazgos bloqueantes
