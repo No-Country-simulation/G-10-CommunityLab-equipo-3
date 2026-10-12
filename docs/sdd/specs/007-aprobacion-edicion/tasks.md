@@ -24,6 +24,13 @@
   - Comprobar con CLI (perfil `session-token`) los tres requisitos de OCI de los que depende el diseño (spec RF-05/RF-07): (1) `put` dos veces al mismo nombre → `list-object-versions` muestra 2; (2) `put --if-none-match '*'` sobre un objeto existente → `412` (el flush de 006 sigue siendo create-only con versioning); (3) una PAR `ObjectRead` creada antes del segundo `put` devuelve la última versión con `curl`.
   - Crear la regla de lifecycle `PREVIOUS_OBJECT_VERSIONS` → `DELETE` a los `10` días sobre `paquetes/` y verificarla con `oci os object-lifecycle-policy get`.
   - `sdd-audit` de 007.
+  - *Hecho 2026-10-12 (versioning + requisitos, CLI 3.89.0, perfil `session-token`, objeto temporal `pruebas/versioning-test.json`, borrado al terminar con sus 3 versiones y su PAR):*
+    - `oci os bucket get` → `versioning: Enabled` (`MessagesUsers`, `NoPublicAccess`, namespace `gr850hk0ujdi`).
+    - (1) `put` v1 + `put --force` v2 al mismo nombre → `list-object-versions` = **2** versiones.
+    - (2) `PUT` con `If-None-Match: *` sobre el objeto existente → **`412 IfNoneMatchFailed`** ("The If-None-Match header is '*' but there is an existing entity"), sigue habiendo 2 versiones: el flush de 006 sigue siendo create-only con versioning. *Ojo:* `oci os object put --no-overwrite` **no** manda la cabecera (hace `HEAD` en el cliente y se salta el `PUT`); la prueba real se hizo con `oci raw-request`.
+    - (3) PAR `ObjectRead` creada con v1 → tras escribir v2 y v3, `curl` devuelve la **última versión** (`200 application/json`).
+    - Extra para TASK-007-05: `PUT` con `If-Match` = etag viejo → **`412 IfMatchFailed`** sin nueva versión (→ `CONFLICT`); con el etag actual → **`200`** con `etag` y `version-id` nuevos (→ `REPLACED`, 3 versiones). La PAR de lectura rechaza escrituras (`PUT` → `404`).
+    - *Pendiente:* regla de lifecycle de 10 días y `sdd-audit`.
   - *Derivado de:* `spec.md RF-05,RF-07,§6 + plan.md §1.2 (OCI),§3` + `AGENTS.md` (sdd-audit antes de cada spec)
   - *Verificación:* salida de los 3 comandos CLI anotada en esta tarea + `sdd-audit` sin hallazgos bloqueantes
 - [ ] **TASK-007-03**: Dominio de revisión y generación de `versionMessage`.
