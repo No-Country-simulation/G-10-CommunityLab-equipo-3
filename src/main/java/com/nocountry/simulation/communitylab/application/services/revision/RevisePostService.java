@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class RevisionPostService implements RevisePostUseCase {
+public class RevisePostService implements RevisePostUseCase {
 
     @Override
     public void revise(RevisePostCommand command) {

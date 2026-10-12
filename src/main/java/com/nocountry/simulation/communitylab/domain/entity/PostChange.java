@@ -14,7 +14,7 @@ public record PostChange (
         String cta
 ){
     public PostChange {
-            topics = topics == null ? null : List.copyOf(topics);
-            hashtags = hashtags == null ? null : List.copyOf(hashtags);
-        }
+        topics = topics == null ? null : List.copyOf(topics);
+        hashtags = hashtags == null ? null : List.copyOf(hashtags);
+    }
 }
