@@ -23,6 +23,9 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class PackageRunService implements PackageRunUseCase {
 
+    // Why a ceiling: above 900KB the margin for the last message + envelope disappears and packages break the 1MB budget (R6).
+    private static final long MAX_FLUSH_BYTES = 921_600;
+
     private final BufferPort buffer;
     private final ArtifactStore store;
     private final long maxBytes;
@@ -35,6 +38,10 @@ public class PackageRunService implements PackageRunUseCase {
                              @Value("${redis.buffer.max.bytes:921600}") long maxBytes,
                              @Value("${buffer.flush.min-messages:5}") long minMessages,
                              PackagePublisher packagePublisher) {
+        if (maxBytes <= 0 || maxBytes > MAX_FLUSH_BYTES) {
+            throw new IllegalStateException(
+                    "REDIS_BUFFER_MAX_BYTES must be between 1 and " + MAX_FLUSH_BYTES + " to keep packages under 1MB");
+        }
         this.buffer = buffer;
         this.store = store;
         this.maxBytes = maxBytes;
