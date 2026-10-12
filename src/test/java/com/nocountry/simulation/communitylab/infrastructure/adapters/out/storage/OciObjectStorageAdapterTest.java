@@ -50,7 +50,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Unit tests for the OCI Object Storage adapter (Mockito only at the SDK client boundary, no network).
  * Derivado de: spec 006 RF-01 (1 lote = 1 objeto paquetes/{source}/paquete-{batchId}.json, application/json)
  * + RF-03 (1 PAR read por objeto, sin listing) + RF-05 + enmienda 2026-10-10 (412 = sin re-PUT y PAR nueva)
- * + RF-07 (fallo OCI deja el lote pendiente) + RNF-01 (Content-Type) + RNF-03 (TTL {@code PAR_TTL_DAYS})
+ * + RF-07 (fallo OCI deja el lote pendiente) + RNF-01 (Content-Type; enmienda 2026-10-12: paquete {@code >= 1MB}
+ * se sube igual con alarma ERROR, nunca se retiene en Redis) + RNF-03 (TTL {@code PAR_TTL_DAYS})
  * + RNF-06 (logs solo batchId/source/parId, sin contenido, autor ni URL PAR) + plan 006 §3 (PUT ok + PAR
  * fallida = failed, el reintento lo cura).
  */
@@ -71,6 +72,10 @@ class OciObjectStorageAdapterTest {
     private static final String PAR_ID = "par-id-1";
     // Deliberately not "now + TTL": proves the result carries the expiry OCI confirmed, not the one requested.
     private static final Instant OCI_EXPIRES_AT = Instant.parse("2026-10-09T10:00:00Z");
+    // Spec 006 RNF-01 budget per package object (1MB = 1024 * 1024 bytes).
+    private static final int ONE_MB = 1_048_576;
+    // Same mapper the adapter uses, so the fixture can size a package to the exact byte.
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @Mock
     private ObjectStorage objectStorage;
@@ -81,7 +86,7 @@ class OciObjectStorageAdapterTest {
     void setUp() {
         OciProperties properties = new OciProperties(OciAuthMode.SESSION_TOKEN, "dev",
                 "MessagesUsers", "sa-saopaulo-1", "test-namespace", "paquetes/", PAR_TTL_DAYS);
-        adapter = new OciObjectStorageAdapter(objectStorage, properties, JsonMapper.builder().build());
+        adapter = new OciObjectStorageAdapter(objectStorage, properties, JSON);
     }
 
     // ---------- PUT ----------
@@ -317,6 +322,47 @@ class OciObjectStorageAdapterTest {
         assertThat(output).doesNotContain(AUTHOR_NAME, MESSAGE);
     }
 
+    // ---------- 1MB budget (RNF-01) ----------
+
+    @Test
+    @DisplayName("Dado un paquete de exactamente 1MB, cuando se guarda, entonces se sube igual con su PAR y deja una alarma ERROR con ids")
+    void packageAtTheBudgetIsUploadedAnywayWithAnAlarm(CapturedOutput output) {
+        // Dado un paquete cuyo JSON pesa justo 1048576 bytes (el tope ya es exceso: la regla es <1MB)
+        putSucceeds();
+        parCreated();
+
+        // Cuando se guarda
+        StoreResult result = adapter.save(packageOfExactly(ONE_MB));
+
+        // Entonces no queda retenido en Redis: PUT con todos los bytes, PAR y STORED (habilita discard + aviso)
+        assertThat(capturedPut().getContentLength()).isEqualTo((long) ONE_MB);
+        assertThat(capturedPar().getCreatePreauthenticatedRequestDetails().getObjectName()).isEqualTo(OBJECT_KEY);
+        assertThat(result.status()).isEqualTo(StoreResult.Status.STORED);
+        // Y la alarma es ERROR e identifica el lote para localizar el objeto, sin autor ni contenido
+        String alarm = output.getAll().lines()
+                .filter(line -> line.contains("over the 1MB budget"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no 1MB budget alarm was logged"));
+        assertThat(alarm).contains("ERROR", "batchId=" + BATCH_ID, "source=DISCORD", "bytes=" + ONE_MB);
+        assertThat(output).doesNotContain(AUTHOR_NAME, "a".repeat(64));
+    }
+
+    @Test
+    @DisplayName("Dado un paquete 1 byte bajo el tope, cuando se guarda, entonces se sube sin alarma")
+    void packageJustUnderTheBudgetHasNoAlarm(CapturedOutput output) {
+        // Dado un paquete de 1048575 bytes (lote cerrado a 900KB + último mensaje pesado)
+        putSucceeds();
+        parCreated();
+
+        // Cuando se guarda
+        StoreResult result = adapter.save(packageOfExactly(ONE_MB - 1));
+
+        // Entonces es un guardado normal: sin alarma
+        assertThat(capturedPut().getContentLength()).isEqualTo(ONE_MB - 1L);
+        assertThat(result.status()).isEqualTo(StoreResult.Status.STORED);
+        assertThat(output).doesNotContain("over the 1MB budget");
+    }
+
     // ---------- fixtures ----------
 
     private void putSucceeds() {
@@ -353,9 +399,22 @@ class OciObjectStorageAdapterTest {
         return new BmcException(status, serviceCode, "simulated OCI error", "opc-request-test");
     }
 
+    // Why pad messageAuthor: it is the only free-length field (post fields are capped per channel) and
+    // ASCII adds exactly 1 byte per char, so the serialized package can be sized to the byte.
+    private static AssetPackage packageOfExactly(int targetBytes) {
+        int baseBytes = JSON.writeValueAsBytes(packageWithAuthorText("")).length;
+        AssetPackage sized = packageWithAuthorText("a".repeat(targetBytes - baseBytes));
+        assertThat(JSON.writeValueAsBytes(sized)).hasSize(targetBytes);
+        return sized;
+    }
+
     private static AssetPackage discordPackage() {
+        return packageWithAuthorText(MESSAGE);
+    }
+
+    private static AssetPackage packageWithAuthorText(String messageAuthor) {
         EnrichedComment post = new EnrichedComment(
-                BATCH_ID, "m-1", "channel-1", "author-1", AUTHOR_NAME, MESSAGE,
+                BATCH_ID, "m-1", "channel-1", "author-1", AUTHOR_NAME, messageAuthor,
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 80, null, EnrichedComment.PROMPT_VERSION, NOW, Source.DISCORD,
                 Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null, false, 1);

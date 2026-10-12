@@ -2,6 +2,7 @@ package com.nocountry.simulation.communitylab.application.services.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
@@ -53,7 +56,8 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
  * evento) + RF-05 (idempotencia, nunca perder el lote; enmienda 2026-10-10: 412 con
  * PAR nueva) + RF-06 (aviso {@code package.completed} por {@code source}) + regla
  * nueva lote por fuente con flush horario si {@code count >= min-messages} + plan
- * 006 §3 (lock por fuente).
+ * 006 §3 (lock por fuente) + RNF-01 / constitución R6 (umbral {@code <= 921600} para
+ * no romper el tope de 1MB; decisión 2026-10-12: fuera de rango no arranca).
  */
 @DisplayName("PackageRunService")
 class PackageRunServiceTest {
@@ -464,6 +468,37 @@ class PackageRunServiceTest {
 
         // Entonces pudo tomar el lock y sellar (finally liberó el lock)
         verify(buffer).sealCurrentBatch(Source.DISCORD);
+    }
+
+    // ---------- flush threshold ceiling ----------
+
+    @ParameterizedTest(name = "REDIS_BUFFER_MAX_BYTES={0}")
+    @ValueSource(longs = {921_601L, 1_048_576L, 0L, -1L})
+    @DisplayName("Dado un umbral fuera de 1..921600, cuando se construye el servicio, entonces falla nombrando la variable")
+    void rejectsThresholdOutsideTheBudget(long maxBytes) {
+        // Dado un umbral que rompe el margen bajo 1MB (o que no tiene sentido)
+        // Cuando se construye el servicio (Spring lo hace al arrancar)
+        // Entonces falla con un mensaje que dice qué variable corregir y el tope
+        assertThatThrownBy(() -> new PackageRunService(buffer, store, maxBytes, MIN_MESSAGES, publisher))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("REDIS_BUFFER_MAX_BYTES")
+                .hasMessageContaining("921600");
+    }
+
+    @Test
+    @DisplayName("Dado el umbral exacto de 921600, cuando se construye el servicio, entonces arranca y sella al alcanzarlo")
+    void acceptsTheCeilingItself() {
+        // Dado el valor por defecto (el tope está incluido: > y no >=)
+        PackageRunService atCeiling = new PackageRunService(buffer, store, 921_600L, MIN_MESSAGES, publisher);
+        sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
+        when(store.save(any())).thenReturn(STORED);
+
+        // Cuando un append deja el lote justo en 921600 bytes
+        atCeiling.flushIfFull(Source.DISCORD, 921_600L);
+
+        // Entonces se sella y se sube con normalidad
+        verify(buffer).sealCurrentBatch(Source.DISCORD);
+        verify(store).save(any());
     }
 
     // ---------- fixtures ----------
