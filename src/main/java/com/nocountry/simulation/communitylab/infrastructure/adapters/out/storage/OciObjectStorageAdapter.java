@@ -29,6 +29,7 @@ import java.util.Date;
 public class OciObjectStorageAdapter implements ArtifactStore {
 
     private static final int MAX_OBJECT_BYTES = 1_048_576;
+    private static final int PRECONDITION_FAILED = 412;
 
     private final ObjectStorage objectStorage;
     private final OciProperties properties;
@@ -71,7 +72,7 @@ public class OciObjectStorageAdapter implements ArtifactStore {
                     assetPackage.batchId(), assetPackage.source(), objectKey, bytes.length, response.getETag());
             return StoreResult.Status.STORED;
         }catch (BmcException e){
-            if(e.getStatusCode() == 412){
+            if(e.getStatusCode() == PRECONDITION_FAILED){
                 log.info("package already in OCI (deduped): batchId={} source={} object={}",
                         assetPackage.batchId(), assetPackage.source(), objectKey);
                 return StoreResult.Status.ALREADY_STORED;
