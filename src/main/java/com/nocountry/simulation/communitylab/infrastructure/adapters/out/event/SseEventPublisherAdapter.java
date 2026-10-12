@@ -1,15 +1,16 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.out.event;
 
-import com.networknt.schema.OutputFormat;
+import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
+import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 @Slf4j
-public class SseEventPublisherAdapter implements EventPublishPost {
+public class SseEventPublisherAdapter implements EventPublishPost, PackagePublisher {
 
     private static final long TIMEOUT_MS = 30 * 60 * 1000L;
     private static final int REPLAY_MAX = 100;
@@ -45,19 +46,10 @@ public class SseEventPublisherAdapter implements EventPublishPost {
         Source source = post.source();
 
         // Why messageId as event id: deterministic, doubles as Last-Event-ID on reconnect.
-        StoredEvent event = new StoredEvent(post.messageId(), post);
+        StoredEvent event = new StoredEvent(post.messageId(), "asset.created", post);
         pushReplay(source, event);
-        for (SseEmitter emitter : emittersBySource.getOrDefault(source, List.of())) {
-            // Why one try per emitter: a dead client must never break delivery to the rest.
-            try {
-                emitter.send(SseEmitter.event()
-                        .id(event.id())
-                        .name("asset.created")
-                        .data(event.post()));
-            } catch (IOException | IllegalStateException e) {
-                emittersBySource.getOrDefault(source, List.of()).remove(emitter);
-            }
-        }
+        sendToAll(source, event);
+
         // Why ids only (Q3): no authorId/authorName/content/tokens in prod logs.
         log.info("Event published: messageId={} batchId={} source={}",
                 post.messageId(), post.messageBatchId(), post.source());
@@ -72,6 +64,20 @@ public class SseEventPublisherAdapter implements EventPublishPost {
         }
     }
 
+    private void sendToAll(Source source, StoredEvent event) {
+        for (SseEmitter emitter : emittersBySource.getOrDefault(source, List.of())) {
+            // Why one try per emitter: a dead client must never break delivery to the rest.
+            try {
+                emitter.send(SseEmitter.event()
+                        .id(event.id())
+                        .name(event.name())
+                        .data(event.data()));
+            } catch (IOException | IllegalStateException e) {
+                emittersBySource.getOrDefault(source, List.of()).remove(emitter);
+            }
+        }
+    }
+
     private void replayAfter (Source source, String lastId, SseEmitter emitter) {
         if (lastId == null || lastId.isBlank()) {
             return;
@@ -82,8 +88,8 @@ public class SseEventPublisherAdapter implements EventPublishPost {
                 try {
                     emitter.send(SseEmitter.event()
                             .id(event.id())
-                            .name("asset.created")
-                            .data(event.post()));
+                            .name(event.name())
+                            .data(event.data()));
                 } catch (IOException | IllegalStateException e) {
                     emittersBySource.getOrDefault(source, List.of()).remove(emitter);
                     return;
@@ -95,5 +101,37 @@ public class SseEventPublisherAdapter implements EventPublishPost {
         }
     }
 
-    private record StoredEvent(String id, ResponseClient post) {}
+    @Override
+    public void publishPackage(PackageCompleted packageCompleted) {
+
+        PackageCompletedEvent packageCompletedEvent = new PackageCompletedEvent(
+                "package.completed",
+                packageCompleted.batchId(),
+                new Payload(packageCompleted.assetsCount(), packageCompleted.parUrlBase(), packageCompleted.expiresAt()));
+
+        StoredEvent event = new StoredEvent(
+                packageCompleted.batchId(),
+                "package.completed",
+                packageCompletedEvent
+        );
+
+        pushReplay(packageCompleted.source(), event);
+
+        sendToAll(packageCompleted.source(), event);
+
+        // Why ids only (RNF-06): parUrlBase is a bearer secret.
+        log.info("Package completed published: batchId={} source={}",
+                packageCompleted.batchId(), packageCompleted.source());
+    }
+
+    // Why name + Object data: the replay holds both asset.created and package.completed and must resend each under its own name.
+    private record StoredEvent(String id, String name, Object data) {}
+
+    private record PackageCompletedEvent(String type, String batchId, Payload payload){
+
+    }
+
+    private record Payload(int assetsCount, String parUrlBase, Instant expiresAt){
+
+    }
 }
