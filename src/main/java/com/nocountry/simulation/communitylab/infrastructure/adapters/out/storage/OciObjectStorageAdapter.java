@@ -28,6 +28,8 @@ import java.util.Date;
 @RequiredArgsConstructor
 public class OciObjectStorageAdapter implements ArtifactStore {
 
+    private static final int MAX_OBJECT_BYTES = 1_048_576;
+
     private final ObjectStorage objectStorage;
     private final OciProperties properties;
     private final ObjectMapper objectMapper;
@@ -36,6 +38,13 @@ public class OciObjectStorageAdapter implements ArtifactStore {
     public StoreResult save(AssetPackage assetPackage) {
         String objectKey = properties.prefix() + assetPackage.objectName();
         byte[] bytes = objectMapper.writeValueAsBytes(assetPackage);
+
+        if(bytes.length >= MAX_OBJECT_BYTES) {
+            log.error("package over the 1MB budget, uploading anyway: batchId={} source={} bytes={} max={}",
+                    assetPackage.batchId(), assetPackage.source(), bytes.length, MAX_OBJECT_BYTES);
+            // Important not apply return -> Why upload anyway: A sealed batch never shrinks, so refusing it would pin it in Redis forever.
+        }
+
         StoreResult.Status putStatus = putCreateOnly(assetPackage, objectKey, bytes);
 
         if(putStatus == StoreResult.Status.FAILED) {
