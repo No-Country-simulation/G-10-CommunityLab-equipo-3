@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,9 +30,11 @@ import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
+import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.StoreResult;
 import com.nocountry.simulation.communitylab.application.port.out.ArtifactStore;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
+import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
@@ -42,31 +45,36 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 
 /**
  * Flush orchestration per source: size trigger, hourly trigger, retry of pending
- * sealed batches and per-source locking. No Spring context; Mockito only at the
- * {@link BufferPort} and {@link ArtifactStore} boundaries.
+ * sealed batches, per-source locking and the {@code package.completed} notice.
+ * No Spring context; Mockito only at the {@link BufferPort}, {@link ArtifactStore}
+ * and {@link PackagePublisher} boundaries.
  *
- * <p>Derivado de: spec 006 RF-01 (flush por tamaño, vacío no se sube) + RF-05
- * (idempotencia, nunca perder el lote) + regla nueva lote por fuente con flush
- * horario si {@code count >= min-messages} + plan 006 §3 (lock por fuente).
+ * <p>Derivado de: spec 006 RF-01 (flush por tamaño, vacío no se sube; fallo OCI sin
+ * evento) + RF-05 (idempotencia, nunca perder el lote; enmienda 2026-10-10: 412 con
+ * PAR nueva) + RF-06 (aviso {@code package.completed} por {@code source}) + regla
+ * nueva lote por fuente con flush horario si {@code count >= min-messages} + plan
+ * 006 §3 (lock por fuente).
  */
 @DisplayName("PackageRunService")
 class PackageRunServiceTest {
 
     private static final long MAX_BYTES = 1_000L;
     private static final long MIN_MESSAGES = 5L;
-    // The flush only reads ok(); the PAR values are opaque here.
-    private static final StoreResult STORED = StoreResult.stored(
-            "https://par.example/p/token/o/paquete.json", Instant.parse("2026-10-07T10:00:00Z"));
+    private static final String PAR_URL = "https://par.example/p/token/o/paquete.json";
+    private static final Instant EXPIRES_AT = Instant.parse("2026-10-07T10:00:00Z");
+    private static final StoreResult STORED = StoreResult.stored(PAR_URL, EXPIRES_AT);
 
     private BufferPort buffer;
     private ArtifactStore store;
+    private PackagePublisher publisher;
     private PackageRunService service;
 
     @BeforeEach
     void setUp() {
         buffer = mock(BufferPort.class);
         store = mock(ArtifactStore.class);
-        service = new PackageRunService(buffer, store, MAX_BYTES, MIN_MESSAGES);
+        publisher = mock(PackagePublisher.class);
+        service = new PackageRunService(buffer, store, MAX_BYTES, MIN_MESSAGES, publisher);
     }
 
     // ---------- size trigger ----------
@@ -233,7 +241,7 @@ class PackageRunServiceTest {
     // ---------- never lose data ----------
 
     @Test
-    @DisplayName("Dado un store que responde fallo (OCI_NOT_CONFIGURED), cuando se sube, entonces el lote queda pendiente")
+    @DisplayName("Dado un store que responde fallo (OCI_NOT_CONFIGURED), cuando se sube, entonces el lote queda pendiente y no hay aviso")
     void storeFailureKeepsBatchPending() {
         // Dado un lote sellable y un store no configurado
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
@@ -242,13 +250,14 @@ class PackageRunServiceTest {
         // Cuando se hace flush
         service.flushIfFull(Source.DISCORD, MAX_BYTES);
 
-        // Entonces no se borra: el próximo tick lo reintenta
+        // Entonces no se borra (el próximo tick lo reintenta) y no se anuncia nada
         verify(store).save(any());
         verify(buffer, never()).discardSealed(any(), anyString());
+        verifyNoInteractions(publisher);
     }
 
     @Test
-    @DisplayName("Dado un store que lanza excepción, cuando se sube, entonces no escapa y el lote queda pendiente")
+    @DisplayName("Dado un store que lanza excepción, cuando se sube, entonces no escapa, el lote queda pendiente y no hay aviso")
     void storeExceptionKeepsBatchPending() {
         // Dado un store que explota
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
@@ -257,8 +266,9 @@ class PackageRunServiceTest {
         // Cuando se hace flush, nada escapa al listener async
         assertThatCode(() -> service.flushIfFull(Source.DISCORD, MAX_BYTES)).doesNotThrowAnyException();
 
-        // Entonces el lote sigue pendiente
+        // Entonces el lote sigue pendiente y no se anuncia nada
         verify(buffer, never()).discardSealed(any(), anyString());
+        verifyNoInteractions(publisher);
     }
 
     @Test
@@ -287,6 +297,92 @@ class PackageRunServiceTest {
 
         // Entonces sin paquete
         verifyNoInteractions(store);
+    }
+
+    // ---------- package.completed notice ----------
+
+    @Test
+    @DisplayName("Dado un paquete guardado, cuando termina el flush, entonces se descarta el lote y luego se anuncia con su PAR")
+    void storedPackageIsAnnouncedAfterDiscard() {
+        // Dado un lote DISCORD con 2 posts y 1 traza LLM_FALLBACK, y un store que confirma
+        sealable(Source.DISCORD, "b-1",
+                post("m-1", Source.DISCORD), post("m-2", Source.DISCORD), fallback("m-3", Source.DISCORD));
+        when(store.save(any())).thenReturn(STORED);
+
+        // Cuando se hace flush
+        service.flushIfFull(Source.DISCORD, MAX_BYTES);
+
+        // Entonces primero se limpia Redis y después sale 1 aviso
+        ArgumentCaptor<PackageCompleted> notice = ArgumentCaptor.forClass(PackageCompleted.class);
+        InOrder order = inOrder(buffer, publisher);
+        order.verify(buffer).discardSealed(Source.DISCORD, "b-1");
+        order.verify(publisher).publishPackage(notice.capture());
+
+        // Y el aviso lleva el lote, su fuente, los assets (sin la traza fallback) y la PAR del store
+        assertThat(notice.getValue().batchId()).isEqualTo("b-1");
+        assertThat(notice.getValue().source()).isEqualTo(Source.DISCORD);
+        assertThat(notice.getValue().assetsCount()).isEqualTo(2);
+        assertThat(notice.getValue().parUrlBase()).isEqualTo(PAR_URL);
+        assertThat(notice.getValue().expiresAt()).isEqualTo(EXPIRES_AT);
+    }
+
+    @Test
+    @DisplayName("Dado un re-flush de un lote ya guardado (412), cuando termina, entonces se anuncia con la PAR nueva")
+    void alreadyStoredPackageIsAnnouncedWithFreshPar() {
+        // Dado un pendiente que ya estaba en OCI: el store devuelve deduped con otra PAR (enmienda RF-05)
+        String freshPar = "https://par.example/p/fresh-token/o/paquete.json";
+        Instant freshExpiry = Instant.parse("2026-10-08T12:00:00Z");
+        when(buffer.pendingBatches(Source.DISCORD)).thenReturn(Set.of("old"));
+        when(buffer.readSealed(Source.DISCORD, "old")).thenReturn(List.of(post("m-1", Source.DISCORD)));
+        when(store.save(any())).thenReturn(StoreResult.alreadyStored(freshPar, freshExpiry));
+
+        // Cuando corre el reintento
+        service.flushIfFull(Source.DISCORD, MAX_BYTES);
+
+        // Entonces el lote deja de estar pendiente y el aviso lleva la PAR recién creada
+        verify(buffer).discardSealed(Source.DISCORD, "old");
+        ArgumentCaptor<PackageCompleted> notice = ArgumentCaptor.forClass(PackageCompleted.class);
+        verify(publisher).publishPackage(notice.capture());
+        assertThat(notice.getValue().batchId()).isEqualTo("old");
+        assertThat(notice.getValue().parUrlBase()).isEqualTo(freshPar);
+        assertThat(notice.getValue().expiresAt()).isEqualTo(freshExpiry);
+    }
+
+    @Test
+    @DisplayName("Dado ambas fuentes guardadas en el tick, cuando terminan, entonces cada aviso va con su propia fuente")
+    void eachNoticeCarriesItsOwnSource() {
+        // Dado DISCORD y TELEGRAM llenos y un store que confirma
+        when(buffer.countMessages(any())).thenReturn(MIN_MESSAGES);
+        sealable(Source.DISCORD, "b-d", post("m-1", Source.DISCORD));
+        sealable(Source.TELEGRAM, "b-t", post("m-2", Source.TELEGRAM));
+        when(store.save(any())).thenReturn(STORED);
+
+        // Cuando corre el tick
+        service.flushScheduled();
+
+        // Entonces 2 avisos, cada uno con la fuente de su lote (el stream SSE se elige por ella)
+        ArgumentCaptor<PackageCompleted> notices = ArgumentCaptor.forClass(PackageCompleted.class);
+        verify(publisher, times(2)).publishPackage(notices.capture());
+        assertThat(notices.getAllValues())
+                .extracting(PackageCompleted::source, PackageCompleted::batchId)
+                .containsExactlyInAnyOrder(
+                        tuple(Source.DISCORD, "b-d"),
+                        tuple(Source.TELEGRAM, "b-t"));
+    }
+
+    @Test
+    @DisplayName("Dado un aviso que falla, cuando termina el flush, entonces no escapa y el lote ya guardado no se vuelve a subir")
+    void noticeFailureDoesNotEscapeNorKeepBatchPending() {
+        // Dado un paquete guardado y un publisher que revienta
+        sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
+        when(store.save(any())).thenReturn(STORED);
+        doThrow(new IllegalStateException("sse down")).when(publisher).publishPackage(any());
+
+        // Cuando se hace flush, nada escapa al listener async
+        assertThatCode(() -> service.flushIfFull(Source.DISCORD, MAX_BYTES)).doesNotThrowAnyException();
+
+        // Entonces el lote ya está en OCI: se descartó antes del aviso y no queda para reintento
+        verify(buffer).discardSealed(Source.DISCORD, "b-1");
     }
 
     // ---------- per-source lock ----------
@@ -375,6 +471,16 @@ class PackageRunServiceTest {
     private void sealable(Source source, String batchId, EnrichedComment... records) {
         when(buffer.sealCurrentBatch(source)).thenReturn(Optional.of(batchId));
         when(buffer.readSealed(source, batchId)).thenReturn(List.of(records));
+    }
+
+    // LLM_FALLBACK trace: buffered for audit but not an asset (spec 004 RF-06).
+    private static EnrichedComment fallback(String messageId, Source source) {
+        return new EnrichedComment(
+                "ingest-batch", messageId, "channel-1", "author-1", "tester",
+                "Mensaje que el LLM no pudo analizar",
+                null, null, null, null, 0, EnrichedComment.LLM_FALLBACK, null,
+                Instant.parse("2026-10-06T10:00:00Z"), source,
+                null, null, null, null, null, false, 1);
     }
 
     private static EnrichedComment post(String messageId, Source source) {

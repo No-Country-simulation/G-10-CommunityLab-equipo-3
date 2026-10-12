@@ -1,6 +1,7 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.discordMessage;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,7 +23,8 @@ import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
  * Public API docs (no Spring context slice: full Boot context with MockMvc).
  *
  * <p>Derivado de: spec 004 RF-04 (Swagger documenta el único GET) + spec 005 RF-07
- * (Swagger documenta el GET Telegram) + spec 007 RF-02 (PATCH de revisión) + constitution P3.
+ * (Swagger documenta el GET Telegram) + spec 006 RF-06 + TASK-006-04 (evento {@code package.completed}
+ * en ambos GET SSE, sin {@code GET /packages*}) + spec 007 RF-02 (PATCH de revisión) + constitution P3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -108,6 +110,27 @@ class SwaggerDocsTest {
                         .exists())
                 .andExpect(jsonPath("$.components.schemas.ResponseClient.properties.sentiment")
                         .exists());
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then both SSE streams document package.completed with its PAR payload")
+    void documentsPackageCompletedOnBothStreams() throws Exception {
+        for (String source : new String[] {"discord", "telegram"}) {
+            String get = "$.paths['/api/v1/" + source + "/messages'].get";
+            String example = get + ".responses['200'].content['text/event-stream'].examples['package.completed'].value";
+            mockMvc.perform(get("/v3/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath(get + ".description").value(containsString("package.completed")))
+                    .andExpect(jsonPath(get + ".responses['200'].content['text/event-stream'].examples['asset.created']")
+                            .exists())
+                    .andExpect(jsonPath(example + ".type").value("package.completed"))
+                    .andExpect(jsonPath(example + ".batchId").exists())
+                    .andExpect(jsonPath(example + ".payload.assetsCount").exists())
+                    .andExpect(jsonPath(example + ".payload.expiresAt").exists())
+                    .andExpect(jsonPath(example + ".payload.parUrlBase").value(containsString("paquetes/" + source + "/")))
+                    // the notice carries no content: the package is read from OCI through the PAR
+                    .andExpect(jsonPath(example + ".payload.enriched").doesNotExist());
+        }
     }
 
     @Test
