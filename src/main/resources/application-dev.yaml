@@ -22,11 +22,6 @@ management:
       exposure:
         include: health,info
 
-# config discord
-discord:
-  token: ${DISCORD_BOT_TOKEN:}
-  channel-id: ${DISCORD_LISTEN_CHANNEL_ID:}
-
 # Config logging debug (dev/test: trazabilidad con authorId a DEBUG; prod solo messageId/batchId/source)
 logging:
   level:
