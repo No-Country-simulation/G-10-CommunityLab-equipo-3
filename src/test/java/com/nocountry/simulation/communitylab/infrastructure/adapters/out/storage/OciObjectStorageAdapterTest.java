@@ -61,7 +61,7 @@ class OciObjectStorageAdapterTest {
 
     private static final String BATCH_ID = "batch-1";
     private static final String OBJECT_KEY = "paquetes/discord/paquete-batch-1.json";
-    private static final int PAR_TTL_DAYS = 1;
+    private static final int PAR_TTL_DAYS = 3;
     private static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
     // Distinctive values so a leak into the logs cannot be a coincidence.
     private static final String AUTHOR_NAME = "Autora-Privada";
@@ -190,7 +190,7 @@ class OciObjectStorageAdapterTest {
     }
 
     @Test
-    @DisplayName("Dado PAR_TTL_DAYS=1, cuando se crea la PAR, entonces pide caducidad a 1 día desde ahora")
+    @DisplayName("Dado PAR_TTL_DAYS=3, cuando se crea la PAR, entonces pide caducidad a 3 días desde ahora")
     void parRequestsConfiguredTtl() {
         // Dado OCI aceptando PUT y PAR
         putSucceeds();
