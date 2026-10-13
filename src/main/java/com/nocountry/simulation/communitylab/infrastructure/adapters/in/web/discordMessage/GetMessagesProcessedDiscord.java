@@ -29,19 +29,22 @@ public class GetMessagesProcessedDiscord {
     @Operation(
             summary = "Subscribe to processed posts",
             description = """
-                    Opens a long-lived SSE stream with two event types, both only for Discord:
+                    Opens a long-lived SSE stream with three event types, all only for Discord:
                     - `asset.created` (id = messageId): one per processed Discord message (post + analysis metadata).
                     - `package.completed` (id = batchId): one per stored package. `payload.parUrlBase` is a \
                     read-only pre-authenticated URL to `GET` the package JSON directly from OCI until \
                     `payload.expiresAt` (ISO-8601); treat it as a secret and never log it.
-                    Reconnect with the last received event id to replay missed events of both types. \
+                    - `message.revised` (id = messageId:v{versionMessage}): a post was approved or edited and \
+                    saved as a new version. No content: reload the package through `parUrlBase`.
+                    Reconnect with the last received event id to replay missed events of every type. \
                     Swagger "Try it out" does not render streams; consume from the frontend with:
                     `const es = new EventSource('/api/v1/discord/messages'); \
                     es.addEventListener('asset.created', e => render(JSON.parse(e.data))); \
-                    es.addEventListener('package.completed', e => loadPackage(JSON.parse(e.data).payload));`""")
+                    es.addEventListener('package.completed', e => loadPackage(JSON.parse(e.data).payload)); \
+                    es.addEventListener('message.revised', e => markRevised(JSON.parse(e.data).payload));`""")
     @ApiResponse(
             responseCode = "200",
-            description = "Stream opened; events flow as `asset.created` and `package.completed` until timeout (~30min), then reconnect.",
+            description = "Stream opened; events flow as `asset.created`, `package.completed` and `message.revised` until timeout (~30min), then reconnect.",
             content = @Content(
                     mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
                     schema = @Schema(implementation = ResponseClient.class),
@@ -82,6 +85,19 @@ public class GetMessagesProcessedDiscord {
                                                 "assetsCount": 12,
                                                 "parUrlBase": "https://objectstorage.sa-saopaulo-1.oraclecloud.com/p/<par-token>/n/<namespace>/b/<bucket>/o/paquetes/discord/paquete-b3e1a2c4-0000-4000-8000-000000000001.json",
                                                 "expiresAt": "2026-10-11T10:00:00Z"
+                                              }
+                                            }"""),
+                            @ExampleObject(
+                                    name = "message.revised",
+                                    summary = "A Discord post was approved or edited and saved as a new version",
+                                    value = """
+                                            {
+                                              "type": "message.revised",
+                                              "batchId": "b3e1a2c4-0000-4000-8000-000000000001",
+                                              "payload": {
+                                                "messageId": "msg-1",
+                                                "versionMessage": 2,
+                                                "approved": true
                                               }
                                             }""")
                     }))

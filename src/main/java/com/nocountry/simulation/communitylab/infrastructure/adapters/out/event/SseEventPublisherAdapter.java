@@ -1,5 +1,6 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.out.event;
 
+import com.nocountry.simulation.communitylab.application.dtos.MessageRevised;
 import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
@@ -119,13 +120,39 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
 
         sendToAll(packageCompleted.source(), event);
 
-        // Why ids only (RNF-06): parUrlBase is a bearer secret.
+        // Why ids only: parUrlBase is a bearer secret.
         log.info("Package completed published: batchId={} source={}",
                 packageCompleted.batchId(), packageCompleted.source());
     }
 
-    // Why name + Object data: the replay holds both asset.created and package.completed and must resend each under its own name.
+    @Override
+    public void publishRevision(MessageRevised messageRevised) {
+
+        MessageRevisedEvent messageRevisedEvent = new MessageRevisedEvent(
+                "message.revised",
+                messageRevised.batchId(),
+                new RevisionPayload(messageRevised.messageId(), messageRevised.versionMessage(), messageRevised.approved()));
+
+        StoredEvent event = new StoredEvent(
+                messageRevised.messageId() + ":v" + messageRevised.versionMessage(),
+                "message.revised",
+                messageRevisedEvent
+        );
+
+        pushReplay(messageRevised.source(), event);
+
+        sendToAll(messageRevised.source(), event);
+
+        log.info("Message revised published: source={} batchId={} messageId={} versionMessage={}",
+                messageRevised.source(), messageRevised.batchId(), messageRevised.messageId(),
+                messageRevised.versionMessage());
+    }
+
     private record StoredEvent(String id, String name, Object data) {}
+
+    private record MessageRevisedEvent(String type, String batchId, RevisionPayload payload) {}
+
+    private record RevisionPayload(String messageId, int versionMessage, boolean approved) {}
 
     private record PackageCompletedEvent(String type, String batchId, Payload payload){
 
