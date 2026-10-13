@@ -31,8 +31,9 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    # Why 127.0.0.1: public traffic arrives only through the tunnel; the port stays reachable for curl on the VM itself.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       - communitylab-net
     environment:
@@ -55,6 +56,20 @@ services:
       - OCI_PREFIX
     # Why 30s: lets Spring finish in-flight requests and close Redis/OCI clients on redeploy.
     stop_grace_period: 30s
+    restart: unless-stopped
+    logging: *logging
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.0
+    # Why outbound only: cloudflared dials Cloudflare and requests come back through that tunnel, so the VM opens no inbound port.
+    # The public hostname -> http://backend:8080 mapping lives in the tunnel config on the Cloudflare dashboard.
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      - TUNNEL_TOKEN
+    depends_on:
+      - backend
+    networks:
+      - communitylab-net
     restart: unless-stopped
     logging: *logging
 
