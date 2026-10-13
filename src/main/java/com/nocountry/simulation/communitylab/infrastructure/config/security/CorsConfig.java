@@ -23,7 +23,9 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Content-Type"));
+        // Why Last-Event-ID: EventSource resends it on reconnect and it is not CORS-safelisted, so a dashboard on
+        // another origin needs it here or every reconnection with replay fails the preflight.
+        configuration.setAllowedHeaders(List.of("Content-Type", "Last-Event-ID"));
         configuration.setAllowCredentials(false);
         // For SSE
         configuration.setExposedHeaders(List.of("Last-Event-ID"));
