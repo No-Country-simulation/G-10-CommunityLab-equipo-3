@@ -1,9 +1,11 @@
 package com.nocountry.simulation.communitylab.application.services.storage;
 
+import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.StoreResult;
 import com.nocountry.simulation.communitylab.application.port.in.PackageRunUseCase;
 import com.nocountry.simulation.communitylab.application.port.out.ArtifactStore;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
+import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -21,20 +23,30 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class PackageRunService implements PackageRunUseCase {
 
+    // Why a ceiling: above 900KB the margin for the last message + envelope disappears and packages break the 1MB budget (R6).
+    private static final long MAX_FLUSH_BYTES = 921_600;
+
     private final BufferPort buffer;
     private final ArtifactStore store;
     private final long maxBytes;
     private final long minMessages;
     private final Map<Source, ReentrantLock> locks = new EnumMap<>(Source.class);
+    private final PackagePublisher packagePublisher;
 
     public PackageRunService(BufferPort buffer,
                              ArtifactStore store,
                              @Value("${redis.buffer.max.bytes:921600}") long maxBytes,
-                             @Value("${buffer.flush.min-messages:5}") long minMessages) {
+                             @Value("${buffer.flush.min-messages:5}") long minMessages,
+                             PackagePublisher packagePublisher) {
+        if (maxBytes <= 0 || maxBytes > MAX_FLUSH_BYTES) {
+            throw new IllegalStateException(
+                    "REDIS_BUFFER_MAX_BYTES must be between 1 and " + MAX_FLUSH_BYTES + " to keep packages under 1MB");
+        }
         this.buffer = buffer;
         this.store = store;
         this.maxBytes = maxBytes;
         this.minMessages = minMessages;
+        this.packagePublisher = packagePublisher;
         for (Source source : Source.values()){
             locks.put(source, new ReentrantLock());
         }
@@ -85,9 +97,20 @@ public class PackageRunService implements PackageRunUseCase {
             return;
         }
         try {
-            StoreResult result = store.save(AssetPackage.of(batchId, source, records, Instant.now()));
+            AssetPackage pkg = AssetPackage.of(batchId, source, records, Instant.now());
+            StoreResult result = store.save(pkg);
+
             if (result.ok()) {
                 buffer.discardSealed(source, batchId);
+                PackageCompleted completed = new PackageCompleted(
+                        batchId,
+                        source,
+                        pkg.stats().assetsCount(),
+                        result.parUrl(),
+                        result.expiresAt()
+                );
+
+                packagePublisher.publishPackage(completed);
                 log.info("package stored: batchId={} source={} records={}", batchId, source, records.size());
             } else {
                 log.warn("package upload pending: batchId={} source={}", batchId, source);

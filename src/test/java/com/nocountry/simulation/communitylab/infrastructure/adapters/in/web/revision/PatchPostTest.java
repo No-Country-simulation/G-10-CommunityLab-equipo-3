@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -19,11 +20,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,20 +42,31 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.nocountry.simulation.communitylab.application.command.RevisePostCommand;
+import com.nocountry.simulation.communitylab.application.dtos.RevisionResult;
+import com.nocountry.simulation.communitylab.application.exception.PackageTooLargeException;
+import com.nocountry.simulation.communitylab.application.exception.StorageFailureException;
+import com.nocountry.simulation.communitylab.application.exception.StorageNotConfiguredException;
 import com.nocountry.simulation.communitylab.application.port.in.RevisePostUseCase;
 import com.nocountry.simulation.communitylab.domain.entity.PostChange;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
+import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
+import com.nocountry.simulation.communitylab.domain.exception.PostNotFoundException;
+import com.nocountry.simulation.communitylab.domain.exception.PostNotRevisableException;
+import com.nocountry.simulation.communitylab.domain.exception.PostVersionConflictException;
 
 import net.dv8tion.jda.api.JDA;
 import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
 /**
- * Revision endpoint, E1: receives and validates the revision, answers 202 without
- * storing it. Full Boot context with the real security chain (CORS + PATCH rule);
- * only the inbound port is mocked.
+ * Revision endpoint: validates the body, delegates to the use case and maps its outcome to HTTP
+ * (200 with the saved version, or one status per failure, never echoing content or provider details).
+ * Full Boot context with the real security chain (CORS + PATCH rule); only the inbound port is mocked.
  *
- * <p>Derivado de: spec 007 RF-02, RNF-01, RNF-03, RNF-04 + plan 007 §1.1 (web, security), §2.
+ * <p>Derivado de: spec 007 RF-02 (E1 validación; E2 {@code 200 {batchId, messageId, versionMessage, approved}},
+ * {@code 404}), RF-03 ({@code 400} reglas de canal, {@code 422} {@code LLM_FALLBACK}), RF-04 (no-op = {@code 200}
+ * misma versión), RF-06 ({@code 409}), RF-09 ({@code 502}/{@code 503 OCI_NOT_CONFIGURED}), RNF-01 ({@code 413}),
+ * RNF-03, RNF-04 + plan 007 §1.1, §1.2 (web), §2.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -87,25 +102,36 @@ class PatchPostTest {
         return mockMvc.perform(patch(url).contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
+    // Why stub: the controller maps the use case result; an unstubbed mock would return null.
+    private void revisionReturns(int versionMessage, boolean approved, boolean changed) {
+        when(revisePostUseCase.revise(any()))
+                .thenReturn(new RevisionResult("b-1", "m-1", versionMessage, approved, changed));
+    }
+
     private RevisePostCommand capturedCommand() {
         ArgumentCaptor<RevisePostCommand> captor = ArgumentCaptor.forClass(RevisePostCommand.class);
         verify(revisePostUseCase).revise(captor.capture());
         return captor.getValue();
     }
 
-    // ---------- accepted ----------
+    // ---------- 200: saved ----------
 
     @ParameterizedTest(name = "{0} -> {1}")
     @CsvSource({"discord, DISCORD", "telegram, TELEGRAM"})
-    @DisplayName("Dado una aprobación válida, cuando se envía a la ruta de su fuente, entonces 202 y el caso de uso recibe esa fuente")
-    void approvalIsAcceptedWithSourceFromPath(String pathSource, Source expected) throws Exception {
-        // Dado / Cuando se aprueba un post de la fuente de la ruta
+    @DisplayName("Dado una aprobación válida, cuando se envía a la ruta de su fuente, entonces 200 con la versión guardada y el caso de uso recibe esa fuente")
+    void approvalReturnsTheSavedVersion(String pathSource, Source expected) throws Exception {
+        // Dado el caso de uso guardando v2 aprobada
+        revisionReturns(2, true, true);
+
+        // Cuando se aprueba un post de la fuente de la ruta
         patchJson("/api/v1/" + pathSource + "/packages/b-1/messages/m-1",
                 "{\"expectedVersion\":1,\"approved\":true}")
-                // Entonces recibido, sin guardar todavía
-                .andExpect(status().isAccepted())
+                // Entonces 200 con lo que el frontend necesita para su siguiente expectedVersion
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.batchId").value("b-1"))
-                .andExpect(jsonPath("$.messageId").value("m-1"));
+                .andExpect(jsonPath("$.messageId").value("m-1"))
+                .andExpect(jsonPath("$.versionMessage").value(2))
+                .andExpect(jsonPath("$.approved").value(true));
 
         RevisePostCommand command = capturedCommand();
         assertThat(command.source()).isEqualTo(expected);
@@ -128,8 +154,10 @@ class PatchPostTest {
                  "hashtags":["#Java"],
                  "cta":"Cuéntanos tu caso"}""";
 
+        revisionReturns(3, false, true);
+
         // Cuando se envía
-        patchJson(DISCORD_URL, body).andExpect(status().isAccepted());
+        patchJson(DISCORD_URL, body).andExpect(status().isOk());
 
         // Entonces el cambio llega completo y approved no se envió (no cambia)
         PostChange change = capturedCommand().change();
@@ -140,6 +168,84 @@ class PatchPostTest {
         assertThat(change.outputContentProcessed()).isEqualTo("Texto corregido por el usuario");
         assertThat(change.hashtags()).containsExactly("#Java");
         assertThat(change.cta()).isEqualTo("Cuéntanos tu caso");
+    }
+
+    @Test
+    @DisplayName("Dado una petición que no cambia nada, cuando se envía, entonces 200 con la misma versión y sin exponer 'changed'")
+    void noOpReturnsTheSameVersion() throws Exception {
+        // Dado un post ya aprobado en v2 (el caso de uso no escribe)
+        revisionReturns(2, true, false);
+
+        // Cuando se vuelve a aprobar / Entonces 200 igual que un cambio: para el frontend el estado es el mismo
+        patchJson(DISCORD_URL, "{\"expectedVersion\":2,\"approved\":true}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.versionMessage").value(2))
+                .andExpect(jsonPath("$.approved").value(true))
+                .andExpect(jsonPath("$.changed").doesNotExist());
+    }
+
+    // ---------- E2: one status per failure (ProblemDetail, no internals) ----------
+
+    static Stream<Arguments> failures() {
+        return Stream.of(
+                Arguments.of(new PostNotFoundException("post not found in package"), 404),
+                Arguments.of(new PostVersionConflictException("post was revised meanwhile"), 409),
+                Arguments.of(new PackageTooLargeException("package over the 1MB budget"), 413),
+                Arguments.of(new PostNotRevisableException("LLM_FALLBACK record has no post to revise"), 422),
+                Arguments.of(new InvalidAssetException("x outputContentProcessed must be <=280 chars"), 400),
+                Arguments.of(new StorageFailureException("package rewrite failed"), 502),
+                Arguments.of(new StorageNotConfiguredException("OCI_NOT_CONFIGURED"), 503));
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @MethodSource("failures")
+    @DisplayName("Dado un fallo del caso de uso, cuando se envía el PATCH, entonces su código HTTP como ProblemDetail")
+    void eachFailureHasItsStatus(RuntimeException failure, int expectedStatus) throws Exception {
+        // Dado el caso de uso fallando por esa causa
+        when(revisePostUseCase.revise(any())).thenThrow(failure);
+
+        // Cuando se envía una revisión válida / Entonces el frontend distingue la causa por el status
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":true}")
+                .andExpect(status().is(expectedStatus))
+                .andExpect(jsonPath("$.status").value(expectedStatus));
+    }
+
+    @Test
+    @DisplayName("Dado una edición que rompe las reglas del canal, cuando se envía, entonces 400 que dice qué regla falla")
+    void channelRuleViolationExplainsTheRule() throws Exception {
+        // Dado el dominio rechazando el post final (mensaje fijo, sin valores del body)
+        when(revisePostUseCase.revise(any()))
+                .thenThrow(new InvalidAssetException("x outputContentProcessed must be <=280 chars"));
+
+        // Cuando se envía / Entonces el usuario sabe qué corregir
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"outputContentProcessed\":\"texto\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("x outputContentProcessed must be <=280 chars")));
+    }
+
+    @Test
+    @DisplayName("Dado OCI sin configurar, cuando se envía, entonces 503 OCI_NOT_CONFIGURED")
+    void notConfiguredStorageSaysSo() throws Exception {
+        // Dado el modo degradado (OCI_AUTH_MODE=none)
+        when(revisePostUseCase.revise(any())).thenThrow(new StorageNotConfiguredException("OCI_NOT_CONFIGURED"));
+
+        // Cuando se envía / Entonces el frontend sabe que no es culpa del post (RF-09)
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":true}")
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string(containsString("OCI_NOT_CONFIGURED")));
+    }
+
+    @Test
+    @DisplayName("Dado un fallo de OCI, cuando se envía, entonces 502 sin exponer detalles del proveedor")
+    void storageFailureHidesProviderDetails() throws Exception {
+        // Dado una excepción cuyo mensaje lleva detalles internos reconocibles
+        when(revisePostUseCase.revise(any()))
+                .thenThrow(new StorageFailureException("SECRET-OCI-DETAIL opc-request-id=xyz"));
+
+        // Cuando se envía / Entonces 502 con un texto fijo (RF-09)
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":true}")
+                .andExpect(status().isBadGateway())
+                .andExpect(content().string(not(containsString("SECRET-OCI-DETAIL"))));
     }
 
     // ---------- 400: body validation ----------
@@ -307,8 +413,10 @@ class PatchPostTest {
     @Test
     @DisplayName("Dado una lista editable válida, cuando se envía, entonces no queda ligada al JSON de entrada")
     void editedListsAreDefensiveCopies() throws Exception {
+        revisionReturns(2, false, true);
+
         patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"hashtags\":[\"#Java\"]}")
-                .andExpect(status().isAccepted());
+                .andExpect(status().isOk());
 
         List<String> hashtags = capturedCommand().change().hashtags();
         assertThatThrownBy(() -> hashtags.add("#otro"))

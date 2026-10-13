@@ -51,6 +51,7 @@ import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentExce
  * spec 006 RF-01 (disparador por tamaño: append devuelve bytes y se evalúa flush por fuente).
  */
 @DisplayName("EnrichmentListener")
+@org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
 class EnrichmentListenerTest {
 
     private static final String BATCH_ID = "batch-1";
@@ -358,5 +359,26 @@ class EnrichmentListenerTest {
                 source.channelPost(), source.titlePost(), source.outputContentProcessed(),
                 source.hashtags(), source.cta(),
                 source.approved(), source.versionMessage());
+    }
+
+    // ---------- unexpected failures leave a trace (revisión 2026-10-12) ----------
+
+    @Test
+    @DisplayName("Dado un fallo inesperado al bufferizar, cuando se procesa, entonces no escapa y queda un warn con ids y la causa, sin contenido")
+    void unexpectedFailureIsLoggedWithIds(org.springframework.boot.test.system.CapturedOutput output) throws Exception {
+        // Dado un post válido ya publicado por SSE y Redis fallando al guardarlo
+        when(llm.processMessage(any())).thenReturn(validResponse());
+        when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
+                .thenReturn(validPost());
+        when(buffer.appendToBatch(any())).thenThrow(new IllegalStateException("redis timeout"));
+
+        // Cuando se procesa
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad")))
+                .doesNotThrowAnyException();
+
+        // Entonces el post que el dashboard ya vio y no llegó al paquete se puede rastrear (antes se perdía sin log)
+        assertThat(output.getOut()).contains("pipeline failed", "messageId=" + MESSAGE_ID,
+                "batchId=" + BATCH_ID, "cause=IllegalStateException");
+        assertThat(output.getOut()).doesNotContain("Consegui mi primer empleo");
     }
 }

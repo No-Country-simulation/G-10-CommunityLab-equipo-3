@@ -169,6 +169,18 @@ class RedisBufferAdapterTest {
     }
 
     @Test
+    @DisplayName("Dado Redis lento (timeout en el RPUSH), cuando se bufferiza, entonces devuelve 0 sin lanzar")
+    void appendRedisTimeoutReturnsZero() {
+        // Dado el SADD hecho y el RPUSH superando REDIS_TIMEOUT (no es RedisConnectionFailureException)
+        when(setOps.add(anyString(), any(String[].class))).thenReturn(1L);
+        when(listOps.rightPush(anyString(), anyString()))
+                .thenThrow(new org.springframework.dao.QueryTimeoutException("timeout"));
+
+        // Cuando se bufferiza / Entonces el adaptador lo trata como fallo de Redis en vez de propagarlo
+        assertThat(adapter.appendToBatch(post("m-1", Source.DISCORD))).isZero();
+    }
+
+    @Test
     @DisplayName("Dado Redis caído, cuando se bufferiza, entonces devuelve 0 sin lanzar")
     void appendRedisDownReturnsZero() {
         when(setOps.add(anyString(), any(String[].class))).thenThrow(new RedisConnectionFailureException("down"));

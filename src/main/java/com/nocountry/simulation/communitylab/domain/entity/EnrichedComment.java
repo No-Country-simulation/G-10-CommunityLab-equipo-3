@@ -9,6 +9,7 @@ import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
+import com.nocountry.simulation.communitylab.domain.exception.PostNotRevisableException;
 
 // Structure for buffering in Redis
 public record EnrichedComment(
@@ -79,9 +80,49 @@ public record EnrichedComment(
         promptVersion = promptVersion == null ? PROMPT_VERSION : promptVersion;
         outputContentProcessed = outputContentProcessed == null ? null : outputContentProcessed.trim();
 
+        // Why "" and not null: one value for "no title / no CTA" whether it comes from the LLM, an old record
+        // Each field on its own, before validatePost reads them.
+        titlePost = titlePost == null || titlePost.isBlank() ? "" : titlePost;
+        cta = cta == null || cta.isBlank() ? "" : cta;
+
         if (!fallback) {
             validatePost(channelPost, titlePost, outputContentProcessed, hashtags, cta);
         }
+    }
+
+    // Applies a dashboard revision; returns this when nothing changes so the caller can skip the OCI write.
+    public EnrichedComment revise(PostChange change) {
+        if (LLM_FALLBACK.equals(flag)) {
+            throw new PostNotRevisableException("LLM_FALLBACK record has no post to revise");
+        }
+        // Why build before comparing: the constructor normalizes (trim, empty texts), so equals sees final values.
+        EnrichedComment candidate = merge(change, versionMessage);
+        if (candidate.equals(this)) {
+            return this;
+        }
+        // Every saved update bumps the version, approval included; messageId never changes.
+        return merge(change, versionMessage + 1);
+    }
+
+    // The constructor re-runs validatePost, so a revision that breaks the final channel's rules can't exist.
+    private EnrichedComment merge(PostChange change, int version) {
+        return new EnrichedComment(
+                messageBatchId, messageId, channelId, authorId, authorName, messageAuthor,
+                sentiment, language, messageType,
+                orKeep(change.topics(), topics), relevance, flag, promptVersion,
+                sentTime, source,
+                orKeep(change.channelPost(), channelPost),
+                orKeep(change.titlePost(), titlePost),
+                orKeep(change.outputContentProcessed(), outputContentProcessed),
+                orKeep(change.hashtags(), hashtags),
+                orKeep(change.cta(), cta),
+                orKeep(change.approved(), approved),
+                version);
+    }
+
+    // null in PostChange means "not sent": keep the stored value ("" / [] are the way to clear, spec 007 RF-02).
+    private static <T> T orKeep(T sent, T current) {
+        return sent != null ? sent : current;
     }
 
     private static void validatePost(Channels channelPost, String titlePost, String outputContentProcessed, List<String> hashtags, String cta) {
@@ -122,7 +163,7 @@ public record EnrichedComment(
                     throw new InvalidAssetException("faq titlePost is required");
                 }
                 if (cta != null && !cta.isBlank()) {
-                    throw new InvalidAssetException("faq cta must be null");
+                    throw new InvalidAssetException("faq cta must be empty");
                 }
                 if (hashtags.size() > MAX_TAGS_OTHER) {
                     throw new InvalidAssetException("faq hashtags must be <=5");

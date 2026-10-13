@@ -35,7 +35,8 @@ import com.sun.net.httpserver.HttpServer;
  * Tests for the OCI client wiring: when the client exists, and that it really builds.
  * Derivado de: spec 006 RF-02 (enmienda 2026-10-08: none -> sin cliente, session-token/instance-principal
  * -> cliente; fallo explicito, no silencioso) + RNF-02 + plan 006 §3 (TASK-006-00: Jersey 3.0.8 alineado,
- * verificado en runtime al construir el cliente real).
+ * verificado en runtime al construir el cliente real) + TASK-006-06 (2026-10-12: sin default `dev` en
+ * `oci.config-profile`; session-token sin perfil falla nombrando OCI_CONFIG_PROFILE y el modo).
  */
 @DisplayName("OciConfig")
 class OciConfigTest {
@@ -89,6 +90,26 @@ class OciConfigTest {
                     .run(context -> {
                         assertThat(context).hasFailed();
                         assertThat(context.getStartupFailure()).hasStackTraceContaining("ociAuthProvider");
+                    });
+        }
+
+        @Test
+        @DisplayName("Dado session-token sin oci.config-profile, cuando arranca, entonces falla nombrando OCI_CONFIG_PROFILE")
+        void failsNamingTheProfileVariableWhenAbsent() {
+            // Dado session-token sin perfil (application.yaml ya no trae el default "dev")
+            runner.withPropertyValues(
+                            "oci.auth-mode=session-token",
+                            "oci.bucket=MessagesUsers",
+                            "oci.region=sa-saopaulo-1",
+                            "oci.namespace=" + TEST_NAMESPACE,
+                            "oci.prefix=paquetes/")
+                    // Cuando arranca, entonces no arranca y la causa dice qué variable falta
+                    .run(context -> {
+                        assertThat(context).hasFailed();
+                        assertThat(context.getStartupFailure())
+                                .rootCause()
+                                .isInstanceOf(IllegalStateException.class)
+                                .hasMessageContaining("OCI_CONFIG_PROFILE");
                     });
         }
     }
@@ -158,10 +179,26 @@ class OciConfigTest {
                 default -> throw new IllegalArgumentException(envName);
             };
 
-            // Cuando se crea, entonces falla antes de hablar con OCI y dice que variable corregir
+            // Cuando se crea, entonces falla antes de hablar con OCI y dice que variable corregir y en qué modo
             assertThatThrownBy(() -> config.objectStorage(fakeProvider(), properties))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining(envName);
+                    .hasMessageContaining(envName)
+                    .hasMessageContaining("OCI_AUTH_MODE=SESSION_TOKEN");
+        }
+
+        @ParameterizedTest(name = "OCI_CONFIG_PROFILE=\"{0}\"")
+        @MethodSource("com.nocountry.simulation.communitylab.infrastructure.config.oci.OciConfigTest#missingProfileValues")
+        @DisplayName("Dado session-token sin perfil (vacío o sin resolver), cuando se pide el proveedor, entonces falla nombrando OCI_CONFIG_PROFILE")
+        void sessionTokenRequiresAProfile(String badProfile) {
+            // Dado session-token sin OCI_CONFIG_PROFILE (sin default en application.yaml queda "${OCI_CONFIG_PROFILE}")
+            OciProperties properties = new OciProperties(OciAuthMode.SESSION_TOKEN, badProfile,
+                    "MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/", 7);
+
+            // Cuando se pide el proveedor, entonces falla con un mensaje claro antes de leer ~/.oci/config
+            assertThatThrownBy(() -> config.ociAuthProvider(properties))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("OCI_CONFIG_PROFILE")
+                    .hasMessageContaining("OCI_AUTH_MODE=SESSION_TOKEN");
         }
 
         @Test
@@ -183,6 +220,10 @@ class OciConfigTest {
                         Arguments.of(env, null),
                         Arguments.of(env, "   "),
                         Arguments.of(env, "${" + env + "}")));
+    }
+
+    static Stream<String> missingProfileValues() {
+        return Stream.of(null, "   ", "${OCI_CONFIG_PROFILE}");
     }
 
     private static OciProperties properties(String bucket, String region, String namespace, String prefix) {

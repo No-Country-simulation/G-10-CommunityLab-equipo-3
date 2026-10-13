@@ -3,7 +3,7 @@
 Derivado de: `spec.md RF-01..RF-07 + RNF-01..RNF-06` + `constitution.md v1.8-buffer-por-fuente R1,R4-R6,Q3-Q4,Fase 1` + `004-paquete-oci-health RF-01/RF-02/RNF-01/RNF-02`.
 Alcance: `Bot → LLM por mensaje (002) → etiquetas (003) → fork SSE vivo + RPUSH Redis **al lote de su fuente** → cierre por bytes o por hora (>=5) → sellado atómico → 1 PUT → 1 CreatePAR read → SSE package.completed con URL → frontend GET directo a OCI`. Solo `DISCORD #Listen` para demo, `TELEGRAM` mismo patrón. Redis: keys por fuente `buffer:{SOURCE}:*` + sellado y pendientes; el umbral de bytes vive en `PackageRunService` (no en el adapter). Opción A fijada: `1 lote = 1 objeto = 1 PAR read por objeto`.
 
-> Nota TTL: el TTL es solo de la URL PAR, no del objeto. El objeto persiste hasta borrado/lifecycle; la PAR vence y se renueva (`List + reuse`).
+> Nota TTL: el TTL es solo de la URL PAR, no del objeto. El objeto persiste hasta borrado/lifecycle; la PAR vence; en re-flush (`412`) se crea una PAR nueva (enmienda 2026-10-10: OCI no devuelve la URL de una PAR existente, ver §3).
 
 ## 1. Arquitectura y componentes
 
@@ -43,7 +43,7 @@ flowchart LR
 * Key: `paquetes/{source}/paquete-{batchId lote}.json` (`{source}` en minúsculas, lo da `AssetPackage.objectName()`; el prefijo `paquetes/` lo añade infraestructura), `Content-Type: application/json`, `<1MB`, cifrado OCI default Always Free.
 * `ArtifactStorePort`: `put(key,bytes)->{etag,sizeBytes}`, `exists(key)->bool`, `createReadPar(object,ttlDays)->{parUrl,expiresAt}`, `listPars(bucket)->[{parId,object,expiresAt}]` (solo re-flush para `deduped:true`, no en path caliente).
 * SSE: `{type:"package.completed", batchId, payload:{assetsCount:N, parUrlBase:"https://...", expiresAt:"ISO-8601"}}`, `id=batchId`, sin contenido ni PII ni PAR en logs. Fallo OCI → sin evento.
-* Re-flush mismo `batchId`: objeto existe → `deduped:true` sin re-PUT; PAR vigente existe → `deduped:true` sin `CreatePAR`.
+* Re-flush mismo `batchId`: objeto existe → `deduped:true` sin re-PUT; ~~PAR vigente existe → `deduped:true` sin `CreatePAR`~~ → **siempre `CreatePAR` nueva** (enmienda 2026-10-10, §3).
   - *Implementado 2026-10-08:* `exists(key)` + `put` se sustituye por **un** `PutObject` con `If-None-Match: *` (create-only atómico en OCI): `412` = ya guardado → `StoreResult.alreadyStored()` (`ok:true, deduped:true`, el lote se descarta). Razón: `exists → put` deja un hueco TOCTOU (dos intentos ven "no existe" y ambos escriben) y cuesta 2 llamadas; el caso real es el reintento tras `PUT` ok + `discardSealed` fallido. Puerto actual `ArtifactStore.save(AssetPackage) -> StoreResult{ok, deduped}`; crece con `parUrl/expiresAt` al implementar la PAR.
 * Env: `OCI_AUTH_MODE=none|session-token|instance-principal` (default `none`), `OCI_CONFIG_PROFILE` (solo `session-token`), `OCI_BUCKET`, `OCI_REGION`, `OCI_NAMESPACE`, `OCI_PREFIX=paquetes/`, `PAR_TTL_DAYS=1`, `REDIS_BUFFER_MAX_BYTES=921600`, `BUFFER_FLUSH_CRON=0 0 * * * *`, `BUFFER_FLUSH_MIN_MESSAGES=5`, `BUFFER_FLUSH_SCHEDULER_ENABLED=true`, `REDIS_HOST/PORT`.
 * Keys Redis por fuente: `buffer:{SOURCE}:current:id|ids|list|bytes`, `buffer:{SOURCE}:sealed:{batchId}`, `buffer:{SOURCE}:pending`.
@@ -65,9 +65,10 @@ flowchart LR
 * Decisión: 1 PAR read por objeto/lote, sin `listing enabled`.
   Alternativa descartada: PAR por asset interno, PAR global `paquetes/`, PAR por prefijo con list (opción B).
   Razón: `N lotes = N PUTs + N PARs` (mínimo en opción A); blast-radius por lote revocable; sin `ListObjects` para leer.
-* Decisión: `List + reuse` solo en re-flush para `deduped:true`.
-  Alternativa descartada: crear siempre nueva o cache local en memoria/Redis.
-  Razón: 1 llamada extra solo en idempotencia, no en path caliente; fuente de verdad OCI (cache local se pierde al reiniciar).
+* ~~Decisión: `List + reuse` solo en re-flush para `deduped:true`.~~ **Sustituida 2026-10-10.**
+* Decisión (2026-10-10): en re-flush (`PutObject` → `412`) crear siempre una PAR nueva sobre el objeto, sin listar ni revocar las anteriores. `StoreResult{status: STORED|ALREADY_STORED|FAILED, parUrl, expiresAt}`. Si `PUT` ok y `CreatePAR` falla → `failed()`: el lote queda en `pending` y el siguiente tick (`412` → `CreatePAR`) lo completa sin código extra.
+  Alternativa descartada: `List + reuse` (imposible: `PreauthenticatedRequestSummary` no trae URL; OCI solo la entrega al crear); crear nueva + revocar las anteriores (`List` + `DeletePreauthenticatedRequest`: más llamadas y código para PARs que caducan solas en 1 día); guardar la URL en Redis (secreto fuera de OCI y se pierde al descartar el lote).
+  Razón: mínimo código; el reintento se cura solo. Límite: un lote reintentado puede tener >1 PAR vigente hasta `PAR_TTL_DAYS`.
 * Decisión: un lote por fuente (`buffer:{SOURCE}:*`).
   Alternativa descartada: lote único mixto Discord+Telegram.
   Razón: `AssetPackage.source` y `package.completed` son por fuente (dual-get); cada fuente con su ritmo y límites; un fallo no arrastra a la otra.
@@ -83,10 +84,13 @@ flowchart LR
 * Decisión (2026-10-08): PAR TTL explícito `1d` (`PAR_TTL_DAYS=1`), no editable (crear nueva + revocar anterior).
   Alternativa descartada: `7d` (propuesta inicial); TTL largo implícito o sin expiración.
   Razón: Q3 + rotación por lote; el paquete lleva `authorName/authorId`, menor ventana si la URL se filtra; el objeto persiste aunque la PAR expire; prohibido borrar bucket con PARs asociadas. Límite: sin renovación bajo demanda (no hay `GET /packages*`), un paquete de más de 1 día no es legible por el frontend hasta definir cómo renovar.
+* Decisión (2026-10-12): el umbral de cierre es la garantía del `<1MB`: `PackageRunService` falla al arrancar si `REDIS_BUFFER_MAX_BYTES` sale de `1..921600`; en `OciObjectStorageAdapter`, un paquete `>=1048576` bytes se sube igual con `log.error` (sin `return failed()`).
+  Alternativa descartada: rechazar el paquete (`failed()` → reintento infinito: el lote sellado nunca adelgaza y queda retenido en Redis); estado `TOO_LARGE` que lo aparta (más código para un caso inalcanzable y el lote sigue ocupando Redis); dividir en dos objetos (rompe `1 lote = 1 objeto = 1 PAR`).
+  Razón: cada registro está acotado por `maxTokens(4000)` del LLM (~16KB) frente a ~124KB de margen; los únicos caminos al exceso son un umbral mal configurado (cerrado al arrancar) o un `tryLock` ocupado varios minutos con mensajes de tamaño máximo (alarma visible). Prioridad: no retener datos en Redis. Límite: en esa anomalía el objeto puede superar el `1MB` por pocos KB.
 
 ## 4. Estrategia de pruebas y despliegue
 
-* Unit `AssetPackageTest` (`enriched[]` vacío aborta, stats separan `LLM_FALLBACK`, `objectName` por fuente); `relevance clamp 0..100` y `topics/hashtags null→[]` en `EnrichedCommentTest`; `<1MB` en `OciObjectStorageAdapterTest`.
+* Unit `AssetPackageTest` (`enriched[]` vacío aborta, stats separan `LLM_FALLBACK`, `objectName` por fuente); `relevance clamp 0..100` y `topics/hashtags null→[]` en `EnrichedCommentTest`; `>=1MB` se sube con alarma `ERROR` en `OciObjectStorageAdapterTest`; umbral fuera de `1..921600` no arranca en `PackageRunServiceTest` + `PackageRunServiceStartupTest`.
 * Unit `PackageRunServiceTest` (16), `RedisBufferAdapterTest` (18), `AssetPackageTest` (9), `BufferFlushSchedulerTest` (2) + `EnrichmentListenerTest` / `Ingest*ServiceTest` ajustados al lote por fuente — ver §1.1. Previsto original: `BufferServiceTest, PackageRunServiceTest` con puertos mockeados (Mockito solo en boundaries): dedup `messageId` sin `RPUSH/INCRBY`; `bytes<900KB` sin flush; `>=900KB` → `1 PUT + 1 PAR + SSE + DEL + nuevo uuid`; `OCI-fail` → `LOG` sin `package.completed` con vivo ya emitido; re-`batchId` → `deduped:true` sin re-PUT ni `CreatePAR`.
 * Adapter `OciObjectStorageAdapterTest` mockeado (cliente SDK): `put/create/list`, `Content-Type`, keys `paquete-{batchId}`, re-put → `deduped:true`, sin creds → `OCI_NOT_CONFIGURED`.
 * Adapter `RedisBufferAdapterTest` mockeado (`RedisTemplate`): `SADD/RPUSH/INCRBY/LRANGE`, `DEL + nuevo uuid`, sin Redis → degradado con SSE intacto.

@@ -4,6 +4,7 @@ import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -93,8 +94,11 @@ public class RedisBufferAdapter implements BufferPort {
         } catch (JacksonException e) {
             log.warn("buffer serialize failed: messageId={}", messageProcessed.messageId());
             return 0L;
-        } catch (RedisConnectionFailureException e){
-            log.warn("buffer redis down: messageId={}", messageProcessed.messageId());
+        } catch (DataAccessException e){
+            // Why DataAccessException: a timeout (QueryTimeoutException) is not a connection failure but loses the
+            // record just the same; it must be logged here instead of escaping the append.
+            log.warn("buffer append failed: messageId={} source={} cause={}",
+                    messageProcessed.messageId(), messageProcessed.source(), e.getClass().getSimpleName());
             return 0L;
         }
     }

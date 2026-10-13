@@ -46,16 +46,18 @@ flowchart LR
 ### 1.2 E2 — guardado versionado (después)
 
 * `domain`:
-  * `EnrichedComment.revise(PostChange change)`: devuelve el mismo registro si `change` no altera nada (RF-04 no-op); si cambia algo (solo `approved`, algún campo editable o ambos), uno nuevo con `versionMessage + 1`, el mismo `messageId` y `approved` = el enviado o el que ya tenía (RF-04). **El incremento de `versionMessage` en cada actualización guardada es obligatorio:** cada versión del objeto en OCI debe tener un número distinto para el post, si no el historial quedaría ambiguo (dos versiones con el mismo número). El constructor revalida el post contra el `channelPost` final (`validatePost`), así que una revisión inválida no puede construirse. Registro `LLM_FALLBACK` → excepción "no revisable".
+  * `EnrichedComment.revise(PostChange change)`: devuelve el mismo registro si `change` no altera nada (RF-04 no-op); si cambia algo (solo `approved`, algún campo editable o ambos), uno nuevo con `versionMessage + 1`, el mismo `messageId` y `approved` = el enviado o el que ya tenía (RF-04). **El incremento de `versionMessage` en cada actualización guardada es obligatorio:** cada versión del objeto en OCI debe tener un número distinto para el post, si no el historial quedaría ambiguo (dos versiones con el mismo número). El constructor revalida el post contra el `channelPost` final (`validatePost`), así que una revisión inválida no puede construirse. Registro `LLM_FALLBACK` → excepción "no revisable". Semántica de `PostChange` (2026-10-12): `null` = no cambia; `""` vacía un texto y `[]` una lista.
+  * Compact constructor de `EnrichedComment`: `titlePost`/`cta` `null` o en blanco → `""` (mismo idioma que `topics/hashtags null → List.of()`), así el LLM, los registros anteriores y las ediciones dan un único valor para "vacío" y el frontend nunca recibe `null`. El mensaje de FAQ pasa de "cta must be null" a "cta must be empty".
+  * `AssetPackage.objectName(Source, String batchId)` estático con la fórmula `{source}/paquete-{batchId}.json`; el `objectName()` de instancia delega en él. `load(Source, batchId)` aún no tiene paquete, y la fórmula debe vivir en un solo sitio para que `save/load/replace` nunca calculen nombres distintos (un desajuste daría `404` en toda revisión).
   * `AssetPackage.revise(String messageId, PostChange change)`: nuevo `AssetPackage` con ese registro sustituido (`stats` no cambian); `messageId` inexistente → excepción "no encontrado".
   * Excepciones de dominio: no encontrado / no revisable / conflicto de versión, para que el adapter web las traduzca a `404/422/409` sin lógica.
 * `application`:
   * `RevisePostUseCase.revise(...) -> RevisionResult{batchId, messageId, versionMessage, approved, boolean changed}`.
   * `port/out/ArtifactStore` crece con `Optional<StoredPackage> load(Source, String batchId)` (`StoredPackage{AssetPackage pkg, String etag}`) y `ReplaceResult replace(AssetPackage, String etag)` (`REPLACED | CONFLICT | FAILED`). `save` de 006 no se toca.
   * `RevisePostService`: `load` (vacío → no encontrado) → `expectedVersion` contra `versionMessage` del post (distinto → conflicto, sin escribir) → `pkg.revise(...)` → si no cambió, devuelve sin `replace` ni evento → `replace(pkg, etag)`: `REPLACED` → publica `message.revised`; `CONFLICT` → repite desde `load` hasta 2 veces y si persiste → conflicto; `FAILED` → error de storage sin evento.
-  * Evento: `port/out/EventPublishPost` con `message.revised`, por `source`.
+  * Evento: método nuevo `EventPublishPost.publishRevision(MessageRevised)` (decidido 2026-10-12, en vez de un puerto propio como `PackagePublisher`) con el record `application/dtos/MessageRevised{source, batchId, messageId, versionMessage, approved}`, sin contenido; `message.revised` por `source`.
 * `infrastructure/adapters/out/storage`:
-  * `OciObjectStorageAdapter.load`: `GetObject` del mismo nombre que `save` (extraer el cálculo `prefix + {source}/paquete-{batchId}.json` a un solo sitio), comprueba `contentLength < 1048576` antes de deserializar, Jackson → `AssetPackage`, devuelve `etag`. `404` → `Optional.empty()`.
+  * `OciObjectStorageAdapter.load`: `GetObject` del mismo nombre que `save` (extraer el cálculo `prefix + {source}/paquete-{batchId}.json` a un solo sitio), comprueba `contentLength < 1048576` antes de deserializar (si no, `413` sin escribir: spec RNF-01), Jackson → `AssetPackage`, devuelve `etag`. `404` → `Optional.empty()`.
   * `OciObjectStorageAdapter.replace`: serializa, guarda `<1MB` (si no, no hay `PUT`), `PutObject` con `ifMatch(etag)` y `Content-Type: application/json`. `200 → REPLACED`, `412 → CONFLICT`, otro → `FAILED` con `status/serviceCode` en log (sin contenido ni etag).
   * `ArtifactStoreAdapter` (modo `none`): `load/replace` → `OCI_NOT_CONFIGURED` → `503`.
 * `infrastructure/adapters/in/web`: los `PATCH` pasan de `202` a `200 RevisePostResponse{batchId, messageId, versionMessage, approved}`; `GlobalExceptionHandler` añade `404/409/413/422/502/503`.
@@ -69,7 +71,7 @@ flowchart LR
   ```
   Editables: `approved` + `topics, channelPost, titlePost, outputContentProcessed, hashtags, cta`. Campos ausentes o `null` = no cambian. `expectedVersion` obligatoria. Cualquier otro campo (`language, sentiment, messageType, relevance, messageAuthor`, ids, autor…) → `400`.
 * Respuestas E1: `202 {batchId, messageId}` · `400` validación (forma del body, campo no editable, enum inválido, sin cambios).
-* Respuestas E2: `200 {batchId, messageId, versionMessage, approved}` · `400` + reglas de canal · `404` paquete o post inexistente · `409` `expectedVersion` desfasada o conflicto tras 2 reintentos · `413` paquete revisado `>=1MB` · `422` registro `LLM_FALLBACK` · `502` fallo OCI · `503` `OCI_NOT_CONFIGURED`. El frontend debe tratar cualquier `2xx` como éxito para no romperse al pasar de `202` a `200`.
+* Respuestas E2: `200 {batchId, messageId, versionMessage, approved}` · `400` + reglas de canal · `404` paquete o post inexistente · `409` `expectedVersion` desfasada o conflicto tras 2 reintentos · `413` paquete guardado o revisado `>=1MB` · `422` registro `LLM_FALLBACK` · `502` fallo OCI · `503` `OCI_NOT_CONFIGURED`. El frontend debe tratar cualquier `2xx` como éxito para no romperse al pasar de `202` a `200`.
 * Registro en Redis y en el objeto OCI: cada `EnrichedComment` añade `approved` y `versionMessage` (E1 ya los escribe con `false, 1`).
 * SSE `asset.created` (`ResponseClient`): añade `approved` y `versionMessage`, copiados del `EnrichedComment` en `EnrichmentListener` (mismo nombre de campo que el paquete).
 * SSE (E2) en el stream de su `source`: `{type:"message.revised", batchId, payload:{messageId, versionMessage, approved}}`, `id = {messageId}:v{versionMessage}`, sin contenido ni PII.
@@ -102,6 +104,9 @@ flowchart LR
 * Decisión: editables solo `topics, channelPost, titlePost, outputContentProcessed, hashtags, cta`; el análisis (`language, sentiment, messageType, relevance, messageAuthor`) no (decidido 2026-10-09). Un campo no editable en el body es `400`, no se ignora.
   Alternativa descartada: editar todo `ResponseModel`; ignorar en silencio los campos no editables.
   Razón: el análisis es la lectura de la IA sobre el mensaje original y alimenta `stats`/relevancia; el usuario corrige el post, no el análisis. Rechazar evita que el frontend crea que cambió algo que no cambió.
+* Decisión (2026-10-12): ausente/`null` = no cambia y `""`/`[]` = vaciar; `titlePost`/`cta` vacíos se guardan siempre como `""`.
+  Alternativa descartada: que un campo ausente vacíe el valor; guardar `null` para "vacío".
+  Razón: si ausente vaciara, aprobar un post LinkedIn (`{expectedVersion, approved:true}`) borraría su CTA y fallaría la regla de canal. Con `""` como único vacío el frontend no tiene que distinguir `null` de `""` y el dominio sigue el mismo patrón que las listas.
 * Decisión: sin `editedAt`/`editedBy`.
   Alternativa descartada: guardar fecha y autor de la revisión.
   Razón: sin gestión de usuarios (Fase >1) la autoría no es fiable; la fecha de cada versión ya la da OCI (`timeModified` de la versión del objeto).
@@ -125,7 +130,8 @@ flowchart LR
   * `SwaggerDocsTest`: aparecen los dos `PATCH`; siguen sin existir `POST` ni `GET /packages*`.
 * **E2**
   * `EnrichedCommentTest`: aprobar incrementa `versionMessage` sin tocar el contenido; editar un campo editable la incrementa y conserva `approved`; `messageId` igual tras cualquier revisión; no-op devuelve los mismos valores; contenido inválido por canal lanza; cambiar `channelPost` revalida contra el canal nuevo; `topics > 5` rechazado; `LLM_FALLBACK` no revisable.
-  * `AssetPackageTest`: `revise` sustituye solo el registro indicado, `stats` iguales, `messageId` inexistente lanza.
+  * `EnrichedCommentTest` (constructor): `titlePost`/`cta` `null` o en blanco → `""`.
+  * `EnrichedCommentReviseTest` / `AssetPackageReviseTest` (una clase por comportamiento): `revise` sustituye solo el registro indicado, `stats` iguales, `messageId` inexistente lanza; `""` vacía y `null` conserva; `objectName(source, batchId)` igual al de instancia.
   * `RevisePostServiceTest` (Mockito solo en `ArtifactStore` y `EventPublishPost`): `REPLACED` → 1 evento; no-op → 0 `replace` y 0 eventos; `expectedVersion` desfasada → conflicto sin `replace`; `CONFLICT` → reintenta (3 `load`) y luego conflicto; `CONFLICT` y luego `REPLACED` → ok; `FAILED` → sin evento; paquete inexistente → no encontrado.
   * `OciObjectStorageAdapterTest`: `load` → `GetObject` con `paquetes/{source}/paquete-{batchId}.json`, devuelve etag; `404 → empty`; JSON viejo deserializa con `versionMessage=1`; `replace` envía `ifMatch(etag)` y `application/json`; `412 → CONFLICT`; `>=1MB` → sin `PutObject`; ningún log con contenido.
   * `PatchPostTest`: `200` y `404/409/413/422/502/503` mapeados por `GlobalExceptionHandler`.

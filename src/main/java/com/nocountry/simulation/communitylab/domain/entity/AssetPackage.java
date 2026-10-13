@@ -2,8 +2,10 @@ package com.nocountry.simulation.communitylab.domain.entity;
 
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
+import com.nocountry.simulation.communitylab.domain.exception.PostNotFoundException;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -39,8 +41,29 @@ public record AssetPackage(
         return new AssetPackage(batchId, source, now, enriched, stats, EnrichedComment.PROMPT_VERSION);
     }
 
-    // Relative object name; the infrastructure adds the bucket prefix (paquetes/).
-    public String objectName() {
+    public static String objectName(Source source, String batchId) {
         return source.name().toLowerCase(Locale.ROOT) + "/paquete-" + batchId + ".json";
+    }
+
+    public String objectName() {
+        return objectName(source, batchId);
+    }
+
+    // Revises one post; returns this when nothing changes so the caller can skip the OCI write.
+    public AssetPackage revise(String messageId, PostChange change) {
+        for (int i = 0; i < enriched.size(); i++) {
+            EnrichedComment current = enriched.get(i);
+            if (current.messageId().equals(messageId)) {
+                EnrichedComment revised = current.revise(change);
+                if (revised == current) {
+                    return this;
+                }
+                List<EnrichedComment> records = new ArrayList<>(enriched);
+                records.set(i, revised);
+
+                return new AssetPackage(batchId, source, generatedAt, records, stats, promptVersion);
+            }
+        }
+        throw new PostNotFoundException("post not found in package");
     }
 }

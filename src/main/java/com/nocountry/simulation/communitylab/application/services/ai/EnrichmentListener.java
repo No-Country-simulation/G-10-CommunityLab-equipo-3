@@ -125,7 +125,12 @@ public class EnrichmentListener {
                     comment.messageId(), event.message().batchId(),
                     messageProcessed.channelPost(), messageProcessed.flag());
         } catch (Exception e){
-            return;
+            // Why log: the post may already be on the dashboard (SSE) while missing from the package; without a
+            // trace that loss was invisible. Ids and exception type only (Q3).
+            log.warn("pipeline failed: messageId={} batchId={} cause={}",
+                    event.message() == null ? null : event.message().messageId(),
+                    event.message() == null ? null : event.message().batchId(),
+                    e.getClass().getSimpleName());
         }
     }
 }
