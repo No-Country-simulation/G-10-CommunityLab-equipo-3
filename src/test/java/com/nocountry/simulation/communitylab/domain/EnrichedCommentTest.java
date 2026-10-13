@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -237,10 +238,10 @@ class EnrichedCommentTest {
                 "¿Cómo desplegar una API en OCI cuando aparece el error 401?",
                 List.of("#OCI"), null);
 
-        // Then question post preserved with mandatory title and no CTA
+        // Then question post preserved with mandatory title and no CTA ("" since spec 007 RF-03)
         assertThat(enriched.channelPost()).isEqualTo(Channels.FAQ);
         assertThat(enriched.titlePost()).isEqualTo("Despliegue en OCI: error 401");
-        assertThat(enriched.cta()).isNull();
+        assertThat(enriched.cta()).isEmpty();
     }
 
     @Test
@@ -371,5 +372,66 @@ class EnrichedCommentTest {
         // Then nothing is reset
         assertThat(enriched.approved()).isTrue();
         assertThat(enriched.versionMessage()).isEqualTo(3);
+    }
+
+    // ---------- spec 007 RF-03: one value for "empty" in titlePost / cta ----------
+
+    // Valid X post (needs neither title nor CTA) where only titlePost and cta vary.
+    private static EnrichedComment withOptionalTexts(String titlePost, String cta) {
+        return new EnrichedComment(
+                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
+                "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
+                List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
+                SENT, Source.DISCORD,
+                Channels.X, titlePost, "hello", List.of("#ONE"), cta, false, 1);
+    }
+
+    @ParameterizedTest(name = "cta=[{0}]")
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("Dado un cta ausente, vacío o en blanco, cuando se construye, entonces queda como cadena vacía")
+    void emptyCtaIsNormalizedToEmptyString(String cta) {
+        // Dado un registro del LLM, uno anterior a 007 o una edición sin CTA
+        var enriched = withOptionalTexts("Titulo", cta);
+
+        // Entonces el frontend recibe siempre "" y nunca null
+        assertThat(enriched.cta()).isNotNull().isEmpty();
+    }
+
+    @ParameterizedTest(name = "titlePost=[{0}]")
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("Dado un titlePost ausente, vacío o en blanco, cuando se construye, entonces queda como cadena vacía")
+    void emptyTitleIsNormalizedToEmptyString(String titlePost) {
+        // Dado un post sin título (todo lo que no es FAQ)
+        var enriched = withOptionalTexts(titlePost, "Síguenos");
+
+        // Entonces un único valor para "sin título"
+        assertThat(enriched.titlePost()).isNotNull().isEmpty();
+    }
+
+    @Test
+    @DisplayName("Dado un titlePost y un cta con texto, cuando se construye, entonces se conservan tal cual")
+    void nonEmptyOptionalTextsAreKept() {
+        // Dado / Cuando un post con título y CTA
+        var enriched = withOptionalTexts("Titulo", "Síguenos");
+
+        // Entonces la normalización solo toca los vacíos
+        assertThat(enriched.titlePost()).isEqualTo("Titulo");
+        assertThat(enriched.cta()).isEqualTo("Síguenos");
+    }
+
+    @Test
+    @DisplayName("Dado un registro LLM_FALLBACK sin título ni CTA, cuando se construye, entonces también quedan vacíos")
+    void fallbackOptionalTextsAreNormalizedToo() {
+        // Dado una traza de fallo con null en los textos opcionales
+        var enriched = post(
+                null, null, null, List.of(), null,
+                Sentiment.NEUTRAL, MessageType.OTRO, List.of(), 0,
+                EnrichedComment.LLM_FALLBACK);
+
+        // Entonces el paquete no mezcla null y "" para el mismo significado
+        assertThat(enriched.titlePost()).isEmpty();
+        assertThat(enriched.cta()).isEmpty();
     }
 }

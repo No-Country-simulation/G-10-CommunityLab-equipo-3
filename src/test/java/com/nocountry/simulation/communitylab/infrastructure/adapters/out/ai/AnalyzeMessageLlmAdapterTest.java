@@ -34,6 +34,7 @@ import com.nocountry.simulation.communitylab.infrastructure.dto.ai.SystemPrompt;
  * convierte el throw en LLM_FALLBACK, nunca 500).
  */
 @DisplayName("AnalyzeMessageLlmAdapter")
+@org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
 class AnalyzeMessageLlmAdapterTest {
 
     private static final String VALID = """
@@ -191,5 +192,21 @@ class AnalyzeMessageLlmAdapterTest {
         // Note: prod retries once, so consume is hit twice before propagating.
         assertThatThrownBy(() -> interruptedService.processMessage(new RequestToLLM("x")))
                 .isInstanceOf(InterruptedException.class);
+    }
+
+    @Test
+    @DisplayName("Dado una primera respuesta inválida, cuando se registra el reintento, entonces el log nombra la causa sin fragmentos de la salida del LLM")
+    void retryLogCarriesNoModelOutput(org.springframework.boot.test.system.CapturedOutput output) throws InterruptedException {
+        // Dado un JSON roto cuyo texto deriva del mensaje del usuario (reconocible si se filtra)
+        when(callSpec.content())
+                .thenReturn("{\"messageAuthor\": \"Autora-Privada dice\" SECRETOUTPUT, \"language\": }")
+                .thenReturn(VALID);
+
+        // Cuando se procesa (el reintento lo recupera)
+        service.processMessage(new RequestToLLM("x"));
+
+        // Entonces queda constancia del intento fallido, pero solo con el tipo de error (Q3: sin contenido en logs)
+        assertThat(output.getOut()).contains("LLM intento 1/2 fallido");
+        assertThat(output.getOut()).doesNotContain("SECRETOUTPUT", "Autora-Privada");
     }
 }

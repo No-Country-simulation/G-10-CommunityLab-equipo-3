@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.nocountry.simulation.communitylab.application.dtos.MessageRevised;
 import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
@@ -40,7 +41,8 @@ import tools.jackson.databind.json.JsonMapper;
  * fuente, sin mezclar Discord/Telegram") + constitution v1.7-dual-get + spec 006
  * RF-06 ({@code package.completed {type, batchId, payload:{assetsCount, parUrlBase,
  * expiresAt}}} por {@code source}, {@code id=batchId}, replay con {@code Last-Event-ID})
- * + RNF-06 (la PAR nunca en logs).
+ * + RNF-06 (la PAR nunca en logs) + spec 007 RF-08 ({@code message.revised {type, batchId, payload:{messageId,
+ * versionMessage, approved}}} por {@code source}, {@code id={messageId}:v{versionMessage}}, sin contenido) + RNF-04.
  * No Spring context: real adapter + real controllers over standalone MockMvc,
  * asserting on the buffered servlet response (the observable send behavior).
  */
@@ -215,7 +217,101 @@ class SseEventPublisherAdapterTest {
                 .doesNotThrowAnyException();
     }
 
+    // ---------- message.revised (spec 007 RF-08) ----------
+
+    @Test
+    @DisplayName("Dado suscriptores en ambas fuentes, cuando se revisa un post TELEGRAM, entonces solo Telegram recibe message.revised con id={messageId}:v{n}")
+    void revisionGoesOnlyToItsSourceWithAVersionedId() throws Exception {
+        // Dado un suscriptor por fuente
+        MvcResult discord = subscribe("/api/v1/discord/messages", null);
+        MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando se guarda la revisión v2 de un post de Telegram
+        adapter.publishRevision(revised("m-1", 2, Source.TELEGRAM));
+
+        // Entonces llega por el stream de su fuente, con un id distinto por versión (sirve de Last-Event-ID)
+        assertThat(eventBlock(telegram.getResponse().getContentAsString(), "m-1:v2")).contains("event:message.revised");
+        assertThat(discord.getResponse().getContentAsString()).doesNotContain("m-1");
+    }
+
+    @Test
+    @DisplayName("Dado una revisión publicada, cuando el frontend lee el data, entonces trae exactamente type, batchId y payload{messageId, versionMessage, approved}")
+    void revisionDataMatchesTheContractWithoutContent() throws Exception {
+        // Dado un suscriptor Telegram
+        MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando se publica la revisión
+        adapter.publishRevision(revised("m-1", 2, Source.TELEGRAM));
+
+        // Entonces solo ids, versión y aprobación: el contenido se lee por la PAR (RF-07)
+        JsonNode data = json.readTree(dataOf(eventBlock(telegram.getResponse().getContentAsString(), "m-1:v2")));
+        assertThat(data.propertyNames()).containsExactly("type", "batchId", "payload");
+        assertThat(data.get("type").asString()).isEqualTo("message.revised");
+        assertThat(data.get("batchId").asString()).isEqualTo("b-1");
+
+        JsonNode payload = data.get("payload");
+        assertThat(payload.propertyNames()).containsExactly("messageId", "versionMessage", "approved");
+        assertThat(payload.get("messageId").asString()).isEqualTo("m-1");
+        assertThat(payload.get("versionMessage").asInt()).isEqualTo(2);
+        assertThat(payload.get("approved").asBoolean()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Dado dos revisiones del mismo post, cuando se publican, entonces cada una tiene su propio id")
+    void eachVersionHasItsOwnEventId() throws Exception {
+        // Dado un suscriptor Telegram
+        MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando el post pasa a v2 y luego a v3
+        adapter.publishRevision(revised("m-1", 2, Source.TELEGRAM));
+        adapter.publishRevision(revised("m-1", 3, Source.TELEGRAM));
+
+        // Entonces el replay no confunde una versión con otra
+        String content = telegram.getResponse().getContentAsString();
+        assertThat(eventBlock(content, "m-1:v2")).contains("event:message.revised");
+        assertThat(eventBlock(content, "m-1:v3")).contains("event:message.revised");
+    }
+
+    @Test
+    @DisplayName("Dado asset y revisión en la cola, cuando se reconecta con Last-Event-ID, entonces la revisión se repite con su nombre y se puede reanudar desde ella")
+    void revisionTakesPartInTheReplay() throws Exception {
+        // Dado, sin suscriptores, un asset, una revisión y otro asset de Telegram
+        adapter.publish(telegramPost("tg-1"));
+        adapter.publishRevision(revised("tg-1", 2, Source.TELEGRAM));
+        adapter.publish(telegramPost("tg-2"));
+
+        // Cuando se reconecta desde el primer asset / Entonces la revisión vuelve como message.revised
+        String fromAsset = subscribe("/api/v1/telegram/messages", "tg-1").getResponse().getContentAsString();
+        assertThat(eventBlock(fromAsset, "tg-1:v2")).contains("event:message.revised");
+
+        // Y cuando se reconecta desde la revisión / Entonces solo lo posterior
+        String fromRevision = subscribe("/api/v1/telegram/messages", "tg-1:v2").getResponse().getContentAsString();
+        assertThat(fromRevision).contains("id:tg-2").doesNotContain("id:tg-1:v2");
+    }
+
+    @Test
+    @DisplayName("Dado ningún suscriptor, cuando se publica una revisión, entonces no lanza (la revisión ya está guardada)")
+    void publishRevisionWithoutSubscribersDoesNotThrow() {
+        // Cuando se publica sin nadie conectado / Entonces no propaga: el PATCH no puede fallar por el aviso
+        assertThatCode(() -> adapter.publishRevision(revised("m-1", 2, Source.TELEGRAM)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Dado una revisión publicada, cuando se escribe el log, entonces lleva source, batchId, messageId y versionMessage")
+    void revisionLogCarriesIds(CapturedOutput output) {
+        // Cuando se publica
+        adapter.publishRevision(revised("m-1", 2, Source.TELEGRAM));
+
+        // Entonces se puede rastrear el aviso (RNF-04: solo ids y versión)
+        assertThat(output.getOut()).contains("source=TELEGRAM", "batchId=b-1", "messageId=m-1", "versionMessage=2");
+    }
+
     // ---------- fixtures ----------
+
+    private static MessageRevised revised(String messageId, int versionMessage, Source source) {
+        return new MessageRevised(source, "b-1", messageId, versionMessage, true);
+    }
 
     private MvcResult subscribe(String path, String lastEventId) throws Exception {
         var request = get(path).accept(MediaType.TEXT_EVENT_STREAM);

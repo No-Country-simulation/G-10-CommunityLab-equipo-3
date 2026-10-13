@@ -140,10 +140,50 @@ class SwaggerDocsTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath(path + ".summary").value("Revise a post"))
-                .andExpect(jsonPath(path + ".responses['202']").exists())
+                .andExpect(jsonPath(path + ".responses['200']").exists())
+                .andExpect(jsonPath(path + ".responses['202']").doesNotExist())
                 .andExpect(jsonPath(path + ".responses['400']").exists())
+                .andExpect(jsonPath(path + ".responses['404']").exists())
+                .andExpect(jsonPath(path + ".responses['409']").exists())
+                .andExpect(jsonPath(path + ".responses['413']").exists())
+                .andExpect(jsonPath(path + ".responses['422']").exists())
+                .andExpect(jsonPath(path + ".responses['502']").exists())
+                .andExpect(jsonPath(path + ".responses['503']").exists())
                 .andExpect(jsonPath(path + ".parameters[?(@.name == 'source')].schema.enum[*]",
                         containsInAnyOrder("discord", "telegram")));
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then RevisePostResponse carries the saved version and approval")
+    void documentsRevisionResponseSchema() throws Exception {
+        String schema = "$.components.schemas.RevisePostResponse.properties";
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(schema + ".batchId").exists())
+                .andExpect(jsonPath(schema + ".messageId").exists())
+                .andExpect(jsonPath(schema + ".versionMessage").exists())
+                .andExpect(jsonPath(schema + ".approved").exists())
+                // internal flag of the use case, not part of the HTTP contract
+                .andExpect(jsonPath(schema + ".changed").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then both SSE streams document message.revised without content (spec 007 RF-08)")
+    void documentsMessageRevisedOnBothStreams() throws Exception {
+        for (String source : new String[] {"discord", "telegram"}) {
+            String get = "$.paths['/api/v1/" + source + "/messages'].get";
+            String example = get + ".responses['200'].content['text/event-stream'].examples['message.revised'].value";
+            mockMvc.perform(get("/v3/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath(get + ".description").value(containsString("message.revised")))
+                    .andExpect(jsonPath(example + ".type").value("message.revised"))
+                    .andExpect(jsonPath(example + ".batchId").exists())
+                    .andExpect(jsonPath(example + ".payload.messageId").exists())
+                    .andExpect(jsonPath(example + ".payload.versionMessage").exists())
+                    .andExpect(jsonPath(example + ".payload.approved").exists())
+                    // the notice carries no content: the post is read through the PAR (RF-07)
+                    .andExpect(jsonPath(example + ".payload.outputContentProcessed").doesNotExist());
+        }
     }
 
     @Test
