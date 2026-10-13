@@ -1,0 +1,7 @@
+# Allowlist: the build only needs the wrapper, the pom and the main sources.
+# Everything else (redis-data/ with real messages, .git, .env, .oci/, keys, target/) never enters the build context.
+*
+!mvnw
+!.mvn/
+!pom.xml
+!src/main/

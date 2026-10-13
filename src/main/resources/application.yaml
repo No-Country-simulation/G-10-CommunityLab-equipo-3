@@ -27,6 +27,11 @@ telegram:
     token: ${TELEGRAM_BOT_TOKEN}
     listen-group-id: ${TELEGRAM_LISTEN_GROUP_ID}
 
+# config discord
+discord:
+  token: ${DISCORD_BOT_TOKEN}
+  channel-id: ${DISCORD_LISTEN_CHANNEL_ID}
+
 # Configuration Scheduler
 buffer:
   flush:
@@ -41,6 +46,6 @@ oci:
   region: ${OCI_REGION}
   namespace: ${OCI_NAMESPACE}
   prefix: ${OCI_PREFIX}
-  par-ttl-days: ${PAR_TTL_DAYS:1}
+  par-ttl-days: ${PAR_TTL_DAYS:3}
   auth-mode: ${OCI_AUTH_MODE:none}
   config-profile: ${OCI_CONFIG_PROFILE}
