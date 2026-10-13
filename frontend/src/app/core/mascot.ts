@@ -36,9 +36,23 @@ export function toExpression(raw: string | null | undefined): Expression | null 
   return key in OSOS ? (key as Expression) : null;
 }
 
-/** Image path for a label; anything outside the vocabulary shows the neutral bear. */
-export const expressionSrc = (raw: string | null | undefined) =>
-  `image/osos/${OSOS[toExpression(raw) ?? DEFAULT_EXPRESSION]}.svg`;
+/** Animated art for the three sentiment bears (public/image/osos/animados/), each with a still first frame */
+const ANIMATED: Partial<Record<Expression, string>> = {
+  neutral: 'neutro',
+  contento: 'feliz',
+  triste: 'triste',
+};
+
+/**
+ * Image path for a label; anything outside the vocabulary shows the neutral bear.
+ * The sentiment bears are animated WebP; `still` (reduced motion) uses their first frame instead.
+ */
+export function expressionSrc(raw: string | null | undefined, still = false): string {
+  const expression = toExpression(raw) ?? DEFAULT_EXPRESSION;
+  const animated = ANIMATED[expression];
+  if (animated) return `image/osos/animados/${animated}${still ? '-quieto' : ''}.webp`;
+  return `image/osos/${OSOS[expression]}.svg`;
+}
 
 /** i18n key of an expression's display name (messages.ts); unknown labels read as neutral */
 export const expressionKey = (raw: string | null | undefined) =>

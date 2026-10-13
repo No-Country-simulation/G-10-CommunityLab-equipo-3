@@ -4,12 +4,15 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
+import { INTERACTION_SOURCES, InteractionSource } from '../../../../core/api/api.models';
 import { API_CONFIG } from '../../../../core/api/community-lab.api';
 import { I18n } from '../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { SOURCE_BRAND, SOURCE_ICON } from '../../../../core/ui-maps';
+import { SENTIMENT_EXPRESSION } from '../../../../core/mascot';
 import { PAGE_ICON } from '../../../../core/page-icons';
 import { WorkspaceStore } from '../../../../core/workspace.store';
+import { Mascot } from '../../../../shared/mascot/mascot';
 
 interface NavItem {
   /** i18n key */
@@ -22,7 +25,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, TooltipModule, TranslatePipe],
+  imports: [RouterLink, TooltipModule, TranslatePipe, Mascot],
   templateUrl: './sidebar.html',
 })
 export class Sidebar {
@@ -39,6 +42,14 @@ export class Sidebar {
     connecting: 'border-amber-500/20 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
     error: 'border-rose-500/20 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
     off: 'border-stone-300/60 bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400',
+  };
+  /** Badge text: says the state too, so a red badge never reads "LIVE" */
+  protected readonly modeLabel: Record<string, string> = {
+    demo: 'MOCK',
+    open: 'LIVE',
+    connecting: '…',
+    error: 'OFF',
+    off: 'OFF',
   };
   protected readonly modeDot: Record<string, string> = {
     demo: 'bg-amber-500',
@@ -62,30 +73,47 @@ export class Sidebar {
     { label: 'nav.storage', path: '/app/storage', emoji: PAGE_ICON.storage },
   ];
 
-  /** Same behavior as the CommuPulse server card: each click flips Discord ↔ Telegram. */
-  protected readonly activeNetwork = computed(() => {
-    const source = this.store.activeSource();
-    const count = this.store.sourceCounts()[source];
-    const [from, to] = SOURCE_BRAND[source];
-    return {
-      source,
-      name: `${source}: CommunityLab`,
-      icon: SOURCE_ICON[source],
-      gradient: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
-      detail: this.i18n.t(count === 1 ? 'common.contentCount.one' : 'common.contentCount.other', { n: count }),
-    };
+  /** Every network, Discord-server-list style: one click selects it, each shows what is waiting for review. */
+  protected readonly networks = computed(() => {
+    const active = this.store.activeSource();
+    const pending = this.store.pendingBySource();
+    return INTERACTION_SOURCES.map((source) => {
+      const [from, to] = SOURCE_BRAND[source];
+      const n = pending[source];
+      return {
+        source,
+        active: source === active,
+        icon: SOURCE_ICON[source],
+        gradient: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
+        pending: n,
+        status: n ? this.i18n.t('sidebar.network.pending', { n }) : this.i18n.t('sidebar.network.clear'),
+      };
+    });
   });
 
-  protected toggleNetwork() {
-    const next = this.store.activeSource() === 'Discord' ? 'Telegram' : 'Discord';
-    this.store.setActiveSource(next);
+  protected selectNetwork(source: InteractionSource) {
+    if (source === this.store.activeSource()) return;
+    this.store.setActiveSource(source);
     this.toast.add({
       severity: 'info',
       summary: this.i18n.t('sidebar.network.toast'),
-      detail: this.i18n.t('sidebar.network.toastDetail', { name: `${next}: CommunityLab` }),
+      detail: this.i18n.t('sidebar.network.toastDetail', { name: `${source}: CommunityLab` }),
       life: 3000,
     });
   }
+
+  /** Community mood: the animated bear plus its texts, or the neutral bear while no message has arrived. */
+  protected readonly mood = computed(() => {
+    const m = this.store.communityMood();
+    const t = (key: string, params?: Record<string, string | number>) => this.i18n.t(key, params);
+    if (!m) return { expression: SENTIMENT_EXPRESSION.neutral, value: t('sidebar.mood.empty'), detail: '', counts: null };
+    return {
+      expression: SENTIMENT_EXPRESSION[m.mood],
+      counts: m.counts,
+      value: t('sidebar.mood.value', { mood: t('mood.' + m.mood).toLowerCase() }),
+      detail: t('sidebar.mood.counts', { p: m.counts.positive, n: m.counts.neutral, neg: m.counts.negative }),
+    };
+  });
 
   /** Item height (46px) + gap (space-y-2 = 8px): distance the active pill moves per item. */
   protected readonly itemStep = 54;

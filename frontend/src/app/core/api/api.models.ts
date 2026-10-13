@@ -71,6 +71,12 @@ export interface GeneratedAsset {
   status: AssetStatus;
   createdAt: string;
   publishedAt?: string;
+  /** Live posts: call to action, shown at the end of `body` and kept apart for the backend (required on LinkedIn) */
+  cta?: string;
+  /** Live posts: version stored in OCI, sent back as `expectedVersion` when revising */
+  versionMessage?: number;
+  /** Live posts: batchId of the OCI package that stores it; revisions are only possible once it is set */
+  packageId?: string;
 }
 
 export interface StorageReceipt {

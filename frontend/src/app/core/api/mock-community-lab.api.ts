@@ -42,7 +42,7 @@ export class MockCommunityLabApi extends CommunityLabApi {
     return of(clone(this.assets)).pipe(delay(250));
   }
 
-  updateAsset(id: string, patch: AssetPatch): Observable<GeneratedAsset> {
+  updateAsset({ id }: GeneratedAsset, patch: AssetPatch): Observable<GeneratedAsset> {
     const asset = this.assets.find((a) => a.id === id);
     if (!asset) return throwError(() => new Error(`Asset ${id} no encontrado`));
     Object.assign(asset, patch);
@@ -50,10 +50,10 @@ export class MockCommunityLabApi extends CommunityLabApi {
     return of(clone(asset)).pipe(delay(300));
   }
 
-  publishAsset(id: string): Observable<GeneratedAsset> {
-    const asset = this.assets.find((a) => a.id === id);
+  publishAsset(target: GeneratedAsset): Observable<GeneratedAsset> {
+    const asset = this.assets.find((a) => a.id === target.id);
     if (asset) asset.publishedAt = new Date().toISOString();
-    return this.updateAsset(id, { status: 'published' }).pipe(delay(500));
+    return this.updateAsset(target, { status: 'published' }).pipe(delay(500));
   }
 
   listStoredObjects(): Observable<StoredObject[]> {

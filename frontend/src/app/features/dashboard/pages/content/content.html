@@ -12,11 +12,12 @@
 </div>
 
 <div class="card">
-  <!-- Status tabs -->
-  <div class="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 pt-2 dark:border-slate-800">
+  <!-- Status tabs: swipe sideways on narrow screens, without visible scrollbars.
+       The bottom rule is an inset shadow so the active underline covers it without overflowing. -->
+  <div class="flex gap-1 overflow-x-auto overflow-y-hidden px-3 pt-2 shadow-[inset_0_-1px_0_theme(colors.slate.100)] [scrollbar-width:none] dark:shadow-[inset_0_-1px_0_theme(colors.slate.800)] [&::-webkit-scrollbar]:hidden">
     @for (tab of filterTabs; track tab.value) {
       <button type="button" (click)="status.set(tab.value)"
-        class="-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition"
+        class="flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition"
         [class]="status() === tab.value
           ? 'border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300'
           : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'">

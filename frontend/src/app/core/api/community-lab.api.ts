@@ -23,11 +23,35 @@ export interface ApiConfig {
 
 export const API_CONFIG = new InjectionToken<ApiConfig>('API_CONFIG');
 
+/** Why a revision was not saved on the backend; the store turns it into a message for the CM. */
+export type RevisionFailure =
+  /** The post's batch is not stored in OCI yet: the change waits in the browser */
+  | 'not-packaged'
+  /** 409: someone saved a newer version first */
+  | 'conflict'
+  /** 400: invalid change or channel rule broken (e.g. too many hashtags for X) */
+  | 'invalid'
+  /** 404: package or post not found */
+  | 'not-found'
+  /** 413/422/502/503 or network: the backend could not save it */
+  | 'unavailable';
+
+export class RevisionError extends Error {
+  constructor(
+    readonly reason: RevisionFailure,
+    /** ProblemDetail.detail from the backend, when it sent one */
+    readonly detail?: string,
+  ) {
+    super(detail ?? reason);
+  }
+}
+
 /** Every call the UI makes to the backend. Swap implementations via `useMocks`. */
 export abstract class CommunityLabApi {
   abstract listAssets(): Observable<GeneratedAsset[]>;
-  abstract updateAsset(id: string, patch: AssetPatch): Observable<GeneratedAsset>;
-  abstract publishAsset(id: string): Observable<GeneratedAsset>;
+  /** Saves a status change or edit; fails with a RevisionError when the backend cannot take it. */
+  abstract updateAsset(asset: GeneratedAsset, patch: AssetPatch): Observable<GeneratedAsset>;
+  abstract publishAsset(asset: GeneratedAsset): Observable<GeneratedAsset>;
   abstract listStoredObjects(): Observable<StoredObject[]>;
   abstract getStoredObject(objectName: string): Observable<ProcessResult>;
 }

@@ -6,12 +6,15 @@ import {
   GeneratedAsset,
   INTERACTION_SOURCES,
   InteractionSource,
+  Sentiment,
   StoredObject,
 } from './api/api.models';
 import { CommunityLabApi } from './api/community-lab.api';
 import { LIVE_ASSET_PREFIX, LiveFeed } from './api/live-feed';
 
 const SOURCE_KEY = 'active-source';
+/** How many recent messages decide the community mood */
+const MOOD_WINDOW = 20;
 
 /** Shared state for curation and OCI storage, backed by CommunityLabApi. */
 @Injectable({ providedIn: 'root' })
@@ -33,13 +36,6 @@ export class WorkspaceStore {
     return this._assets().filter((a) => a.origin.source === source);
   });
 
-  /** Asset count per network, for the network switcher. */
-  readonly sourceCounts = computed(() => {
-    const counts = Object.fromEntries(INTERACTION_SOURCES.map((s) => [s, 0])) as Record<InteractionSource, number>;
-    for (const a of this._assets()) counts[a.origin.source]++;
-    return counts;
-  });
-
   readonly objects = this._objects.asReadonly();
   readonly loaded = signal(false);
 
@@ -52,6 +48,30 @@ export class WorkspaceStore {
   readonly pendingReview = computed(
     () => this.assets().filter((a) => a.status === 'draft' || a.status === 'in_review').length,
   );
+
+  /** Items waiting for review per network, for the network list in the sidebar. */
+  readonly pendingBySource = computed(() => {
+    const counts = Object.fromEntries(INTERACTION_SOURCES.map((s) => [s, 0])) as Record<InteractionSource, number>;
+    for (const a of this._assets()) if (a.status === 'draft' || a.status === 'in_review') counts[a.origin.source]++;
+    return counts;
+  });
+
+  /**
+   * Mood of the selected network's community: sentiment of its latest messages (one vote per message,
+   * not per generated post). `mood` is the most frequent sentiment; ties lean to neutral. Null without messages.
+   */
+  readonly communityMood = computed(() => {
+    const messages = new Map<string, GeneratedAsset>();
+    for (const a of this.assets()) if (!messages.has(a.interactionId)) messages.set(a.interactionId, a);
+    const latest = [...messages.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, MOOD_WINDOW);
+    const counts: Record<Sentiment, number> = { positive: 0, neutral: 0, negative: 0 };
+    for (const a of latest) counts[a.origin.sentiment]++;
+    if (!latest.length) return null;
+    // A sentiment wins only when it is strictly the most frequent; any tie reads as neutral
+    const winners = (Object.keys(counts) as Sentiment[]).filter((s) => counts[s] === Math.max(...Object.values(counts)));
+    const mood: Sentiment = winners.length === 1 ? winners[0] : 'neutral';
+    return { mood, counts, total: latest.length };
+  });
 
   setActiveSource(source: InteractionSource) {
     this._activeSource.set(source);

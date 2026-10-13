@@ -44,6 +44,36 @@ export interface BackendPost {
   hashtags: string[] | null;
   /** Required for LinkedIn, forbidden for FAQ */
   cta: string | null;
+  /** true once the CM approved it (PATCH …/packages/{batchId}/messages/{messageId}) */
+  approved?: boolean | null;
+  /** Version stored in OCI; starts at 1, each saved revision bumps it */
+  versionMessage?: number | null;
+}
+
+/** `package.completed`: a batch was stored in OCI; its JSON is readable through `parUrlBase` until `expiresAt`. */
+export interface PackageNotice {
+  source: InteractionSource;
+  batchId: string;
+  assetsCount: number;
+  /** Pre-authenticated read URL of the package. A secret: never log it. */
+  parUrlBase: string;
+  expiresAt: string;
+}
+
+/** `message.revised`: someone approved or edited a stored post; the content is reloaded from its package. */
+export interface RevisionNotice {
+  source: InteractionSource;
+  batchId: string;
+  messageId: string;
+  versionMessage: number;
+  approved: boolean;
+}
+
+/** Envelope of `package.completed` and `message.revised` (`asset.created` is the bare post). */
+interface BackendNotice<T> {
+  type: string;
+  batchId: string;
+  payload: T;
 }
 
 export type LiveFeedStatus = 'off' | 'connecting' | 'open' | 'error';
@@ -64,6 +94,8 @@ export class LiveFeed implements OnDestroy {
   private readonly feeds = inject(API_CONFIG).liveFeeds ?? {};
   private readonly zone = inject(NgZone);
   private readonly assets$ = new Subject<GeneratedAsset>();
+  private readonly packages$ = new Subject<PackageNotice>();
+  private readonly revisions$ = new Subject<RevisionNotice>();
   private readonly streams = new Map<InteractionSource, EventSource>();
   private readonly retryTimers = new Map<InteractionSource, ReturnType<typeof setTimeout>>();
 
@@ -74,6 +106,10 @@ export class LiveFeed implements OnDestroy {
 
   /** Assets pushed by the backend from every network, already mapped to the frontend contract. */
   readonly assets: Observable<GeneratedAsset> = this.assets$.asObservable();
+  /** Batches stored in OCI (`package.completed`). */
+  readonly packages: Observable<PackageNotice> = this.packages$.asObservable();
+  /** Posts approved or edited by someone (`message.revised`). */
+  readonly revisions: Observable<RevisionNotice> = this.revisions$.asObservable();
 
   /** Stream URL of a network, if it has one. */
   urlOf(source: InteractionSource): string | undefined {
@@ -88,6 +124,8 @@ export class LiveFeed implements OnDestroy {
     this.retryTimers.forEach((t) => clearTimeout(t));
     this.streams.forEach((es) => es.close());
     this.assets$.complete();
+    this.packages$.complete();
+    this.revisions$.complete();
   }
 
   private open(source: InteractionSource) {
@@ -107,14 +145,28 @@ export class LiveFeed implements OnDestroy {
         this.streams.delete(source);
         this.retryTimers.set(source, setTimeout(() => this.open(source), RETRY_MS));
       });
-    es.addEventListener('asset.created', (e) => {
-      try {
-        const asset = toGeneratedAsset(JSON.parse((e as MessageEvent<string>).data), source);
-        this.zone.run(() => this.assets$.next(asset));
-      } catch (err) {
-        console.warn(`[live-feed:${source}] evento descartado`, err);
-      }
+    // Any event proves the stream is open, even when the backend sends no headers before the first one
+    const on = <T>(type: string, handle: (data: T) => void) =>
+      es.addEventListener(type, (e) => {
+        try {
+          const data = JSON.parse((e as MessageEvent<string>).data) as T;
+          this.zone.run(() => {
+            this.setStatus(source, 'open');
+            handle(data);
+          });
+        } catch (err) {
+          // Only the event type: payloads may carry a PAR URL, which must never reach the logs
+          console.warn(`[live-feed:${source}] ${type} descartado`, err instanceof Error ? err.message : err);
+        }
+      });
+    on<BackendPost>('asset.created', (post) => this.assets$.next(toGeneratedAsset(post, source)));
+    on<BackendNotice<{ assetsCount: number; parUrlBase: string; expiresAt: string }>>('package.completed', (n) => {
+      if (!n.payload?.parUrlBase) throw new Error('package.completed sin parUrlBase');
+      this.packages$.next({ source, batchId: n.batchId, ...n.payload });
     });
+    on<BackendNotice<{ messageId: string; versionMessage: number; approved: boolean }>>('message.revised', (n) =>
+      this.revisions$.next({ source, batchId: n.batchId, ...n.payload }),
+    );
   }
 
   private setStatus(source: InteractionSource, value: LiveFeedStatus) {
@@ -169,18 +221,33 @@ function toIso(value: BackendPost['sentTime']): string {
   return value;
 }
 
+/** Id of a live post in the UI: the source keeps Discord and Telegram ids (independent) from colliding. */
+export const liveAssetId = (source: InteractionSource, messageId: string) =>
+  `${LIVE_ASSET_PREFIX}${source.toLowerCase()}-${messageId}`;
+
+/** Body as shown and edited in the UI: the post plus its call to action as the last paragraph. */
+export const withCta = (content: string, cta?: string | null) => (cta ? `${content}\n\n${cta}` : content);
+
+/** Backend `channelPost` for each asset type (what PATCH expects). */
+export const CHANNEL_POST: Partial<Record<AssetType, string>> = {
+  linkedin_post: 'LINKEDIN',
+  x_post: 'X',
+  newsletter_highlight: 'NEWSLETTER',
+  faq: 'FAQ',
+};
+
 /**
  * @param stream network of the stream the event arrived on; used when the payload has no
  *               `source`, so a Telegram post is never filed under Discord.
+ * @param packageId batchId of the OCI package the post was read from, when it comes from one.
  */
-export function toGeneratedAsset(post: BackendPost, stream: InteractionSource): GeneratedAsset {
+export function toGeneratedAsset(post: BackendPost, stream: InteractionSource, packageId?: string): GeneratedAsset {
   const source = SOURCE[post.source ?? ''] ?? stream;
   const type = TYPE[post.channelPost ?? ''] ?? 'faq';
   const content = post.outputContentProcessed?.trim() ?? '';
-  const body = post.cta ? `${content}\n\n${post.cta}` : content;
+  const body = withCta(content, post.cta);
   return {
-    // Source in the id: Discord and Telegram ids are independent and could collide
-    id: `${LIVE_ASSET_PREFIX}${source.toLowerCase()}-${post.messageId}`,
+    id: liveAssetId(source, post.messageId),
     interactionId: post.messageId,
     batchId: post.messageBatchId ?? '',
     origin: {
@@ -199,7 +266,10 @@ export function toGeneratedAsset(post: BackendPost, stream: InteractionSource): 
     body,
     hashtags: post.hashtags ?? [],
     // LLM fallback records are traces, not publishable content
-    status: post.flag ? 'draft' : 'in_review',
+    status: post.flag ? 'draft' : post.approved ? 'approved' : 'in_review',
     createdAt: toIso(post.sentTime),
+    cta: post.cta ?? undefined,
+    versionMessage: post.versionMessage ?? 1,
+    packageId,
   };
 }
