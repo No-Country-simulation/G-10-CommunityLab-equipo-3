@@ -1,0 +1,66 @@
+# Production stack for the OCI ARM VM (Ampere A1).
+# On the VM, with the deploy variables exported in the shell:
+#   docker compose -f docker-compose-prod.yaml up -d --build
+name: communitylab-backend
+
+services:
+  redis:
+    image: redis:8.10
+    # Why AOF: open, sealed and pending batches survive a container restart until they reach OCI.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis-data:/data
+    # No ports: only reachable inside communitylab-net, which is why there is no password in Phase 1.
+    networks:
+      - communitylab-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    build: .
+    image: communitylab-backend:latest
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - communitylab-net
+    environment:
+      # Fixed for this stack: prod profile, Redis by service name, VM identity (no key files, R4).
+      - SPRING_PROFILES_ACTIVE=prod
+      - REDIS_HOST=redis
+      - OCI_AUTH_MODE=instance-principal
+      # Passed through from the deploy shell; values are never written in this file.
+      - API_KEY_LLM_MISTRAL_DEV
+      - MODEL_MISTRAL
+      - BASE_URL_MODEL_AI
+      - TELEGRAM_BOT_TOKEN
+      - TELEGRAM_LISTEN_GROUP_ID
+      - DISCORD_BOT_TOKEN
+      - DISCORD_LISTEN_CHANNEL_ID
+      - CORS_ALLOWED_ORIGINS_PROD
+      - OCI_BUCKET
+      - OCI_REGION
+      - OCI_NAMESPACE
+      - OCI_PREFIX
+    # Why 30s: lets Spring finish in-flight requests and close Redis/OCI clients on redeploy.
+    stop_grace_period: 30s
+    restart: unless-stopped
+    logging: *logging
+
+networks:
+  communitylab-net:
+    name: communitylab-net
+
+volumes:
+  redis-data:
