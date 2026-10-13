@@ -1,26 +1,37 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.out.storage;
 
+import com.nocountry.simulation.communitylab.application.dtos.ReplaceResult;
 import com.nocountry.simulation.communitylab.application.dtos.StoreResult;
+import com.nocountry.simulation.communitylab.application.dtos.StoredPackage;
+import com.nocountry.simulation.communitylab.application.exception.PackageTooLargeException;
+import com.nocountry.simulation.communitylab.application.exception.StorageFailureException;
 import com.nocountry.simulation.communitylab.application.port.out.ArtifactStore;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
+import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.infrastructure.config.oci.OciProperties;
 import com.oracle.bmc.model.BmcException;
 import com.oracle.bmc.objectstorage.ObjectStorage;
 import com.oracle.bmc.objectstorage.model.CreatePreauthenticatedRequestDetails;
 import com.oracle.bmc.objectstorage.model.PreauthenticatedRequest;
 import com.oracle.bmc.objectstorage.requests.CreatePreauthenticatedRequestRequest;
+import com.oracle.bmc.objectstorage.requests.GetObjectRequest;
 import com.oracle.bmc.objectstorage.requests.PutObjectRequest;
+import com.oracle.bmc.objectstorage.responses.GetObjectResponse;
 import com.oracle.bmc.objectstorage.responses.PutObjectResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 
 @Component
 @Slf4j
@@ -30,6 +41,7 @@ public class OciObjectStorageAdapter implements ArtifactStore {
 
     private static final int MAX_OBJECT_BYTES = 1_048_576;
     private static final int PRECONDITION_FAILED = 412;
+    private static final int NOT_FOUND = 404;
 
     private final ObjectStorage objectStorage;
     private final OciProperties properties;
@@ -113,6 +125,77 @@ public class OciObjectStorageAdapter implements ArtifactStore {
             log.warn("read PAR creation failed: batchId={} source={} status={} serviceCode={}",
                     assetPackage.batchId(), assetPackage.source(), e.getStatusCode(), e.getServiceCode());
             return StoreResult.failed();
+        }
+    }
+
+    @Override
+    public Optional<StoredPackage> load(Source source, String batchId) {
+        String objectKey = properties.prefix() + AssetPackage.objectName(source, batchId);
+
+        GetObjectRequest request = GetObjectRequest.builder()
+                .namespaceName(properties.namespace())
+                .bucketName(properties.bucket())
+                .objectName(objectKey)
+                .build();
+
+        GetObjectResponse response;
+        try{
+            response = objectStorage.getObject(request);
+        } catch (BmcException e){
+            if (e.getStatusCode() == NOT_FOUND) {
+                return Optional.empty();
+            }
+            log.warn("package load from OCI failed: batchId={} source={} status={} serviceCode={}",
+                    batchId, source, e.getStatusCode(), e.getServiceCode());
+            throw new StorageFailureException("package load failed");
+        }
+
+        try(InputStream body = response.getInputStream()){
+            if(response.getContentLength() >= MAX_OBJECT_BYTES){
+                // Why ERROR: the flush closes at 900KB, so a stored package this big only exists through a bug.
+                log.error("package over the 1MB budget, not revisable: batchId={} source={} bytes={}",
+                        batchId, source, response.getContentLength());
+                throw new PackageTooLargeException("package over the 1MB budget");
+            }
+            AssetPackage assetPackage = objectMapper.readValue(body, AssetPackage.class);
+            log.info("package loaded from OCI: batchId={} source={}", batchId, source);
+            return Optional.of(new StoredPackage(assetPackage, response.getETag()));
+        } catch (JacksonException | IOException e){
+            log.warn("package in OCI is unreadable: batchId={} source={}", batchId, source);
+            throw new StorageFailureException("package unreadable");
+        }
+    }
+
+    @Override
+    public ReplaceResult replace(AssetPackage assetPackage, String etag) {
+        byte[] bytes = objectMapper.writeValueAsBytes(assetPackage);
+        if (bytes.length >= MAX_OBJECT_BYTES) {
+            throw new PackageTooLargeException("revised package over the 1MB budget");
+        }
+
+        PutObjectRequest request = PutObjectRequest.builder()
+                .namespaceName(properties.namespace())
+                .bucketName(properties.bucket())
+                .objectName(properties.prefix() + assetPackage.objectName())
+                .contentType("application/json")
+                .contentLength((long) bytes.length)
+                .ifMatch(etag)
+                .putObjectBody(new ByteArrayInputStream(bytes))
+                .build();
+
+        try {
+            objectStorage.putObject(request);
+            log.info("package replaced in OCI: batchId={} source={}", assetPackage.batchId(), assetPackage.source());
+            return ReplaceResult.REPLACED;
+        } catch (BmcException e) {
+            if (e.getStatusCode() == PRECONDITION_FAILED) {
+                log.info("package changed since it was read: batchId={} source={}",
+                        assetPackage.batchId(), assetPackage.source());
+                return ReplaceResult.CONFLICT;
+            }
+            log.warn("package replace in OCI failed: batchId={} source={} status={} serviceCode={}",
+                    assetPackage.batchId(), assetPackage.source(), e.getStatusCode(), e.getServiceCode());
+            return ReplaceResult.FAILED;
         }
     }
 }
