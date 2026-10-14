@@ -85,7 +85,8 @@ public class AnalyzeMessageLlmAdapter implements RequestToLLMProcess {
             // First attempt
             return callLimited(request, systemText);
         } catch (Exception first) {
-            log.warn("LLM intento 1/2 fallido: {}", first.getMessage());
+            // Why the type only: parse errors can quote fragments of the model output, derived from the user's message (Q3).
+            log.warn("LLM intento 1/2 fallido: cause={}", first.getClass().getSimpleName());
             String repair = systemText + "\n\nPrevious output was invalid ("
                     + first.getMessage() + "). Respond with ONLY the JSON object.";
             return callLimited(request, repair);

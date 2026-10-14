@@ -2,6 +2,8 @@ package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.tel
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
@@ -12,9 +14,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -27,6 +31,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
 
+import com.nocountry.simulation.communitylab.application.dtos.History;
+import com.nocountry.simulation.communitylab.application.port.in.LoadHistoryUseCase;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.infrastructure.adapters.out.event.SseEventPublisherAdapter;
 
@@ -36,7 +42,7 @@ import net.dv8tion.jda.api.JDA;
  * SSE subscription endpoint (no Spring context slice: full Boot context with MockMvc).
  *
  * <p>Derivado de: spec 005 RF-07 (GET text/event-stream con reconexión por
- * {@code Last-Event-ID}) + plan.md §1,§3.
+ * {@code Last-Event-ID}) + spec 008 RF-01/RF-06 (el controller pasa un historial perezoso de su fuente) + plan.md §1,§3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -62,6 +68,9 @@ class GetMessageProcessedTelegramTest {
     @MockitoBean
     private SseEventPublisherAdapter publisher;
 
+    @MockitoBean
+    private LoadHistoryUseCase loadHistory;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -70,7 +79,7 @@ class GetMessageProcessedTelegramTest {
     void opensEventStream() throws Exception {
         // Given a fresh emitter from the publisher
         List<SseEmitter> emitted = new ArrayList<>();
-        when(publisher.subscribe(eq(Source.TELEGRAM), any())).thenAnswer(invocation -> {
+        when(publisher.subscribe(eq(Source.TELEGRAM), any(), any())).thenAnswer(invocation -> {
             SseEmitter emitter = new SseEmitter(60_000L);
             emitted.add(emitter);
             return emitter;
@@ -87,7 +96,7 @@ class GetMessageProcessedTelegramTest {
         mockMvc.perform(asyncDispatch(started))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM));
-        verify(publisher).subscribe(Source.TELEGRAM, null);
+        verify(publisher).subscribe(eq(Source.TELEGRAM), isNull(), any());
     }
 
     @Test
@@ -95,7 +104,7 @@ class GetMessageProcessedTelegramTest {
     void forwardsLastEventId() throws Exception {
         // Given a fresh emitter from the publisher
         List<SseEmitter> emitted = new ArrayList<>();
-        when(publisher.subscribe(eq(Source.TELEGRAM), any())).thenAnswer(invocation -> {
+        when(publisher.subscribe(eq(Source.TELEGRAM), any(), any())).thenAnswer(invocation -> {
             SseEmitter emitter = new SseEmitter(60_000L);
             emitted.add(emitter);
             return emitter;
@@ -111,6 +120,34 @@ class GetMessageProcessedTelegramTest {
         // And completing the emitter resolves 200 forwarding the id
         emitted.get(0).complete();
         mockMvc.perform(asyncDispatch(started)).andExpect(status().isOk());
-        verify(publisher).subscribe(Source.TELEGRAM, "tg-7");
+        verify(publisher).subscribe(eq(Source.TELEGRAM), eq("tg-7"), any());
+    }
+
+    @Test
+    @DisplayName("Dado una suscripción, cuando el adapter pide el historial, entonces se carga el de esta fuente y solo entonces")
+    @SuppressWarnings("unchecked")
+    void passesALazyHistoryOfItsOwnSource() throws Exception {
+        // Dado un adapter que devuelve un emitter y captura el supplier
+        ArgumentCaptor<Supplier<History>> history = ArgumentCaptor.forClass(Supplier.class);
+        List<SseEmitter> emitted = new ArrayList<>();
+        when(publisher.subscribe(eq(Source.TELEGRAM), any(), history.capture())).thenAnswer(invocation -> {
+            SseEmitter emitter = new SseEmitter(60_000L);
+            emitted.add(emitter);
+            return emitter;
+        });
+        when(loadHistory.load(Source.TELEGRAM)).thenReturn(History.empty());
+
+        // Cuando se suscribe
+        mockMvc.perform(get("/api/v1/telegram/messages").accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(request().asyncStarted());
+        emitted.get(0).complete();
+
+        // Entonces el controller no carga nada por su cuenta (la decisión replay/historial es del adapter)
+        verify(loadHistory, never()).load(any());
+
+        // Y cuando el adapter lo pide, se carga el historial de esta fuente, nunca el de la otra
+        history.getValue().get();
+        verify(loadHistory).load(Source.TELEGRAM);
+        verify(loadHistory, never()).load(Source.DISCORD);
     }
 }

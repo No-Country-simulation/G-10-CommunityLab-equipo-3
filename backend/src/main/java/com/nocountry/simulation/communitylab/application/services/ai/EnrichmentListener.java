@@ -3,10 +3,12 @@ package com.nocountry.simulation.communitylab.application.services.ai;
 import com.nocountry.simulation.communitylab.application.dtos.RequestToLLM;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
+import com.nocountry.simulation.communitylab.application.port.in.PackageRunUseCase;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommentFromAi;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
 import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMProcess;
+import com.nocountry.simulation.communitylab.application.services.storage.PackageRunService;
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
@@ -27,6 +29,7 @@ public class EnrichmentListener {
     private final EnrichedCommentFromAi converter;
     private final BufferPort buffer;
     private final EventPublishPost eventPublishPost;
+    private final PackageRunUseCase packageRunUseCase;
 
 
     @Async
@@ -89,38 +92,25 @@ public class EnrichmentListener {
                 return;
             }
 
-            // Create response to client
-            ResponseClient responseToClient = new ResponseClient(
-                    messageProcessed.authorName(),
-                    messageProcessed.messageAuthor(),
-                    messageProcessed.messageId(),
-                    messageProcessed.messageBatchId(),
-                    messageProcessed.sentiment(),
-                    messageProcessed.language(),
-                    messageProcessed.messageType(),
-                    messageProcessed.topics(),
-                    messageProcessed.relevance(),
-                    messageProcessed.flag(),
-                    messageProcessed.sentTime(),
-                    messageProcessed.source(),
-                    messageProcessed.channelPost(),
-                    messageProcessed.titlePost(),
-                    messageProcessed.outputContentProcessed(),
-                    messageProcessed.hashtags(),
-                    messageProcessed.cta()
-            );
+            // Create response to client (same conversion as the history snapshot)
+            ResponseClient responseToClient = ResponseClient.from(messageProcessed);
 
             // Sent message to client
             eventPublishPost.publish(responseToClient);
 
-            // Storage message in Redis
-            buffer.appendToBatch(messageProcessed);
+            long batchBytes = buffer.appendToBatch(messageProcessed);
+            packageRunUseCase.flushIfFull(messageProcessed.source(), batchBytes);
 
             log.info("pipeline done: messageId={} batchId={} channelPost={} flag={}",
                     comment.messageId(), event.message().batchId(),
                     messageProcessed.channelPost(), messageProcessed.flag());
         } catch (Exception e){
-            return;
+            // Why log: the post may already be on the dashboard (SSE) while missing from the package; without a
+            // trace that loss was invisible. Ids and exception type only (Q3).
+            log.warn("pipeline failed: messageId={} batchId={} cause={}",
+                    event.message() == null ? null : event.message().messageId(),
+                    event.message() == null ? null : event.message().batchId(),
+                    e.getClass().getSimpleName());
         }
     }
 }

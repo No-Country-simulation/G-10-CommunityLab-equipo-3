@@ -15,6 +15,12 @@ spring:
     ansi:
       enabled: always
 
+  # Config the size pool threads for task scheduling
+  task:
+    scheduling:
+      pool:
+        size: 2
+
 # Value of buffer max batch size
 redis:
   buffer:
@@ -26,3 +32,26 @@ telegram:
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
     listen-group-id: ${TELEGRAM_LISTEN_GROUP_ID}
+
+# config discord
+discord:
+  token: ${DISCORD_BOT_TOKEN}
+  channel-id: ${DISCORD_LISTEN_CHANNEL_ID}
+
+# Configuration Scheduler
+buffer:
+  flush:
+    cron: ${BUFFER_FLUSH_CRON:0 0 * * * *}
+    min-messages: ${BUFFER_FLUSH_MIN_MESSAGES:5}
+    scheduler:
+      enabled: ${BUFFER_FLUSH_SCHEDULER_ENABLED:true}
+
+# Configuration OCI
+oci:
+  bucket: ${OCI_BUCKET}
+  region: ${OCI_REGION}
+  namespace: ${OCI_NAMESPACE}
+  prefix: ${OCI_PREFIX}
+  par-ttl-days: ${PAR_TTL_DAYS:3}
+  auth-mode: ${OCI_AUTH_MODE:none}
+  config-profile: ${OCI_CONFIG_PROFILE}

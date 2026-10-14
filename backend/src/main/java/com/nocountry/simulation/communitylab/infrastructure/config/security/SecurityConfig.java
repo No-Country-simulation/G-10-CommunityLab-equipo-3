@@ -1,5 +1,6 @@
 package com.nocountry.simulation.communitylab.infrastructure.config.security;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,10 +22,14 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/v1/discord/messages").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/telegram/messages").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/v1/discord/packages/*/messages/*",
+                                "/api/v1/telegram/packages/*/messages/*").permitAll()
                         .anyRequest()
                         .denyAll())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
