@@ -157,13 +157,10 @@
       <p class="text-[0.74rem] leading-snug text-stone-500 dark:text-stone-400">
         {{ api.useMocks ? ('sidebar.mode.demoDetail' | t) : 'Spring Boot + OCI Object Storage' }}
       </p>
-      <p class="truncate border-t border-dashed border-stone-200 pt-1.5 font-mono text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
-        {{ api.useMocks ? 'mock-engine' : api.baseUrl }}
-      </p>
-      @if (store.liveUrl(); as liveUrl) {
+      <!-- No backend URL here: it means nothing to a CM and does not belong on screen -->
+      @if (store.liveUrl()) {
         @let live = store.liveStatus();
-        <div class="flex items-center justify-between gap-2 text-[0.72rem] text-stone-500 dark:text-stone-400"
-          [title]="liveUrl">
+        <div class="flex items-center justify-between gap-2 border-t border-dashed border-stone-200 pt-1.5 text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
           <span class="inline-flex items-center gap-1.5 font-semibold">
             <i [class]="store.activeSource() === 'Telegram' ? 'pi pi-telegram' : 'pi pi-discord'"></i> {{ 'sidebar.live.title' | t }}
           </span>
