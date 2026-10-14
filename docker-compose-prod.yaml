@@ -54,6 +54,8 @@ services:
       - OCI_REGION
       - OCI_NAMESPACE
       - OCI_PREFIX
+      - BUFFER_FLUSH_CRON
+      - BUFFER_FLUSH_MIN_MESSAGES
     # Why 30s: lets Spring finish in-flight requests and close Redis/OCI clients on redeploy.
     stop_grace_period: 30s
     restart: unless-stopped
