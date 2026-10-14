@@ -1,5 +1,6 @@
 package com.nocountry.simulation.communitylab.application.dtos;
 
+import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -30,4 +31,30 @@ public record ResponseClient(
         Boolean revised,
         Boolean approved,
         Integer versionMessage) {
+
+    // Why one place: the live event and the history snapshot must never send different shapes of the same post.
+    public static ResponseClient from(EnrichedComment comment) {
+        return new ResponseClient(
+                comment.authorName(),
+                comment.messageAuthor(),
+                comment.messageId(),
+                comment.messageBatchId(),
+                comment.sentiment(),
+                comment.language(),
+                comment.messageType(),
+                comment.topics(),
+                comment.relevance(),
+                comment.flag(),
+                comment.sentTime(),
+                comment.source(),
+                comment.channelPost(),
+                comment.titlePost(),
+                comment.outputContentProcessed(),
+                comment.hashtags(),
+                comment.cta(),
+                comment.revised(),
+                comment.approved(),
+                comment.versionMessage()
+        );
+    }
 }

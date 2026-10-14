@@ -182,4 +182,28 @@ public class RedisBufferAdapter implements BufferPort {
             log.warn("buffer redis down: discard batchId={} source={}", batchId, source);
         }
     }
+
+    @Override
+    public List<EnrichedComment> readOpen(Source source) {
+        try{
+            List<String> jsons = redisTemplate.opsForList().range(key(source, CURRENT_LIST), 0, -1);
+            if(jsons == null){
+                return List.of();
+            }
+
+            List<EnrichedComment> messages = new ArrayList<>();
+
+            for(String json : jsons){
+                try{
+                    messages.add(objectMapper.readValue(json, EnrichedComment.class));
+                }catch (JacksonException | InvalidAssetException e){
+                    log.warn("open record skipped: source={}", source);
+                }
+            }
+            return messages;
+        }catch(DataAccessException e){
+            log.warn("open batch read failed: source={} cause={}", source, e.getClass().getSimpleName());
+            return List.of();
+        }
+    }
 }

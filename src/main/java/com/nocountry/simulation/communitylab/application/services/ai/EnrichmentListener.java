@@ -92,29 +92,8 @@ public class EnrichmentListener {
                 return;
             }
 
-            // Create response to client
-            ResponseClient responseToClient = new ResponseClient(
-                    messageProcessed.authorName(),
-                    messageProcessed.messageAuthor(),
-                    messageProcessed.messageId(),
-                    messageProcessed.messageBatchId(),
-                    messageProcessed.sentiment(),
-                    messageProcessed.language(),
-                    messageProcessed.messageType(),
-                    messageProcessed.topics(),
-                    messageProcessed.relevance(),
-                    messageProcessed.flag(),
-                    messageProcessed.sentTime(),
-                    messageProcessed.source(),
-                    messageProcessed.channelPost(),
-                    messageProcessed.titlePost(),
-                    messageProcessed.outputContentProcessed(),
-                    messageProcessed.hashtags(),
-                    messageProcessed.cta(),
-                    messageProcessed.revised(),
-                    messageProcessed.approved(),
-                    messageProcessed.versionMessage()
-            );
+            // Create response to client (same conversion as the history snapshot)
+            ResponseClient responseToClient = ResponseClient.from(messageProcessed);
 
             // Sent message to client
             eventPublishPost.publish(responseToClient);

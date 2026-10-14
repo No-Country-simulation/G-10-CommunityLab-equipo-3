@@ -1,6 +1,7 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.in.web.discordMessage;
 
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
+import com.nocountry.simulation.communitylab.application.port.in.LoadHistoryUseCase;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.infrastructure.adapters.out.event.SseEventPublisherAdapter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class GetMessagesProcessedDiscord {
 
     private final SseEventPublisherAdapter publisher;
+    private final LoadHistoryUseCase loadHistory;
 
     @Operation(
             summary = "Subscribe to processed posts",
@@ -36,15 +38,20 @@ public class GetMessagesProcessedDiscord {
                     `payload.expiresAt` (ISO-8601); treat it as a secret and never log it.
                     - `message.revised` (id = messageId:v{versionMessage}): a post was approved or edited and \
                     saved as a new version. No content: reload the package through `parUrlBase`.
-                    Reconnect with the last received event id to replay missed events of every type. \
+                    On connect without `Last-Event-ID` (or with one the server no longer has), the stream first sends the \
+                    current history: one `package.completed` per package whose PAR is still valid (oldest first), then one \
+                    `asset.created` per processed message not yet stored in OCI, and finally `snapshot.completed` \
+                    (no id, data `{type, packages, pending}`). Live events follow. The same id may arrive twice: upsert by id.
+                    Reconnect with the last received event id to resume from memory instead of reloading the history. \
                     Swagger "Try it out" does not render streams; consume from the frontend with:
                     `const es = new EventSource('/api/v1/discord/messages'); \
                     es.addEventListener('asset.created', e => render(JSON.parse(e.data))); \
                     es.addEventListener('package.completed', e => loadPackage(JSON.parse(e.data).payload)); \
-                    es.addEventListener('message.revised', e => markRevised(JSON.parse(e.data).payload));`""")
+                    es.addEventListener('message.revised', e => markRevised(JSON.parse(e.data).payload)); \
+                    es.addEventListener('snapshot.completed', e => hideLoading());`""")
     @ApiResponse(
             responseCode = "200",
-            description = "Stream opened; events flow as `asset.created`, `package.completed` and `message.revised` until timeout (~30min), then reconnect.",
+            description = "Stream opened; the history block ends with `snapshot.completed`, then `asset.created`, `package.completed` and `message.revised` flow live until timeout (~30min), then reconnect.",
             content = @Content(
                     mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
                     schema = @Schema(implementation = ResponseClient.class),
@@ -101,6 +108,15 @@ public class GetMessagesProcessedDiscord {
                                                 "approved": true,
                                                 "revised": true
                                               }
+                                            }"""),
+                            @ExampleObject(
+                                    name = "snapshot.completed",
+                                    summary = "End of the history block sent on connect (no id)",
+                                    value = """
+                                            {
+                                              "type": "snapshot.completed",
+                                              "packages": 2,
+                                              "pending": 3
                                             }""")
                     }))
     @GetMapping(value = "/api/v1/discord/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -108,6 +124,6 @@ public class GetMessagesProcessedDiscord {
             @Parameter(description = "Last received event id for replay; omit on first connect.", example = "msg-1")
             @RequestHeader(value = "Last-Event-ID", required = false) String lastEvent) {
         log.debug("sse subscribe: lastEventId={}", lastEvent);
-        return publisher.subscribe(Source.DISCORD,lastEvent);
+        return publisher.subscribe(Source.DISCORD, lastEvent, () -> loadHistory.load(Source.DISCORD));
     }
 }

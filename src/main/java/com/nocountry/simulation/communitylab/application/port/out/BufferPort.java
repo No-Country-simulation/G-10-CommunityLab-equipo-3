@@ -16,5 +16,6 @@ public interface BufferPort {
     // For build AssetPackage
     List<EnrichedComment> readSealed(Source source, String batchId);
     void discardSealed (Source source, String batchId);
+    List<EnrichedComment> readOpen(Source source);
 
 }

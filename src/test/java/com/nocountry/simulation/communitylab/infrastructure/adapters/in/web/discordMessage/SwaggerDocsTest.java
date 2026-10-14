@@ -24,7 +24,8 @@ import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
  *
  * <p>Derivado de: spec 004 RF-04 (Swagger documenta el único GET) + spec 005 RF-07
  * (Swagger documenta el GET Telegram) + spec 006 RF-06 + TASK-006-04 (evento {@code package.completed}
- * en ambos GET SSE, sin {@code GET /packages*}) + spec 007 RF-02 (PATCH de revisión) + constitution P3.
+ * en ambos GET SSE, sin {@code GET /packages*}) + spec 007 RF-02 (PATCH de revisión) + spec 008 RF-04
+ * (historial al conectar y {@code snapshot.completed} documentados en ambos GET SSE) + constitution P3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -188,6 +189,22 @@ class SwaggerDocsTest {
                     .andExpect(jsonPath(example + ".payload.revised").value(true))
                     // the notice carries no content: the post is read through the PAR (RF-07)
                     .andExpect(jsonPath(example + ".payload.outputContentProcessed").doesNotExist());
+        }
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then both SSE streams document the history block and snapshot.completed (spec 008)")
+    void documentsTheHistoryBlockOnBothStreams() throws Exception {
+        for (String source : new String[] {"discord", "telegram"}) {
+            String get = "$.paths['/api/v1/" + source + "/messages'].get";
+            String example = get + ".responses['200'].content['text/event-stream'].examples['snapshot.completed'].value";
+            mockMvc.perform(get("/v3/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath(get + ".description").value(containsString("snapshot.completed")))
+                    .andExpect(jsonPath(get + ".description").value(containsString("upsert by id")))
+                    .andExpect(jsonPath(example + ".type").value("snapshot.completed"))
+                    .andExpect(jsonPath(example + ".packages").exists())
+                    .andExpect(jsonPath(example + ".pending").exists());
         }
     }
 
