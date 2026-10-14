@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import com.nocountry.simulation.communitylab.application.port.in.PackageRunUseCase;
 import com.nocountry.simulation.communitylab.application.port.out.ArtifactStore;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
+import com.nocountry.simulation.communitylab.application.port.out.PackageIndex;
 import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
 
 /**
@@ -85,6 +86,11 @@ class PackageRunServiceStartupTest {
         @Bean
         PackagePublisher packagePublisher() {
             return mock(PackagePublisher.class);
+        }
+
+        @Bean
+        PackageIndex packageIndex() {
+            return mock(PackageIndex.class);
         }
     }
 }

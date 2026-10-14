@@ -21,8 +21,11 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisOperations;
@@ -49,9 +52,11 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p>Derivado de: spec 004 RF buffer (SADD dedup, RPUSH, INCRBY bytes) + spec 006
  * RF-01 (cierre por tamaño) + regla nueva lote por fuente + plan 006 §3 (sellado
- * MULTI/RENAME sin Lua, pendientes reintentables).
+ * MULTI/RENAME sin Lua, pendientes reintentables) + spec 008 RF-01/RF-06/RF-07 + plan 008 §1.1
+ * ({@code readOpen}: lote abierto de su fuente, en orden de llegada, degradado a vacío).
  */
 @DisplayName("RedisBufferAdapter")
+@ExtendWith(OutputCaptureExtension.class)
 class RedisBufferAdapterTest {
 
     private RedisTemplate<String, String> redisTemplate;
@@ -338,6 +343,74 @@ class RedisBufferAdapterTest {
 
         verify(redisTemplate).delete("buffer:TELEGRAM:sealed:b-1");
         verify(setOps).remove("buffer:TELEGRAM:pending", "b-1");
+    }
+
+    // ---------- open batch (spec 008) ----------
+
+    @Test
+    @DisplayName("Dado un lote abierto con varios mensajes, cuando se lee, entonces vuelven todos en orden de llegada")
+    void readOpenReturnsEveryMessageInArrivalOrder() throws Exception {
+        // Dado 3 mensajes en el lote abierto de TELEGRAM
+        EnrichedComment first = post("m-1", Source.TELEGRAM);
+        EnrichedComment second = post("m-2", Source.TELEGRAM);
+        EnrichedComment third = post("m-3", Source.TELEGRAM);
+        when(listOps.range("buffer:TELEGRAM:current:list", 0, -1)).thenReturn(List.of(
+                objectMapper.writeValueAsString(first),
+                objectMapper.writeValueAsString(second),
+                objectMapper.writeValueAsString(third)));
+
+        // Cuando se lee el lote abierto
+        List<EnrichedComment> records = adapter.readOpen(Source.TELEGRAM);
+
+        // Entonces todos (no solo el primero), en el orden del RPUSH
+        assertThat(records).containsExactly(first, second, third);
+    }
+
+    @Test
+    @DisplayName("Dado un registro corrupto en el lote abierto, cuando se lee, entonces se salta solo ese y el log no lleva contenido")
+    void readOpenSkipsCorruptRecord(CapturedOutput output) throws Exception {
+        // Dado un json roto entre dos válidos
+        EnrichedComment first = post("m-1", Source.TELEGRAM);
+        EnrichedComment second = post("m-2", Source.TELEGRAM);
+        when(listOps.range("buffer:TELEGRAM:current:list", 0, -1)).thenReturn(List.of(
+                objectMapper.writeValueAsString(first),
+                "{not-json",
+                objectMapper.writeValueAsString(second)));
+
+        // Cuando se lee
+        List<EnrichedComment> records = adapter.readOpen(Source.TELEGRAM);
+
+        // Entonces los válidos llegan al snapshot y queda rastro solo con la fuente
+        assertThat(records).containsExactly(first, second);
+        assertThat(output.getOut()).contains("open record skipped: source=TELEGRAM").doesNotContain("not-json");
+    }
+
+    @Test
+    @DisplayName("Dado lotes abiertos en ambas fuentes, cuando se lee el de DISCORD, entonces solo se consulta la lista de DISCORD")
+    void readOpenReadsOnlyItsSourceList() {
+        // Dado un lote DISCORD vacío
+        when(listOps.range("buffer:DISCORD:current:list", 0, -1)).thenReturn(List.of());
+
+        // Cuando se lee / Entonces nunca toca TELEGRAM ni las listas selladas (dual-get)
+        assertThat(adapter.readOpen(Source.DISCORD)).isEmpty();
+        verify(listOps, never()).range(eq("buffer:TELEGRAM:current:list"), anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("Dado Redis caído, cuando se lee el lote abierto, entonces devuelve vacío sin lanzar")
+    void readOpenRedisDownReturnsEmpty() {
+        when(listOps.range(anyString(), eq(0L), eq(-1L))).thenThrow(new RedisConnectionFailureException("down"));
+
+        assertThat(adapter.readOpen(Source.TELEGRAM)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Dado un timeout de Redis, cuando se lee el lote abierto, entonces tampoco escapa (DataAccessException)")
+    void readOpenRedisTimeoutReturnsEmpty() {
+        when(listOps.range(anyString(), eq(0L), eq(-1L)))
+                .thenThrow(new org.springframework.dao.QueryTimeoutException("timeout"));
+
+        assertThat(adapter.readOpen(Source.TELEGRAM)).isEmpty();
     }
 
     private static EnrichedComment post(String messageId, Source source) {

@@ -6,8 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.nocountry.simulation.communitylab.application.dtos.History;
 import com.nocountry.simulation.communitylab.application.dtos.MessageRevised;
 import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
@@ -45,7 +49,9 @@ import tools.jackson.databind.json.JsonMapper;
  * expiresAt}}} por {@code source}, {@code id=batchId}, replay con {@code Last-Event-ID})
  * + RNF-06 (la PAR nunca en logs) + spec 007 RF-08 ({@code message.revised {type, batchId, payload:{messageId,
  * versionMessage, approved}}} por {@code source}, {@code id={messageId}:v{versionMessage}}, sin contenido) + RNF-04
- * + plan 006 §3 (comentario {@code connected} al suscribirse + heartbeat cada 30 s: Cloudflare corta a los 100 s sin bytes).
+ * + plan 006 §3 (comentario {@code connected} al suscribirse + heartbeat cada 30 s: Cloudflare corta a los 100 s sin bytes)
+ * + spec 008 RF-01/RF-02/RF-04/RF-05/RF-06/RNF-04 (historial al conectar: paquetes vigentes → pendientes →
+ * {@code snapshot.completed} sin id; replay si el {@code Last-Event-ID} es conocido, historial si no) + plan 008 §1.1, §2.
  * No Spring context: real adapter + real controllers over standalone MockMvc,
  * asserting on the buffered servlet response (the observable send behavior).
  */
@@ -61,14 +67,22 @@ class SseEventPublisherAdapterTest {
     private final JsonMapper json = JsonMapper.builder().build();
     private SseEventPublisherAdapter adapter;
     private MockMvc mockMvc;
+    // Fake history use case: what each source would load, and every load that actually happened.
+    private final Map<Source, History> histories = new EnumMap<>(Source.class);
+    private final List<Source> historyLoads = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         adapter = new SseEventPublisherAdapter();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                new GetMessagesProcessedDiscord(adapter),
-                new GetMessageProcessedTelegram(adapter))
+                new GetMessagesProcessedDiscord(adapter, this::loadHistory),
+                new GetMessageProcessedTelegram(adapter, this::loadHistory))
                 .build();
+    }
+
+    private History loadHistory(Source source) {
+        historyLoads.add(source);
+        return histories.getOrDefault(source, History.empty());
     }
 
     @Test
@@ -349,7 +363,7 @@ class SseEventPublisherAdapterTest {
         subscribe("/api/v1/telegram/messages", null);
 
         // Entonces el comentario es por conexión, no un broadcast
-        assertThat(first.getResponse().getContentAsString()).isEqualTo(":connected\n\n");
+        assertThat(occurrences(first.getResponse().getContentAsString(), ":connected\n\n")).isEqualTo(1);
     }
 
     // ---------- heartbeat (Cloudflare 524) ----------
@@ -365,8 +379,11 @@ class SseEventPublisherAdapterTest {
         adapter.heartbeat();
 
         // Entonces Cloudflare ve tráfico en los dos streams, no solo en el de una fuente
-        assertThat(discord.getResponse().getContentAsString()).isEqualTo(":connected\n\n:heartbeat\n\n");
-        assertThat(telegram.getResponse().getContentAsString()).isEqualTo(":connected\n\n:heartbeat\n\n");
+        for (MvcResult stream : List.of(discord, telegram)) {
+            String content = stream.getResponse().getContentAsString();
+            assertThat(content).endsWith("\n\n:heartbeat\n\n");
+            assertThat(occurrences(content, ":heartbeat\n\n")).isEqualTo(1);
+        }
     }
 
     @Test
@@ -389,7 +406,7 @@ class SseEventPublisherAdapterTest {
     @DisplayName("Dado una conexión cerrada antes que una viva, cuando late el heartbeat, entonces no lanza y la viva lo recibe igual")
     void heartbeatSkipsADeadClientWithoutBreakingTheRest() throws Exception {
         // Dado un emitter ya cerrado (cliente que se fue) registrado antes que un dashboard vivo
-        adapter.subscribe(Source.TELEGRAM, null).complete();
+        adapter.subscribe(Source.TELEGRAM, null, History::empty).complete();
         MvcResult alive = subscribe("/api/v1/telegram/messages", null);
 
         // Cuando late el heartbeat / Entonces el fallo del muerto no se propaga al scheduler
@@ -417,6 +434,163 @@ class SseEventPublisherAdapterTest {
                 .isEqualTo(Duration.ofSeconds(30));
     }
 
+    // ---------- history on connect (spec 008) ----------
+
+    @Test
+    @DisplayName("Dado paquetes vigentes y mensajes sin guardar, cuando se suscribe sin Last-Event-ID, entonces llegan :connected, paquetes, mensajes y snapshot.completed en ese orden")
+    void initialBlockComesInTheSpecifiedOrder() throws Exception {
+        // Dado el historial de Telegram con 2 paquetes y 2 mensajes pendientes
+        histories.put(Source.TELEGRAM, new History(
+                List.of(completed("b-1", Source.TELEGRAM), completed("b-2", Source.TELEGRAM)),
+                List.of(telegramPost("m-1"), telegramPost("m-2"))));
+
+        // Cuando un dashboard abre el stream por primera vez
+        String content = subscribe("/api/v1/telegram/messages", null).getResponse().getContentAsString();
+
+        // Entonces el bloque inicial sigue el orden de RF-01
+        List<String> blocks = Arrays.asList(content.split("\n\n"));
+        assertThat(blocks).hasSize(6);
+        assertThat(blocks.get(0)).isEqualTo(":connected");
+        assertThat(blocks.get(1)).contains("id:b-1", "event:package.completed");
+        assertThat(blocks.get(2)).contains("id:b-2", "event:package.completed");
+        assertThat(blocks.get(3)).contains("id:m-1", "event:asset.created");
+        assertThat(blocks.get(4)).contains("id:m-2", "event:asset.created");
+        assertThat(blocks.get(5)).contains("event:snapshot.completed");
+    }
+
+    @Test
+    @DisplayName("Dado un historial, cuando termina el bloque inicial, entonces snapshot.completed no lleva id y trae type, packages y pending")
+    void snapshotCompletedHasNoIdAndCarriesTheCounts() throws Exception {
+        // Dado 1 paquete y 3 mensajes pendientes
+        histories.put(Source.TELEGRAM, new History(
+                List.of(completed("b-1", Source.TELEGRAM)),
+                List.of(telegramPost("m-1"), telegramPost("m-2"), telegramPost("m-3"))));
+
+        // Cuando se suscribe
+        String block = namedBlock(subscribe("/api/v1/telegram/messages", null).getResponse().getContentAsString(),
+                "snapshot.completed");
+
+        // Entonces no mueve el Last-Event-ID del navegador y cuenta lo enviado
+        assertThat(block.lines()).noneMatch(line -> line.startsWith("id:"));
+        JsonNode data = json.readTree(dataOf(block));
+        assertThat(data.propertyNames()).containsExactly("type", "packages", "pending");
+        assertThat(data.get("type").asString()).isEqualTo("snapshot.completed");
+        assertThat(data.get("packages").asInt()).isEqualTo(1);
+        assertThat(data.get("pending").asInt()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("Dado un paquete en el historial, cuando se envía, entonces su package.completed es idéntico al que salió en vivo")
+    void historyEventsAreTheSameAsTheLiveOnes() throws Exception {
+        // Dado un dashboard que vio en vivo el paquete b-1
+        MvcResult live = subscribe("/api/v1/telegram/messages", null);
+        adapter.publishPackage(completed("b-1", Source.TELEGRAM));
+        String liveData = dataOf(eventBlock(live.getResponse().getContentAsString(), "b-1"));
+
+        // Cuando otro dashboard llega tarde y lo recibe por el historial
+        histories.put(Source.TELEGRAM, new History(List.of(completed("b-1", Source.TELEGRAM)), List.of()));
+        String late = subscribe("/api/v1/telegram/messages", null).getResponse().getContentAsString();
+
+        // Entonces el mismo JSON, con la PAR que el frontend lee directo de OCI
+        assertThat(dataOf(eventBlock(late, "b-1"))).isEqualTo(liveData);
+        assertThat(json.readTree(liveData).get("payload").get("parUrlBase").asString()).isEqualTo(PAR_URL);
+    }
+
+    @Test
+    @DisplayName("Dado un Last-Event-ID que sigue en memoria, cuando se reconecta, entonces repite lo posterior sin cargar el historial")
+    void knownLastEventIdReplaysWithoutLoadingTheHistory() throws Exception {
+        // Dado dos eventos en la cola de replay y un historial que no debería usarse
+        adapter.publish(telegramPost("tg-1"));
+        adapter.publish(telegramPost("tg-2"));
+        histories.put(Source.TELEGRAM, new History(List.of(completed("b-old", Source.TELEGRAM)), List.of()));
+
+        // Cuando se reconecta desde tg-1
+        String content = subscribe("/api/v1/telegram/messages", "tg-1").getResponse().getContentAsString();
+
+        // Entonces solo lo posterior, sin tocar Redis, y snapshot.completed cuenta el replay
+        assertThat(historyLoads).isEmpty();
+        assertThat(content).contains("id:tg-2").doesNotContain("id:tg-1\n").doesNotContain("b-old");
+        JsonNode data = json.readTree(dataOf(namedBlock(content, "snapshot.completed")));
+        assertThat(data.get("packages").asInt()).isZero();
+        assertThat(data.get("pending").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Dado un replay con una revisión, cuando se cuentan los eventos repetidos, entonces message.revised no suma a packages ni a pending")
+    void replayCountsOnlyPackagesAndAssets() throws Exception {
+        // Dado un asset, un paquete y una revisión tras el último id visto
+        adapter.publish(telegramPost("tg-1"));
+        adapter.publish(telegramPost("tg-2"));
+        adapter.publishPackage(completed("b-1", Source.TELEGRAM));
+        adapter.publishRevision(revised("tg-2", 2, Source.TELEGRAM));
+
+        // Cuando se reconecta desde tg-1
+        String content = subscribe("/api/v1/telegram/messages", "tg-1").getResponse().getContentAsString();
+
+        // Entonces 1 asset y 1 paquete (la revisión se repite pero no se cuenta)
+        assertThat(eventBlock(content, "tg-2:v2")).contains("event:message.revised");
+        JsonNode data = json.readTree(dataOf(namedBlock(content, "snapshot.completed")));
+        assertThat(data.get("packages").asInt()).isEqualTo(1);
+        assertThat(data.get("pending").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Dado un Last-Event-ID que ya no está en memoria (redeploy), cuando se reconecta, entonces recibe el historial completo")
+    void unknownLastEventIdGetsTheFullHistory() throws Exception {
+        // Dado un backend recién reiniciado (cola vacía) y paquetes vigentes en Redis
+        histories.put(Source.TELEGRAM, new History(List.of(completed("b-1", Source.TELEGRAM)), List.of(telegramPost("m-1"))));
+
+        // Cuando el navegador reconecta con su último id de antes del reinicio
+        String content = subscribe("/api/v1/telegram/messages", "tg-before-restart").getResponse().getContentAsString();
+
+        // Entonces no se queda sin historial
+        assertThat(historyLoads).containsExactly(Source.TELEGRAM);
+        assertThat(eventBlock(content, "b-1")).contains("event:package.completed");
+        assertThat(eventBlock(content, "m-1")).contains("event:asset.created");
+    }
+
+    @Test
+    @DisplayName("Dado ningún dato, cuando se suscribe, entonces recibe :connected y snapshot.completed con contadores a 0")
+    void emptyHistoryStillEndsTheInitialBlock() throws Exception {
+        // Cuando se suscribe sin historial
+        String content = subscribe("/api/v1/telegram/messages", null).getResponse().getContentAsString();
+
+        // Entonces el frontend sabe igual que ya cargó (quita el estado de carga)
+        assertThat(content).startsWith(":connected\n\n");
+        JsonNode data = json.readTree(dataOf(namedBlock(content, "snapshot.completed")));
+        assertThat(data.get("packages").asInt()).isZero();
+        assertThat(data.get("pending").asInt()).isZero();
+    }
+
+    @Test
+    @DisplayName("Dado historial en ambas fuentes, cuando se suscribe a Discord, entonces solo se carga y se envía el de Discord")
+    void historyIsIsolatedBySource() throws Exception {
+        // Dado historial distinto por fuente
+        histories.put(Source.DISCORD, new History(List.of(completed("b-d", Source.DISCORD)), List.of()));
+        histories.put(Source.TELEGRAM, new History(List.of(completed("b-t", Source.TELEGRAM)), List.of()));
+
+        // Cuando se suscribe a Discord
+        String content = subscribe("/api/v1/discord/messages", null).getResponse().getContentAsString();
+
+        // Entonces nada de Telegram
+        assertThat(historyLoads).containsExactly(Source.DISCORD);
+        assertThat(content).contains("id:b-d").doesNotContain("b-t");
+    }
+
+    @Test
+    @DisplayName("Dado un historial con PAR, cuando se suscribe, entonces el log lleva fuente y contadores pero nunca la PAR")
+    void subscriptionLogCarriesCountsButNeverThePar(CapturedOutput output) throws Exception {
+        // Dado un paquete vigente
+        histories.put(Source.TELEGRAM, new History(List.of(completed("b-1", Source.TELEGRAM)), List.of(telegramPost("m-1"))));
+
+        // Cuando se suscribe
+        subscribe("/api/v1/telegram/messages", null);
+
+        // Entonces se puede rastrear sin filtrar el secreto (RNF-04)
+        assertThat(output.getOut()).contains("sse subscribed: source=TELEGRAM packages=1 pending=1");
+        assertThat(output.getOut()).doesNotContain("SECRET-PAR-TOKEN");
+    }
+
     // ---------- fixtures ----------
 
     private static MessageRevised revised(String messageId, int versionMessage, Source source) {
@@ -441,6 +615,18 @@ class SseEventPublisherAdapterTest {
                 .filter(block -> block.lines().anyMatch(line -> line.equals("id:" + id)))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no SSE event with id " + id + " in:\n" + stream));
+    }
+
+    // Blocks without id (snapshot.completed) are found by event name.
+    private static String namedBlock(String stream, String name) {
+        return Arrays.stream(stream.split("\n\n"))
+                .filter(block -> block.lines().anyMatch(line -> line.equals("event:" + name)))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no SSE event named " + name + " in:\n" + stream));
+    }
+
+    private static int occurrences(String text, String fragment) {
+        return text.split(java.util.regex.Pattern.quote(fragment), -1).length - 1;
     }
 
     private static String dataOf(String block) {

@@ -28,15 +28,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.StoreResult;
 import com.nocountry.simulation.communitylab.application.port.out.ArtifactStore;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
+import com.nocountry.simulation.communitylab.application.port.out.PackageIndex;
 import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
@@ -49,17 +53,20 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 /**
  * Flush orchestration per source: size trigger, hourly trigger, retry of pending
  * sealed batches, per-source locking and the {@code package.completed} notice.
- * No Spring context; Mockito only at the {@link BufferPort}, {@link ArtifactStore}
- * and {@link PackagePublisher} boundaries.
+ * No Spring context; Mockito only at the {@link BufferPort}, {@link ArtifactStore},
+ * {@link PackagePublisher} and {@link PackageIndex} boundaries.
  *
  * <p>Derivado de: spec 006 RF-01 (flush por tamaño, vacío no se sube; fallo OCI sin
  * evento) + RF-05 (idempotencia, nunca perder el lote; enmienda 2026-10-10: 412 con
  * PAR nueva) + RF-06 (aviso {@code package.completed} por {@code source}) + regla
  * nueva lote por fuente con flush horario si {@code count >= min-messages} + plan
  * 006 §3 (lock por fuente) + RNF-01 / constitución R6 (umbral {@code <= 921600} para
- * no romper el tope de 1MB; decisión 2026-10-12: fuera de rango no arranca).
+ * no romper el tope de 1MB; decisión 2026-10-12: fuera de rango no arranca) + spec 008 RF-03
+ * (todo paquete anunciado, re-flush incluido, se registra en el índice) + RF-07 (un fallo del índice no
+ * hace fallar el flush ni devuelve el lote a pendientes) + plan 008 §1.1, §3.
  */
 @DisplayName("PackageRunService")
+@ExtendWith(OutputCaptureExtension.class)
 class PackageRunServiceTest {
 
     private static final long MAX_BYTES = 1_000L;
@@ -71,6 +78,7 @@ class PackageRunServiceTest {
     private BufferPort buffer;
     private ArtifactStore store;
     private PackagePublisher publisher;
+    private PackageIndex index;
     private PackageRunService service;
 
     @BeforeEach
@@ -78,7 +86,8 @@ class PackageRunServiceTest {
         buffer = mock(BufferPort.class);
         store = mock(ArtifactStore.class);
         publisher = mock(PackagePublisher.class);
-        service = new PackageRunService(buffer, store, MAX_BYTES, MIN_MESSAGES, publisher);
+        index = mock(PackageIndex.class);
+        service = new PackageRunService(buffer, store, MAX_BYTES, MIN_MESSAGES, publisher, index);
     }
 
     // ---------- size trigger ----------
@@ -254,10 +263,10 @@ class PackageRunServiceTest {
         // Cuando se hace flush
         service.flushIfFull(Source.DISCORD, MAX_BYTES);
 
-        // Entonces no se borra (el próximo tick lo reintenta) y no se anuncia nada
+        // Entonces no se borra (el próximo tick lo reintenta) y no se anuncia ni se indexa nada
         verify(store).save(any());
         verify(buffer, never()).discardSealed(any(), anyString());
-        verifyNoInteractions(publisher);
+        verifyNoInteractions(publisher, index);
     }
 
     @Test
@@ -270,9 +279,9 @@ class PackageRunServiceTest {
         // Cuando se hace flush, nada escapa al listener async
         assertThatCode(() -> service.flushIfFull(Source.DISCORD, MAX_BYTES)).doesNotThrowAnyException();
 
-        // Entonces el lote sigue pendiente y no se anuncia nada
+        // Entonces el lote sigue pendiente y no se anuncia ni se indexa nada
         verify(buffer, never()).discardSealed(any(), anyString());
-        verifyNoInteractions(publisher);
+        verifyNoInteractions(publisher, index);
     }
 
     @Test
@@ -389,6 +398,71 @@ class PackageRunServiceTest {
         verify(buffer).discardSealed(Source.DISCORD, "b-1");
     }
 
+    // ---------- package index (spec 008) ----------
+
+    @Test
+    @DisplayName("Dado un paquete guardado, cuando termina el flush, entonces se anuncia y después se registra en el índice el mismo aviso")
+    void storedPackageIsRecordedInTheIndexAfterTheNotice() {
+        // Dado un lote DISCORD y un store que confirma
+        sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD), post("m-2", Source.DISCORD));
+        when(store.save(any())).thenReturn(STORED);
+
+        // Cuando se hace flush
+        service.flushIfFull(Source.DISCORD, MAX_BYTES);
+
+        // Entonces el vivo sale primero y el índice guarda exactamente lo anunciado (lo que reenviará el snapshot)
+        ArgumentCaptor<PackageCompleted> notice = ArgumentCaptor.forClass(PackageCompleted.class);
+        ArgumentCaptor<PackageCompleted> recorded = ArgumentCaptor.forClass(PackageCompleted.class);
+        InOrder order = inOrder(publisher, index);
+        order.verify(publisher).publishPackage(notice.capture());
+        order.verify(index).record(recorded.capture());
+        assertThat(recorded.getValue()).isEqualTo(notice.getValue());
+        assertThat(recorded.getValue().parUrlBase()).isEqualTo(PAR_URL);
+    }
+
+    @Test
+    @DisplayName("Dado un re-flush (412) con PAR nueva, cuando termina, entonces el índice recibe el lote con la PAR nueva")
+    void alreadyStoredPackageIsRecordedWithTheFreshPar() {
+        // Dado un pendiente que ya estaba en OCI y una PAR recién creada
+        String freshPar = "https://par.example/p/fresh-token/o/paquete.json";
+        Instant freshExpiry = Instant.parse("2026-10-08T12:00:00Z");
+        when(buffer.pendingBatches(Source.DISCORD)).thenReturn(Set.of("old"));
+        when(buffer.readSealed(Source.DISCORD, "old")).thenReturn(List.of(post("m-1", Source.DISCORD)));
+        when(store.save(any())).thenReturn(StoreResult.alreadyStored(freshPar, freshExpiry));
+
+        // Cuando corre el reintento
+        service.flushIfFull(Source.DISCORD, MAX_BYTES);
+
+        // Entonces la entrada del lote se sustituye por la PAR vigente (RF-03)
+        ArgumentCaptor<PackageCompleted> recorded = ArgumentCaptor.forClass(PackageCompleted.class);
+        verify(index).record(recorded.capture());
+        assertThat(recorded.getValue().batchId()).isEqualTo("old");
+        assertThat(recorded.getValue().parUrlBase()).isEqualTo(freshPar);
+        assertThat(recorded.getValue().expiresAt()).isEqualTo(freshExpiry);
+    }
+
+    @Test
+    @DisplayName("Dado un índice que lanza, cuando termina el flush, entonces no escapa, el lote no vuelve a pendientes y el log no dice que la subida falló")
+    void indexFailureNeitherFailsTheFlushNorLooksLikeAFailedUpload(CapturedOutput output) {
+        // Dado un paquete guardado y un índice que revienta
+        sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
+        when(store.save(any())).thenReturn(STORED);
+        doThrow(new IllegalStateException("index down")).when(index).record(any());
+
+        // Cuando se hace flush, nada escapa al listener async ni al scheduler
+        assertThatCode(() -> service.flushIfFull(Source.DISCORD, MAX_BYTES)).doesNotThrowAnyException();
+
+        // Entonces el lote ya en OCI quedó descartado y anunciado: no se vuelve a subir
+        verify(buffer).discardSealed(Source.DISCORD, "b-1");
+        verify(publisher).publishPackage(any());
+
+        // Y los logs cuentan lo que pasó: guardado, con un aviso del índice; nunca "upload failed"
+        assertThat(output.getOut())
+                .contains("package index record failed: batchId=b-1 source=DISCORD")
+                .contains("package stored: batchId=b-1 source=DISCORD")
+                .doesNotContain("package upload failed");
+    }
+
     // ---------- per-source lock ----------
 
     @Test
@@ -479,7 +553,7 @@ class PackageRunServiceTest {
         // Dado un umbral que rompe el margen bajo 1MB (o que no tiene sentido)
         // Cuando se construye el servicio (Spring lo hace al arrancar)
         // Entonces falla con un mensaje que dice qué variable corregir y el tope
-        assertThatThrownBy(() -> new PackageRunService(buffer, store, maxBytes, MIN_MESSAGES, publisher))
+        assertThatThrownBy(() -> new PackageRunService(buffer, store, maxBytes, MIN_MESSAGES, publisher, index))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("REDIS_BUFFER_MAX_BYTES")
                 .hasMessageContaining("921600");
@@ -489,7 +563,7 @@ class PackageRunServiceTest {
     @DisplayName("Dado el umbral exacto de 921600, cuando se construye el servicio, entonces arranca y sella al alcanzarlo")
     void acceptsTheCeilingItself() {
         // Dado el valor por defecto (el tope está incluido: > y no >=)
-        PackageRunService atCeiling = new PackageRunService(buffer, store, 921_600L, MIN_MESSAGES, publisher);
+        PackageRunService atCeiling = new PackageRunService(buffer, store, 921_600L, MIN_MESSAGES, publisher, index);
         sealable(Source.DISCORD, "b-1", post("m-1", Source.DISCORD));
         when(store.save(any())).thenReturn(STORED);
 
