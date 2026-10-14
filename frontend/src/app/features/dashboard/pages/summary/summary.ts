@@ -9,10 +9,11 @@ import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { StatCard, StatItem } from '../../../../shared/stat-card/stat-card';
 import { Bear } from '../../../../shared/bear/bear';
+import { InteractionsCharts } from './interactions-charts';
 
 @Component({
   selector: 'app-summary',
-  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, AssetTitlePipe, Bear],
+  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, AssetTitlePipe, Bear, InteractionsCharts],
   templateUrl: './summary.html',
   styleUrl: './summary.css',
 })
@@ -23,42 +24,6 @@ export class Summary {
 
   protected readonly typeIcon = ASSET_TYPE_ICON;
   protected readonly typeTint = ASSET_TYPE_TINT;
-
-  /** The four steps the challenge asks for, each linked to where it happens in the app (title/text are i18n keys). */
-  protected readonly steps = [
-    {
-      title: 'step.ingest',
-      text: 'summary.step.ingest',
-      icon: 'pi pi-inbox',
-      link: '/app/content',
-      color: '#d97706',
-      colorTo: '#b45309',
-    },
-    {
-      title: 'step.analysis',
-      text: 'summary.step.analysis',
-      icon: 'pi pi-sparkles',
-      link: '/app/content',
-      color: '#8b5cf6',
-      colorTo: '#6d28d9',
-    },
-    {
-      title: 'step.orchestration',
-      text: 'summary.step.orchestration',
-      icon: 'pi pi-sitemap',
-      link: '/app/content',
-      color: '#10b981',
-      colorTo: '#047857',
-    },
-    {
-      title: 'step.storage',
-      text: 'summary.step.storage',
-      icon: 'pi pi-cloud-upload',
-      link: '/app/storage',
-      color: '#e0654f',
-      colorTo: '#c74634',
-    },
-  ];
 
   /** Greeting of the welcome card, by local time of day (i18n key). */
   protected readonly greetingKey = (() => {

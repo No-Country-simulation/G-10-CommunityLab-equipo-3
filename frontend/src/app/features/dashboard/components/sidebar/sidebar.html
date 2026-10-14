@@ -15,10 +15,12 @@
   <div class="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-5 py-6" [class.lg:px-3]="c">
     <!-- Brand -->
     <div class="mb-4 flex items-center gap-3" [class.lg:justify-center]="c">
-      <div class="h-16 w-16 shrink-0 overflow-hidden rounded-[18px] border border-amber-500/30 bg-gradient-to-br from-amber-100 to-amber-200 shadow-[0_6px_14px_rgb(217_119_6/0.3)] transition-all duration-300 hover:-rotate-6 hover:scale-105"
-        [class.lg:h-14]="c" [class.lg:w-14]="c">
+      <!-- The logo leads back to the public landing page -->
+      <a routerLink="/" (click)="close.emit()" [pTooltip]="'topbar.landing' | t" tooltipPosition="right" [tooltipDisabled]="!c"
+        class="block h-16 w-16 shrink-0 overflow-hidden rounded-[18px] border border-amber-500/30 bg-gradient-to-br from-amber-100 to-amber-200 shadow-[0_6px_14px_rgb(217_119_6/0.3)] transition-all duration-300 hover:-rotate-6 hover:scale-105"
+        [class.lg:h-14]="c" [class.lg:w-14]="c" [attr.aria-label]="'topbar.landing' | t">
         <img src="image/logo/oso-head.png" alt="Ukuku AI" width="64" height="64" class="h-full w-full object-cover" />
-      </div>
+      </a>
       <div class="min-w-0" [class.lg:hidden]="c">
         <p class="font-display text-[1.3rem] font-extrabold leading-none text-espresso dark:text-white">Ukuku <span class="text-amber-600 dark:text-amber-400">AI</span></p>
         <p class="mt-1 text-[11px] leading-snug text-stone-500 dark:text-stone-400">{{ 'brand.tagline' | t }}</p>

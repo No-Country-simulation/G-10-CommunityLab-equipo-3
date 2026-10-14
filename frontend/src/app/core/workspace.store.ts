@@ -58,6 +58,19 @@ export class WorkspaceStore {
     () => this.assets().filter((a) => a.status === 'draft' || a.status === 'in_review').length,
   );
 
+  /**
+   * Every community message received, across both networks: one entry per message (a message can generate
+   * several posts), with its network and when it was written. Feeds the summary charts.
+   */
+  readonly interactions = computed(() => {
+    const byMessage = new Map<string, { source: InteractionSource; at: string }>();
+    for (const a of this._assets()) {
+      const key = `${a.origin.source}:${a.interactionId}`;
+      if (!byMessage.has(key)) byMessage.set(key, { source: a.origin.source, at: a.createdAt });
+    }
+    return [...byMessage.values()];
+  });
+
   /** Items waiting for review per network, for the network list in the sidebar. */
   readonly pendingBySource = computed(() => {
     const counts = Object.fromEntries(INTERACTION_SOURCES.map((s) => [s, 0])) as Record<InteractionSource, number>;

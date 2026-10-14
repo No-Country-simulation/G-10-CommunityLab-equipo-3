@@ -1,0 +1,202 @@
+<!-- Period control: one row above the charts it scopes -->
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <h2 class="card-title">{{ 'summary.charts.title' | t }}</h2>
+  <div class="range-switch" role="radiogroup" [attr.aria-label]="'summary.charts.rangeAria' | t">
+    @for (r of ranges; track r) {
+      <button type="button" role="radio" class="range-option" [class.is-active]="range() === r"
+        [attr.aria-checked]="range() === r" (click)="setRange(r)">{{ 'summary.charts.range.' + r | t }}</button>
+    }
+  </div>
+</div>
+
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+  <!-- Interactions per network: the whole period, or the clicked column -->
+  @let s = split();
+  @let d = delta();
+  <section class="card p-5 sm:p-6" [class.is-scoped]="s.scope">
+    <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ 'summary.charts.byNetwork.title' | t }}</h3>
+    @if (s.scope) {
+      <button type="button" class="scope-chip" (click)="selected.set(null)" [attr.aria-label]="'summary.charts.clearSelection' | t">
+        {{ s.scope }} <i class="pi pi-times text-[9px]" aria-hidden="true"></i>
+      </button>
+    } @else {
+      <p class="card-subtitle">{{ 'summary.charts.subtitle.' + range() | t }}</p>
+    }
+
+    <div class="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
+      <p class="text-4xl font-bold text-slate-900 dark:text-white" [appCountUp]="s.all" [duration]="600"></p>
+      <!-- Change against the previous period: arrow + sign + words, never color alone -->
+      @if (!s.scope) {
+        @if (d) {
+          <p class="delta mb-1" [class.is-up]="d.change > 0" [class.is-down]="d.change < 0">
+            <i class="pi text-[10px]" [class]="d.change > 0 ? 'pi-arrow-up' : d.change < 0 ? 'pi-arrow-down' : 'pi-minus'" aria-hidden="true"></i>
+            {{ 'summary.charts.vsPrevious' | t: { delta: (d.change > 0 ? '+' : d.change < 0 ? '−' : '') + d.text } }}
+          </p>
+        } @else {
+          <p class="mb-1 text-xs text-slate-400">{{ 'summary.charts.noPrevious' | t }}</p>
+        }
+      }
+    </div>
+    <p class="text-xs text-slate-500 dark:text-slate-400">{{ 'summary.charts.total' | t }}</p>
+
+    <!-- One stacked bar, 2px surface gap between the segments; segments slide when the data changes -->
+    <div class="split-bar mt-5" role="img"
+      [attr.aria-label]="sources[0] + ' ' + s.rows[0].value + ', ' + sources[1] + ' ' + s.rows[1].value">
+      @for (row of s.rows; track row.source) {
+        <span class="split-segment" [class]="'series-' + row.source.toLowerCase()"
+          [class.is-dimmed]="emphasis() && emphasis() !== row.source"
+          [class.is-zero]="!s.all || row.off || !row.value" [style.flex-grow]="s.all && !row.off ? row.value : 0"></span>
+      }
+      @if (!s.all) {
+        <span class="split-segment split-empty"></span>
+      }
+    </div>
+
+    <!-- Legend with the values, also the toggle and the emphasis control -->
+    <ul class="mt-4 space-y-1">
+      @for (row of s.rows; track row.source) {
+        <li>
+          <button type="button" class="legend-row" [class.is-off]="row.off" [attr.aria-pressed]="!row.off"
+            [attr.aria-label]="'summary.charts.toggleSeries' | t: { name: row.source }"
+            (click)="toggle(row.source)" (pointerenter)="emphasis.set(row.source)" (pointerleave)="emphasis.set(null)"
+            (focus)="emphasis.set(row.source)" (blur)="emphasis.set(null)">
+            <span class="legend-swatch" [class]="'series-' + row.source.toLowerCase()" aria-hidden="true"></span>
+            <i [class]="sourceIcon[row.source]" class="text-slate-500 dark:text-slate-400" aria-hidden="true"></i>
+            <span class="flex-1 text-left text-slate-700 dark:text-slate-200">{{ row.source }}</span>
+            @if (row.off) {
+              <span class="text-xs text-slate-400">{{ 'summary.charts.hidden' | t }}</span>
+            } @else {
+              <span class="font-semibold text-slate-900 dark:text-white" [appCountUp]="row.value" [duration]="600"></span>
+              <span class="w-11 text-right text-xs text-slate-500 dark:text-slate-400">{{ pct(row.share) }}</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+    <p class="mt-4 text-[11px] text-slate-400">{{ 'summary.charts.hint' | t }}</p>
+  </section>
+
+  <!-- Interactions over time: stacked columns by network -->
+  <section class="card p-5 sm:p-6 xl:col-span-2">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900 dark:text-white">{{ 'summary.charts.overTime.title' | t }}</h3>
+        <p class="card-subtitle">{{ 'summary.charts.subtitle.' + range() | t }}</p>
+      </div>
+      <!-- Legend chips: click to show/hide a network, hover to emphasize it -->
+      <ul class="flex items-center gap-1.5 text-xs">
+        @for (src of sources; track src) {
+          @let off = hidden().has(src);
+          <li>
+            <button type="button" class="legend-chip" [class.is-off]="off" [attr.aria-pressed]="!off"
+              [attr.aria-label]="'summary.charts.toggleSeries' | t: { name: src }"
+              (click)="toggle(src)" (pointerenter)="emphasis.set(src)" (pointerleave)="emphasis.set(null)"
+              (focus)="emphasis.set(src)" (blur)="emphasis.set(null)">
+              <span class="legend-swatch" [class]="'series-' + src.toLowerCase()" aria-hidden="true"></span>{{ src }}
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+
+    @let max = axisMax();
+    @let top = peak();
+    <div class="chart mt-5" (pointerleave)="active.set(null)">
+      <!-- Hairline gridlines and their clean tick values (they slide when the scale changes) -->
+      <div class="plot">
+        @for (t of ticks(); track t) {
+          <div class="gridline" [style.bottom.%]="(t / max) * 100">
+            <span class="tick">{{ t }}</span>
+          </div>
+        }
+
+        <div class="columns">
+          @for (b of buckets(); track b.label; let i = $index) {
+            @let sum = total(b.counts);
+            @let height = grown() ? (sum / max) * 100 : 0;
+            <!-- The whole band is the hit target, not just the painted column -->
+            <button type="button" class="band"
+              [class.is-active]="active() === i" [class.is-selected]="selected() === i" [class.is-pulse]="pulse() === i"
+              [attr.aria-pressed]="selected() === i" [style.--i]="i"
+              [attr.aria-label]="b.longLabel + ': ' + sources[0] + ' ' + b.counts[sources[0]] + ', ' + sources[1] + ' ' + b.counts[sources[1]]"
+              (pointerenter)="active.set(i)" (focus)="active.set(i)" (blur)="active.set(null)"
+              (click)="select(i)" (keydown)="onKey($event, i)">
+              <span class="column" [style.height.%]="height">
+                @for (src of visible(); track src) {
+                  <span class="segment" [class]="'series-' + src.toLowerCase()"
+                    [class.is-dimmed]="emphasis() && emphasis() !== src" [style.flex-grow]="b.counts[src]"
+                    [class.is-empty]="!b.counts[src]"></span>
+                }
+              </span>
+
+              <!-- The one direct label: the peak's value on its cap -->
+              @if (i === top && active() !== i) {
+                <span class="cap-label" [style.bottom.%]="height">{{ sum }}</span>
+              }
+              @if (pulse() === i) {
+                <span class="pulse-badge" [style.bottom.%]="height">+1</span>
+              }
+
+              @if (active() === i) {
+                <!-- One tooltip, every series; the value leads, the name follows -->
+                <span class="tooltip" [class.tooltip-left]="i > buckets().length / 2" role="tooltip">
+                  <span class="tooltip-title">{{ b.longLabel }}</span>
+                  @for (src of sources; track src) {
+                    <span class="tooltip-row" [class.is-off]="hidden().has(src)">
+                      <span class="tooltip-key" [class]="'series-' + src.toLowerCase()" aria-hidden="true"></span>
+                      <strong>{{ b.counts[src] }}</strong>
+                      <span>{{ src }}</span>
+                    </span>
+                  }
+                  <span class="tooltip-hint">{{ (selected() === i ? 'summary.charts.clickToClear' : 'summary.charts.clickToScope') | t }}</span>
+                </span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="axis" aria-hidden="true">
+        @for (b of buckets(); track b.label; let i = $index) {
+          <span class="axis-label" [class.is-selected]="selected() === i">{{ showAxisLabel(i) ? b.label : '' }}</span>
+        }
+      </div>
+
+      @if (!split().all && selected() === null) {
+        <p class="chart-empty">{{ 'summary.charts.empty' | t }}</p>
+      }
+    </div>
+
+    <!-- Table view: every value without hovering -->
+    <button type="button" class="mt-4 text-xs font-semibold text-amber-700 hover:underline dark:text-amber-400"
+      [attr.aria-expanded]="showTable()" (click)="showTable.set(!showTable())">
+      {{ (showTable() ? 'summary.charts.hideTable' : 'summary.charts.showTable') | t }}
+    </button>
+    @if (showTable()) {
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-500 dark:text-slate-400">
+            <tr>
+              <th class="py-1.5 pr-4 font-semibold">{{ 'summary.charts.period' | t }}</th>
+              @for (src of sources; track src) {
+                <th class="py-1.5 pr-4 text-right font-semibold">{{ src }}</th>
+              }
+              <th class="py-1.5 text-right font-semibold">{{ 'summary.charts.total' | t }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 tabular-nums text-slate-700 dark:divide-slate-800 dark:text-slate-200">
+            @for (b of buckets(); track b.label; let i = $index) {
+              <tr [class.is-selected-row]="selected() === i">
+                <td class="py-1.5 pr-4">{{ b.longLabel }}</td>
+                @for (src of sources; track src) {
+                  <td class="py-1.5 pr-4 text-right">{{ b.counts[src] }}</td>
+                }
+                <td class="py-1.5 text-right font-semibold">{{ b.counts[sources[0]] + b.counts[sources[1]] }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
