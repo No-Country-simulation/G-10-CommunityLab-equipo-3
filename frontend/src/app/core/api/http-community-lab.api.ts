@@ -83,12 +83,12 @@ export class HttpCommunityLabApi extends CommunityLabApi {
     return forkJoin(
       refs.map((ref) =>
         this.packages.loadRaw(ref).pipe(
-          map(({ sizeBytes }) => toStoredObject(ref, sizeBytes)),
+          map(({ pkg, sizeBytes }) => toStoredObject(ref, sizeBytes, pkg.generatedAt)),
           // Unreadable right now: still listed, size unknown
           catchError(() => of(toStoredObject(ref, 0))),
         ),
       ),
-    );
+    ).pipe(map((list) => list.sort((a, b) => b.storedAt.localeCompare(a.storedAt))));
   }
 
   getStoredObject(objectName: string): Observable<StoredObjectView> {
@@ -101,12 +101,15 @@ export class HttpCommunityLabApi extends CommunityLabApi {
 /** Object name inside the bucket prefix, as the backend writes it */
 const objectNameOf = (ref: PackageRef) => `${ref.source.toLowerCase()}/paquete-${ref.batchId}.json`;
 
-function toStoredObject(ref: PackageRef, sizeBytes: number): StoredObject {
+/** When the package was stored: its own `generatedAt`, else its PAR expiry minus the 3-day TTL */
+const PAR_TTL_MS = 3 * 864e5;
+
+function toStoredObject(ref: PackageRef, sizeBytes: number, generatedAt?: string): StoredObject {
   return {
     objectName: objectNameOf(ref),
     batchId: ref.batchId,
     sizeBytes,
-    storedAt: ref.storedAt,
+    storedAt: generatedAt ?? new Date(Date.parse(ref.expiresAt) - PAR_TTL_MS).toISOString(),
     interactions: ref.assetsCount,
     assets: ref.assetsCount,
     // Never the PAR: it is a secret. The object path is enough to find it in the OCI console.

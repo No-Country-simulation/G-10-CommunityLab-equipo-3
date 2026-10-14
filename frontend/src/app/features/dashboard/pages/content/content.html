@@ -75,7 +75,7 @@
           <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
             <i class="pi pi-inbox text-slate-400"></i>
           </div>
-          <p class="font-medium">{{ (store.loaded() ? 'content.empty' : 'common.loading') | t }}</p>
+          <p class="font-medium">{{ (store.historyLoading() ? 'common.loadingHistory' : store.loaded() ? 'content.empty' : 'common.loading') | t }}</p>
           <p class="text-sm text-slate-500 dark:text-slate-400">{{ 'content.emptyText' | t }}</p>
         </li>
       }

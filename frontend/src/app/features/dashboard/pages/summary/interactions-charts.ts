@@ -85,6 +85,9 @@ export class InteractionsCharts {
   protected readonly pulse = signal<number | null>(null);
   protected readonly showTable = signal(false);
 
+  /** The backend is still sending the history of the selected network (spec 008) */
+  protected readonly loadingHistory = computed(() => this.store.historyLoading());
+
   protected readonly visible = computed(() => INTERACTION_SOURCES.filter((s) => !this.hidden().has(s)));
 
   /** Buckets of the selected range plus, in front, the same number of buckets before it (for the delta) */

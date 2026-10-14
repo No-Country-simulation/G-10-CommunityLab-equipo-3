@@ -8,6 +8,7 @@ import { BackendPost, PackageNotice, toGeneratedAsset } from './live-feed';
 export interface BackendPackage {
   batchId: string;
   source: 'DISCORD' | 'TELEGRAM';
+  /** When the backend stored the package */
   generatedAt: string;
   /** One record per message: the post plus its analysis (`LLM_FALLBACK` traces included) */
   enriched: BackendPost[];
@@ -15,41 +16,34 @@ export interface BackendPackage {
   promptVersion?: string;
 }
 
-/** What the browser keeps of a `package.completed` notice. */
-export interface PackageRef extends PackageNotice {
-  /** When the notice arrived: the package was stored then */
-  storedAt: string;
-}
-
-const STORAGE_KEY = 'oci-packages.v1';
+/** A package announced by `package.completed`, live or replayed in the history block. */
+export type PackageRef = PackageNotice;
 
 /**
- * OCI packages announced by `package.completed`. The backend exposes no "list packages" endpoint, so the
- * notices are kept in this browser until their PAR expires (3 days): that is what lets curated posts and the
- * storage page survive a page reload. The PAR is a secret: kept only here, never logged or shown.
+ * OCI packages announced by `package.completed`. Every time a dashboard connects, the backend replays all packages
+ * with a valid PAR (last 3 days, backend spec 008), so every tab and every user sees the same history: nothing is
+ * stored in the browser. The PAR is a secret: kept only in memory, never logged or shown.
  */
 @Injectable({ providedIn: 'root' })
 export class OciPackages {
   private readonly http = inject(HttpClient);
-  private readonly _refs = signal<PackageRef[]>(readRefs());
+  private readonly _refs = signal<PackageRef[]>([]);
 
-  /** Known packages that can still be read, newest first */
+  /** Known packages, newest announcement first */
   readonly refs = this._refs.asReadonly();
 
+  /** One request per package version: the storage page and the curation list share it */
+  private readonly cache = new Map<string, Observable<{ pkg: BackendPackage; sizeBytes: number }>>();
+
+  /** Registers a notice; the same batch announced again (history replay, re-flush) replaces the old entry. */
   add(notice: PackageNotice): PackageRef {
-    const ref: PackageRef = { ...notice, storedAt: new Date().toISOString() };
-    // A re-flush of the same batch comes with a new PAR: keep only the latest one
-    this._refs.update((refs) => [ref, ...refs.filter((r) => !sameBatch(r, ref))]);
-    this.persist();
-    return ref;
+    this._refs.update((refs) => [notice, ...refs.filter((r) => !sameBatch(r, notice))]);
+    return notice;
   }
 
   find(source: InteractionSource, batchId: string): PackageRef | undefined {
     return this._refs().find((r) => r.source === source && r.batchId === batchId);
   }
-
-  /** One request per package version: the storage page and the curation list share it */
-  private readonly cache = new Map<string, Observable<{ pkg: BackendPackage; sizeBytes: number }>>();
 
   /** GET the package straight from OCI (no backend call, no credentials besides the PAR), with its size. */
   loadRaw(ref: PackageRef): Observable<{ pkg: BackendPackage; sizeBytes: number }> {
@@ -83,27 +77,8 @@ export class OciPackages {
   /** Forget a package whose PAR stopped working (expired or revoked) */
   drop(ref: PackageRef) {
     this._refs.update((refs) => refs.filter((r) => !sameBatch(r, ref)));
-    this.persist();
-  }
-
-  private persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this._refs()));
-    } catch {
-      // packages just won't survive a reload
-    }
+    this.cache.delete(ref.parUrlBase);
   }
 }
 
 const sameBatch = (a: PackageRef, b: PackageRef) => a.source === b.source && a.batchId === b.batchId;
-
-/** Saved notices whose PAR has not expired yet */
-function readRefs(): PackageRef[] {
-  try {
-    const refs = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as PackageRef[];
-    const now = Date.now();
-    return Array.isArray(refs) ? refs.filter((r) => r?.parUrlBase && Date.parse(r.expiresAt) > now) : [];
-  } catch {
-    return [];
-  }
-}

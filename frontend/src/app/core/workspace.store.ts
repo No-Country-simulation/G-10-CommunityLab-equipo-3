@@ -10,7 +10,7 @@ import {
   StoredObject,
 } from './api/api.models';
 import { MessageService } from 'primeng/api';
-import { CommunityLabApi, RevisionError } from './api/community-lab.api';
+import { API_CONFIG, CommunityLabApi, RevisionError } from './api/community-lab.api';
 import { LIVE_ASSET_PREFIX, LiveFeed, RevisionNotice, liveAssetId } from './api/live-feed';
 import { OciPackages, PackageRef } from './api/oci-packages';
 import { I18n } from './i18n/i18n.service';
@@ -27,6 +27,7 @@ const MOOD_WINDOW = 20;
 export class WorkspaceStore {
   private readonly api = inject(CommunityLabApi);
   private readonly liveFeed = inject(LiveFeed);
+  private readonly config = inject(API_CONFIG);
   private readonly packages = inject(OciPackages);
   private readonly toast = inject(MessageService);
   private readonly i18n = inject(I18n);
@@ -117,11 +118,27 @@ export class WorkspaceStore {
     this.liveFeed.packages.subscribe((notice) => {
       const ref = this.packages.add(notice);
       this.loadPackage(ref);
-      this.refreshStorage();
+      // The history block can announce dozens of packages in a row: refresh the storage list once per burst
+      clearTimeout(this.storageRefresh);
+      this.storageRefresh = setTimeout(() => this.refreshStorage(), 300);
     });
     this.liveFeed.revisions.subscribe((n) => this.onRevised(n));
     this.liveFeed.connect();
   }
+
+  private storageRefresh?: ReturnType<typeof setTimeout>;
+
+  /** Whether the selected network already received its history from the backend (spec 008) */
+  readonly historyLoaded = computed(() => this.liveFeed.historyLoaded()[this._activeSource()]);
+
+  /** Waiting for the history of the selected network: show "loading" instead of an empty list */
+  readonly historyLoading = computed(
+    () =>
+      !this.config.useMocks &&
+      !!this.liveFeed.urlOf(this._activeSource()) &&
+      this.liveStatus() !== 'error' &&
+      !this.historyLoaded(),
+  );
 
   /** Connection state of the selected network's SSE stream. */
   readonly liveStatus = computed(() => this.liveFeed.status()[this._activeSource()]);

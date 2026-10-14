@@ -163,7 +163,7 @@
       </div>
 
       @if (!split().all && selected() === null) {
-        <p class="chart-empty">{{ 'summary.charts.empty' | t }}</p>
+        <p class="chart-empty">{{ (loadingHistory() ? 'common.loadingHistory' : 'summary.charts.empty') | t }}</p>
       }
     </div>
 

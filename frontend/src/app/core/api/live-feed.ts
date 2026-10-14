@@ -104,6 +104,14 @@ export class LiveFeed implements OnDestroy {
     Object.fromEntries(INTERACTION_SOURCES.map((s) => [s, 'off'])) as Record<InteractionSource, LiveFeedStatus>,
   );
 
+  /**
+   * Whether each network already sent its history (`snapshot.completed`, backend spec 008). On connect the backend
+   * replays the last 3 days with the same events as live (package.completed + asset.created), then this marker.
+   */
+  readonly historyLoaded = signal(
+    Object.fromEntries(INTERACTION_SOURCES.map((s) => [s, false])) as Record<InteractionSource, boolean>,
+  );
+
   /** Assets pushed by the backend from every network, already mapped to the frontend contract. */
   readonly assets: Observable<GeneratedAsset> = this.assets$.asObservable();
   /** Batches stored in OCI (`package.completed`). */
@@ -166,6 +174,10 @@ export class LiveFeed implements OnDestroy {
     });
     on<BackendNotice<{ messageId: string; versionMessage: number; approved: boolean }>>('message.revised', (n) =>
       this.revisions$.next({ source, batchId: n.batchId, ...n.payload }),
+    );
+    // End of the history block: the same ids may arrive again later, the store updates instead of duplicating
+    on<{ packages: number; pending: number }>('snapshot.completed', () =>
+      this.historyLoaded.update((h) => ({ ...h, [source]: true })),
     );
   }
 
