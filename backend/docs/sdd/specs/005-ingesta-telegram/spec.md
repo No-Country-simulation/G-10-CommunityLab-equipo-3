@@ -46,7 +46,7 @@ Objetivo 005: escuchar los mensajes de Telegram —el backend es el bot—, vali
 ## 5. Fuera de Alcance (Out of Scope)
 
 - Webhook Telegram, endpoints REST de ingesta (`POST /api/v1/ingest*`): eliminados, la entrada es vía bot long polling.
-- `GET /packages*` (sin recuperación persistida; frontend solo recibe el vivo), polling/CSV entrantes.
+- `GET /packages*` (sin recuperación persistida; frontend solo recibe el vivo; *desde 2026-10-14 el historial vigente llega por el mismo `GET` SSE al conectar, spec 008*), polling/CSV entrantes.
 - Rate-limit por fuente + `429` (fuera de Fase 1).
 - Auth, usuarios, roles, DB relacional (Fase >1).
 - Publicación automática a LinkedIn/X, responder/diagnosticar dudas (003 RF-04 prohibido responder).

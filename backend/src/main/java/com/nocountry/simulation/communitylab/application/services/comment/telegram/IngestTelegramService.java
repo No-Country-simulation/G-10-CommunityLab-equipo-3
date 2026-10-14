@@ -36,7 +36,7 @@ public class IngestTelegramService implements IngestUseCaseTelegram {
                     Source.TELEGRAM
             );
 
-            String batchId = bufferPort.getCurrentBatchId();
+            String batchId = bufferPort.getCurrentBatchId(Source.TELEGRAM);
 
             ChannelMessage message = ChannelMessage.from(comment, batchId);
 

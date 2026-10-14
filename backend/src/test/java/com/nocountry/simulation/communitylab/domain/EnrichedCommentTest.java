@@ -9,6 +9,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
@@ -41,7 +45,7 @@ class EnrichedCommentTest {
                 "Conseguí empleo como dev Java", sentiment, Language.ES, messageType,
                 topics, relevance, flag, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                channelPost, titlePost, copy, hashtags, cta);
+                channelPost, titlePost, copy, hashtags, cta, false, false, 1);
     }
 
     private static EnrichedComment linkedin(String copy, List<String> hashtags, String cta) {
@@ -234,10 +238,10 @@ class EnrichedCommentTest {
                 "¿Cómo desplegar una API en OCI cuando aparece el error 401?",
                 List.of("#OCI"), null);
 
-        // Then question post preserved with mandatory title and no CTA
+        // Then question post preserved with mandatory title and no CTA ("" since spec 007 RF-03)
         assertThat(enriched.channelPost()).isEqualTo(Channels.FAQ);
         assertThat(enriched.titlePost()).isEqualTo("Despliegue en OCI: error 401");
-        assertThat(enriched.cta()).isNull();
+        assertThat(enriched.cta()).isEmpty();
     }
 
     @Test
@@ -294,14 +298,14 @@ class EnrichedCommentTest {
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, false, 1))
                 .isInstanceOf(InvalidAssetException.class);
         assertThatThrownBy(() -> new EnrichedComment(
                         "batch-1", null, "listen-123", "author-1", "author-name",
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, false, 1))
                 .isInstanceOf(InvalidAssetException.class);
     }
 
@@ -322,5 +326,127 @@ class EnrichedCommentTest {
 
     private static String words(int n) {
         return "word ".repeat(n).trim();
+    }
+
+    // ---------- spec 007 RF-01: review attributes ----------
+
+    // Valid X post where only the review attributes vary.
+    private static EnrichedComment reviewed(Boolean approved, Integer versionMessage) {
+        return reviewed(false, approved, versionMessage);
+    }
+
+    private static EnrichedComment reviewed(Boolean revised, Boolean approved, Integer versionMessage) {
+        return new EnrichedComment(
+                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
+                "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
+                List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
+                SENT, Source.DISCORD,
+                Channels.X, null, "hello", List.of("#ONE"), null,
+                revised, approved, versionMessage);
+    }
+
+    @Test
+    @DisplayName("Given no approval state (record written before spec 007), when built, then it is not approved")
+    void nullApprovedDefaultsToFalse() {
+        // Given / When a record without approved
+        var enriched = reviewed(null, 1);
+
+        // Then it reads as pending approval, never null
+        assertThat(enriched.approved()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given no review mark (record written before the 2026-10-13 amendment), when built, then it is not reviewed")
+    void nullRevisedDefaultsToFalse() {
+        // Given / When a record without revised
+        var enriched = reviewed(null, false, 1);
+
+        // Then it reads as pending review, never null
+        assertThat(enriched.revised()).isFalse();
+    }
+
+    @ParameterizedTest(name = "versionMessage={0}")
+    @NullSource
+    @ValueSource(ints = {0, -3})
+    @DisplayName("Given a missing or non-positive versionMessage, when built, then it is the AI original (1)")
+    void missingOrInvalidVersionDefaultsToOne(Integer versionMessage) {
+        // Given / When a record without a usable version
+        var enriched = reviewed(false, versionMessage);
+
+        // Then it is treated as the untouched AI output
+        assertThat(enriched.versionMessage()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given valid review attributes, when built, then they are kept as received")
+    void keepsValidReviewAttributes() {
+        // Given / When a reviewed and approved post already edited twice
+        var enriched = reviewed(true, true, 3);
+
+        // Then nothing is reset
+        assertThat(enriched.revised()).isTrue();
+        assertThat(enriched.approved()).isTrue();
+        assertThat(enriched.versionMessage()).isEqualTo(3);
+    }
+
+    // ---------- spec 007 RF-03: one value for "empty" in titlePost / cta ----------
+
+    // Valid X post (needs neither title nor CTA) where only titlePost and cta vary.
+    private static EnrichedComment withOptionalTexts(String titlePost, String cta) {
+        return new EnrichedComment(
+                "batch-1", "msg-1", "listen-123", "author-1", "author-name",
+                "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
+                List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
+                SENT, Source.DISCORD,
+                Channels.X, titlePost, "hello", List.of("#ONE"), cta, false, false, 1);
+    }
+
+    @ParameterizedTest(name = "cta=[{0}]")
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("Dado un cta ausente, vacío o en blanco, cuando se construye, entonces queda como cadena vacía")
+    void emptyCtaIsNormalizedToEmptyString(String cta) {
+        // Dado un registro del LLM, uno anterior a 007 o una edición sin CTA
+        var enriched = withOptionalTexts("Titulo", cta);
+
+        // Entonces el frontend recibe siempre "" y nunca null
+        assertThat(enriched.cta()).isNotNull().isEmpty();
+    }
+
+    @ParameterizedTest(name = "titlePost=[{0}]")
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("Dado un titlePost ausente, vacío o en blanco, cuando se construye, entonces queda como cadena vacía")
+    void emptyTitleIsNormalizedToEmptyString(String titlePost) {
+        // Dado un post sin título (todo lo que no es FAQ)
+        var enriched = withOptionalTexts(titlePost, "Síguenos");
+
+        // Entonces un único valor para "sin título"
+        assertThat(enriched.titlePost()).isNotNull().isEmpty();
+    }
+
+    @Test
+    @DisplayName("Dado un titlePost y un cta con texto, cuando se construye, entonces se conservan tal cual")
+    void nonEmptyOptionalTextsAreKept() {
+        // Dado / Cuando un post con título y CTA
+        var enriched = withOptionalTexts("Titulo", "Síguenos");
+
+        // Entonces la normalización solo toca los vacíos
+        assertThat(enriched.titlePost()).isEqualTo("Titulo");
+        assertThat(enriched.cta()).isEqualTo("Síguenos");
+    }
+
+    @Test
+    @DisplayName("Dado un registro LLM_FALLBACK sin título ni CTA, cuando se construye, entonces también quedan vacíos")
+    void fallbackOptionalTextsAreNormalizedToo() {
+        // Dado una traza de fallo con null en los textos opcionales
+        var enriched = post(
+                null, null, null, List.of(), null,
+                Sentiment.NEUTRAL, MessageType.OTRO, List.of(), 0,
+                EnrichedComment.LLM_FALLBACK);
+
+        // Entonces el paquete no mezcla null y "" para el mismo significado
+        assertThat(enriched.titlePost()).isEmpty();
+        assertThat(enriched.cta()).isEmpty();
     }
 }

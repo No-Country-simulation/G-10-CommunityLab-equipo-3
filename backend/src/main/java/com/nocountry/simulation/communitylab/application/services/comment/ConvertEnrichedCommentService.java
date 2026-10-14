@@ -39,6 +39,9 @@ public class ConvertEnrichedCommentService implements EnrichedCommentFromAi {
                 responseFromModel.titlePost(),
                 responseFromModel.outputContentProcessed(),
                 responseFromModel.hashtags(),
-                responseFromModel.cta());
+                responseFromModel.cta(),
+                false,
+                false,
+                1);
     }
 }
