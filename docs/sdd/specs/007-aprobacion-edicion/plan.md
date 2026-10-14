@@ -63,18 +63,29 @@ flowchart LR
 * `infrastructure/adapters/in/web`: los `PATCH` pasan de `202` a `200 RevisePostResponse{batchId, messageId, versionMessage, approved}`; `GlobalExceptionHandler` añade `404/409/413/422/502/503`.
 * `OCI (consola/CLI, no código)`: Object Versioning en `MessagesUsers` (`oci os bucket update --bucket-name MessagesUsers --versioning Enabled`; solo se puede suspender, no desactivar) + lifecycle `PREVIOUS_OBJECT_VERSIONS` → `DELETE` a los `10` días + IAM `OBJECT_READ` + `OBJECT_OVERWRITE`.
 
+### 1.3 Enmienda 2026-10-13 — `revised`
+
+* `domain`:
+  * `EnrichedComment` + componente `Boolean revised`; compact constructor `revised == null → false` (mismo motivo que `approved`, §1.1: los registros ya guardados sin el campo llegan `null` y no se descartan). `ConvertEnrichedCommentService` construye con `revised=false`.
+  * `PostChange` + `Boolean revised` (`null` = no enviado; `true` = marcar revisado). `false` no llega al dominio: lo rechaza el request (`400`).
+  * `EnrichedComment.revise`: el candidato del no-op se construye con `revised = change.revised()` o el actual (como hoy); si difiere de `this`, el registro guardado lleva `versionMessage + 1` **y `revised = true`**. Forzar `true` **después** de la comparación evita que una petición sin cambios sobre un post sin revisar suba la versión y escriba en OCI.
+* `application`: `RevisionResult` y `MessageRevised` + `revised`.
+* `infrastructure`:
+  * `RevisePostRequest` + `Boolean revised`; cuenta como cambio en el `@AssertTrue` "al menos un cambio" (`{expectedVersion, revised:true}` es válido); `@AssertTrue` aparte "`revised` solo admite `true`" → `400`; el mensaje de campos editables añade `revised`. `toChange()` lo pasa a `PostChange`.
+  * `RevisePostResponse` + `revised`; `ResponseClient` + `revised`, copiado en `EnrichmentListener`; payload SSE `message.revised` + `revised`. Swagger: request, respuesta `200` y ejemplos de `asset.created`/`message.revised`.
+
 ## 2. Contratos de Datos / Interfaces
 
 * Request `PATCH /api/v1/{discord|telegram}/packages/{batchId}/messages/{messageId}`, `Content-Type: application/json`:
   ```json
   { "expectedVersion": 1, "approved": true, "channelPost": "LINKEDIN", "titlePost": null, "outputContentProcessed": "texto editado…", "hashtags": ["#java", "#spring"], "cta": "…", "topics": ["spring"] }
   ```
-  Editables: `approved` + `topics, channelPost, titlePost, outputContentProcessed, hashtags, cta`. Campos ausentes o `null` = no cambian. `expectedVersion` obligatoria. Cualquier otro campo (`language, sentiment, messageType, relevance, messageAuthor`, ids, autor…) → `400`.
+  Editables: `approved`, `revised` (solo `true`, enmienda 2026-10-13) + `topics, channelPost, titlePost, outputContentProcessed, hashtags, cta`. Campos ausentes o `null` = no cambian. `expectedVersion` obligatoria. Cualquier otro campo (`language, sentiment, messageType, relevance, messageAuthor`, ids, autor…) → `400`.
 * Respuestas E1: `202 {batchId, messageId}` · `400` validación (forma del body, campo no editable, enum inválido, sin cambios).
-* Respuestas E2: `200 {batchId, messageId, versionMessage, approved}` · `400` + reglas de canal · `404` paquete o post inexistente · `409` `expectedVersion` desfasada o conflicto tras 2 reintentos · `413` paquete guardado o revisado `>=1MB` · `422` registro `LLM_FALLBACK` · `502` fallo OCI · `503` `OCI_NOT_CONFIGURED`. El frontend debe tratar cualquier `2xx` como éxito para no romperse al pasar de `202` a `200`.
-* Registro en Redis y en el objeto OCI: cada `EnrichedComment` añade `approved` y `versionMessage` (E1 ya los escribe con `false, 1`).
-* SSE `asset.created` (`ResponseClient`): añade `approved` y `versionMessage`, copiados del `EnrichedComment` en `EnrichmentListener` (mismo nombre de campo que el paquete).
-* SSE (E2) en el stream de su `source`: `{type:"message.revised", batchId, payload:{messageId, versionMessage, approved}}`, `id = {messageId}:v{versionMessage}`, sin contenido ni PII.
+* Respuestas E2: `200 {batchId, messageId, versionMessage, approved, revised}` · `400` + reglas de canal · `404` paquete o post inexistente · `409` `expectedVersion` desfasada o conflicto tras 2 reintentos · `413` paquete guardado o revisado `>=1MB` · `422` registro `LLM_FALLBACK` · `502` fallo OCI · `503` `OCI_NOT_CONFIGURED`. El frontend debe tratar cualquier `2xx` como éxito para no romperse al pasar de `202` a `200`.
+* Registro en Redis y en el objeto OCI: cada `EnrichedComment` añade `approved` y `versionMessage` (E1 ya los escribe con `false, 1`) y `revised` (enmienda 2026-10-13, nace `false`).
+* SSE `asset.created` (`ResponseClient`): añade `approved`, `revised` y `versionMessage`, copiados del `EnrichedComment` en `EnrichmentListener` (mismo nombre de campo que el paquete).
+* SSE (E2) en el stream de su `source`: `{type:"message.revised", batchId, payload:{messageId, versionMessage, approved, revised}}`, `id = {messageId}:v{versionMessage}`, sin contenido ni PII.
 * `ArtifactStore` (E2): `save` (006, intacto) + `load(Source, batchId) -> Optional<StoredPackage{pkg, etag}>` + `replace(AssetPackage, etag) -> ReplaceResult{REPLACED|CONFLICT|FAILED}`.
 * Env: sin variables nuevas (reutiliza `OCI_*` de 006).
 
@@ -120,6 +131,10 @@ flowchart LR
   Alternativa descartada: validación manual en el controller.
   Razón: ya autorizado en la tabla de stack (`validation`) y Q3 exige Bean Validation en todo input; es el primer body HTTP de la API.
 
+* Decisión (2026-10-13): atributo `revised` además de `approved`; lo pone el backend en toda revisión guardada y el frontend solo puede enviar `true`.
+  Alternativa descartada: cambiar `approved` por un enum `PENDING|APPROVED|REJECTED`; dejar que el cliente envíe `revised` libremente (incluido `false`); que marcar revisado sin cambios no suba `versionMessage`.
+  Razón: `approved=false` no distinguía "sin revisar" de "revisado y no apto". Un campo nuevo no rompe el contrato de `approved` que ya consume el frontend. Si el cliente pudiera enviar `false`, un post editado volvería a "por revisar"; `revised` es un hecho que registra el backend, como `versionMessage`. Marcar revisado reescribe el objeto en OCI, y sin subir la versión habría dos versiones con el mismo `versionMessage` (misma razón que aprobar, decisión 2026-10-09).
+
 ## 4. Estrategia de pruebas
 
 * **E1**
@@ -136,6 +151,13 @@ flowchart LR
   * `OciObjectStorageAdapterTest`: `load` → `GetObject` con `paquetes/{source}/paquete-{batchId}.json`, devuelve etag; `404 → empty`; JSON viejo deserializa con `versionMessage=1`; `replace` envía `ifMatch(etag)` y `application/json`; `412 → CONFLICT`; `>=1MB` → sin `PutObject`; ningún log con contenido.
   * `PatchPostTest`: `200` y `404/409/413/422/502/503` mapeados por `GlobalExceptionHandler`.
   * `SseEventPublisherAdapterTest`: `message.revised` solo por el stream de su `source`, sin contenido.
+
+* **Enmienda `revised` (2026-10-13)**
+  * `EnrichedCommentTest`: `revised null → false`; la salida del LLM nace `revised=false` (`ConvertEnrichedCommentServiceTest`).
+  * `EnrichedCommentReviseTest`: editar o aprobar un post `revised=false` → `revised=true` y `versionMessage + 1`; solo `revised:true` sobre `false` → guardado con el contenido igual; `revised:true` sobre `true` sin otros cambios → no-op; una petición sin cambios sobre un post sin revisar no lo marca.
+  * `RedisBufferAdapterTest` / `OciObjectStorageAdapterRevisionTest`: registro sin `revised` → `false`, no se salta.
+  * `PatchPostTest`: `{expectedVersion, revised:true}` → `200`; `revised:false` → `400` sin llamar al use case; la respuesta incluye `revised`.
+  * `SseEventPublisherAdapterTest` / `EnrichmentListenerTest`: `message.revised` y `asset.created` llevan `revised`. `SwaggerDocsTest`: `revised` en request, respuesta y ejemplos.
 
 ## 5. Verificación
 
