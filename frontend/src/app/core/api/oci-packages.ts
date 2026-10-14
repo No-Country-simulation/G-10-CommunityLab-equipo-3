@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, shareReplay } from 'rxjs';
 import { GeneratedAsset, InteractionSource } from './api.models';
 import { BackendPost, PackageNotice, toGeneratedAsset } from './live-feed';
 
@@ -48,9 +48,31 @@ export class OciPackages {
     return this._refs().find((r) => r.source === source && r.batchId === batchId);
   }
 
-  /** GET the package straight from OCI (no backend call, no credentials besides the PAR). */
+  /** One request per package version: the storage page and the curation list share it */
+  private readonly cache = new Map<string, Observable<{ pkg: BackendPackage; sizeBytes: number }>>();
+
+  /** GET the package straight from OCI (no backend call, no credentials besides the PAR), with its size. */
+  loadRaw(ref: PackageRef): Observable<{ pkg: BackendPackage; sizeBytes: number }> {
+    let request = this.cache.get(ref.parUrlBase);
+    if (!request) {
+      request = this.http.get(ref.parUrlBase, { responseType: 'text' }).pipe(
+        map((text) => ({ pkg: JSON.parse(text) as BackendPackage, sizeBytes: new Blob([text]).size })),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+      this.cache.set(ref.parUrlBase, request);
+      // A failed read is not cached: the next attempt asks OCI again
+      request.subscribe({ error: () => this.cache.delete(ref.parUrlBase) });
+    }
+    return request;
+  }
+
   load(ref: PackageRef): Observable<BackendPackage> {
-    return this.http.get<BackendPackage>(ref.parUrlBase);
+    return this.loadRaw(ref).pipe(map(({ pkg }) => pkg));
+  }
+
+  /** The package changed (a post was revised): the next read fetches the current version from OCI */
+  invalidate(ref: PackageRef) {
+    this.cache.delete(ref.parUrlBase);
   }
 
   /** The package's posts, ready for the UI. */

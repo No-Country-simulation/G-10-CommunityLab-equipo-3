@@ -7,7 +7,7 @@ import {
   ProcessResult,
   StoredObject,
 } from './api.models';
-import { CommunityLabApi } from './community-lab.api';
+import { CommunityLabApi, StoredObjectView } from './community-lab.api';
 import { process } from './mock-engine';
 import { SEED_BATCHES } from './sample-interactions';
 
@@ -71,9 +71,11 @@ export class MockCommunityLabApi extends CommunityLabApi {
     return of(objects).pipe(delay(300));
   }
 
-  getStoredObject(objectName: string): Observable<ProcessResult> {
+  getStoredObject(objectName: string): Observable<StoredObjectView> {
     const found = [...this.batches.values()].find((r) => r.storage.objectName === objectName);
-    return found ? of(clone(found)).pipe(delay(200)) : throwError(() => new Error('Objeto no encontrado'));
+    return found
+      ? of({ objectName, content: clone(found) }).pipe(delay(200))
+      : throwError(() => new Error('Objeto no encontrado'));
   }
 
   private save(result: ProcessResult) {

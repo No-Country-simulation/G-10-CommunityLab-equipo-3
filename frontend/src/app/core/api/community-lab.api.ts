@@ -4,7 +4,6 @@ import {
   AssetPatch,
   GeneratedAsset,
   InteractionSource,
-  ProcessResult,
   StoredObject,
 } from './api.models';
 
@@ -22,6 +21,12 @@ export interface ApiConfig {
 }
 
 export const API_CONFIG = new InjectionToken<ApiConfig>('API_CONFIG');
+
+/** A stored object opened from the storage page: its name and its JSON as stored */
+export interface StoredObjectView {
+  objectName: string;
+  content: unknown;
+}
 
 /** Why a revision was not saved on the backend; the store turns it into a message for the CM. */
 export type RevisionFailure =
@@ -53,5 +58,5 @@ export abstract class CommunityLabApi {
   abstract updateAsset(asset: GeneratedAsset, patch: AssetPatch): Observable<GeneratedAsset>;
   abstract publishAsset(asset: GeneratedAsset): Observable<GeneratedAsset>;
   abstract listStoredObjects(): Observable<StoredObject[]>;
-  abstract getStoredObject(objectName: string): Observable<ProcessResult>;
+  abstract getStoredObject(objectName: string): Observable<StoredObjectView>;
 }

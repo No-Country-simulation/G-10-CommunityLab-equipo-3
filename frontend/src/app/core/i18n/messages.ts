@@ -194,6 +194,19 @@ export const EN = {
   'tone.didactico': 'Educational',
   'tone.narrativo': 'Narrative',
 
+  // Saving curation changes to the backend (core/workspace.store.ts)
+  'sync.pending': 'Saved on this device',
+  'sync.pendingDetail': 'It will be stored in OCI as soon as this batch is saved there.',
+  'sync.conflict': 'Someone changed this post first',
+  'sync.conflictDetail': 'The latest version was loaded. Check it and try again.',
+  'sync.invalid': 'The change was not saved',
+  'sync.invalidDetail': 'It does not follow the rules of this channel.',
+  'sync.not-found': 'Post not found',
+  'sync.not-foundDetail': 'Its package is no longer in OCI.',
+  'sync.unavailable': 'The server could not save it',
+  'sync.unavailableDetail': 'Try again in a few minutes.',
+  'sync.packageUnreadable': 'Could not read a package from OCI',
+  'sync.packageUnreadableDetail': 'Its link may have expired (3 days).',
   // Mascot expressions (labels returned by the LLM, see core/mascot.ts)
   'mascot.neutral': 'Neutral',
   'mascot.contento': 'Happy',
@@ -421,6 +434,19 @@ export const ES: Record<MessageKey, string> = {
   'tone.didactico': 'Didáctico',
   'tone.narrativo': 'Narrativo',
 
+  // Saving curation changes to the backend (core/workspace.store.ts)
+  'sync.pending': 'Guardado en este dispositivo',
+  'sync.pendingDetail': 'Se guardará en OCI en cuanto este lote se almacene allí.',
+  'sync.conflict': 'Alguien cambió este post antes',
+  'sync.conflictDetail': 'Se cargó la última versión. Revísala y vuelve a intentarlo.',
+  'sync.invalid': 'No se guardó el cambio',
+  'sync.invalidDetail': 'No cumple las reglas de este canal.',
+  'sync.not-found': 'No se encontró el post',
+  'sync.not-foundDetail': 'Su paquete ya no está en OCI.',
+  'sync.unavailable': 'El servidor no pudo guardarlo',
+  'sync.unavailableDetail': 'Inténtalo de nuevo en unos minutos.',
+  'sync.packageUnreadable': 'No se pudo leer un paquete de OCI',
+  'sync.packageUnreadableDetail': 'Puede que su enlace haya caducado (3 días).',
   // Mascot expressions (labels returned by the LLM, see core/mascot.ts)
   'mascot.neutral': 'Neutral',
   'mascot.contento': 'Contento',
@@ -650,6 +676,19 @@ export const PT: Record<MessageKey, string> = {
   'tone.didactico': 'Didático',
   'tone.narrativo': 'Narrativo',
 
+  // Saving curation changes to the backend (core/workspace.store.ts)
+  'sync.pending': 'Salvo neste dispositivo',
+  'sync.pendingDetail': 'Será salvo na OCI assim que este lote for armazenado lá.',
+  'sync.conflict': 'Alguém alterou este post antes',
+  'sync.conflictDetail': 'A versão mais recente foi carregada. Revise e tente de novo.',
+  'sync.invalid': 'A alteração não foi salva',
+  'sync.invalidDetail': 'Não segue as regras deste canal.',
+  'sync.not-found': 'Post não encontrado',
+  'sync.not-foundDetail': 'O pacote dele não está mais na OCI.',
+  'sync.unavailable': 'O servidor não conseguiu salvar',
+  'sync.unavailableDetail': 'Tente de novo em alguns minutos.',
+  'sync.packageUnreadable': 'Não foi possível ler um pacote da OCI',
+  'sync.packageUnreadableDetail': 'O link pode ter expirado (3 dias).',
   // Mascot expressions (labels returned by the LLM, see core/mascot.ts)
   'mascot.neutral': 'Neutro',
   'mascot.contento': 'Contente',

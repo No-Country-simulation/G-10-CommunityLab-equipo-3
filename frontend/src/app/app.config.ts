@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -14,6 +14,13 @@ import { EN, ES, PT } from './core/i18n/messages';
 import { LANDING_EN } from './features/landing/i18n/landing.en';
 import { LANDING_ES } from './features/landing/i18n/landing.es';
 import { LANDING_PT } from './features/landing/i18n/landing.pt';
+
+/**
+ * Where the backend lives. `ng serve` proxies '/api' to http://localhost:8080 (proxy.conf.json);
+ * a production build (Netlify) has no proxy, so it calls the public backend directly
+ * (its CORS_ALLOWED_ORIGINS_PROD must include the site's origin).
+ */
+const BACKEND = isDevMode() ? '' : 'https://apibackendjav.up-x.me';
 
 const CommunityLabPreset = definePreset(Aura, {
   semantic: {
@@ -89,16 +96,14 @@ export const appConfig: ApplicationConfig = {
       },
     },
     MessageService,
-    // Real backend. It only exposes the SSE streams for now: until the REST endpoints of
-    // API_CONTRACT.md exist, asset and storage lists load empty.
+    // Real backend: SSE streams + post revision (PATCH); stored packages are read straight from OCI.
     // Set useMocks to true for the simulated demo.
-    // '/api' is proxied to http://localhost:8080 by proxy.conf.json (ng serve).
     provideCommunityLabApi({
-      baseUrl: '/api/v1',
+      baseUrl: `${BACKEND}/api/v1`,
       useMocks: false,
       liveFeeds: {
-        Discord: '/api/v1/discord/messages',
-        Telegram: '/api/v1/telegram/messages',
+        Discord: `${BACKEND}/api/v1/discord/messages`,
+        Telegram: `${BACKEND}/api/v1/telegram/messages`,
       },
     }),
     providePrimeNG({

@@ -87,7 +87,7 @@
   </div>
 </section>
 
-<p-dialog [header]="viewing()?.storage?.objectName ?? ''" [modal]="true" [visible]="!!viewing()" (visibleChange)="!$event && viewing.set(null)"
+<p-dialog [header]="viewing()?.objectName ?? ''" [modal]="true" [visible]="!!viewing()" (visibleChange)="!$event && viewing.set(null)"
   [style]="{ width: 'min(900px, 95vw)' }" [dismissableMask]="true">
   <pre class="max-h-[60vh] overflow-auto rounded-lg bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">{{ viewingJson() }}</pre>
   <ng-template #footer>

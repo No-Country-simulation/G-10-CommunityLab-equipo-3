@@ -148,36 +148,44 @@ export class Content {
   }
 
   protected save(a: GeneratedAsset) {
-    this.store.update(a.id, {
-      title: this.draft.title.trim(),
-      body: this.draft.body.trim(),
-      hashtags: this.draft.hashtags
-        .split(/[\s,]+/)
-        .filter(Boolean)
-        .map((h) => (h.startsWith('#') ? h : `#${h}`)),
-    });
     this.view.set('preview');
-    this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.saved'), life: 2000 });
+    this.store
+      .update(a.id, {
+        title: this.draft.title.trim(),
+        body: this.draft.body.trim(),
+        hashtags: this.draft.hashtags
+          .split(/[\s,]+/)
+          .filter(Boolean)
+          .map((h) => (h.startsWith('#') ? h : `#${h}`)),
+      })
+      // "pending" and "failed" already have their own message from the store
+      .then((outcome) => outcome === 'saved' && this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.saved'), life: 2000 }));
   }
 
   protected setStatus(a: GeneratedAsset, status: AssetStatus) {
-    this.store.update(a.id, { status });
-    this.toast.add({
-      severity: 'info',
-      summary: this.i18n.t('content.toast.marked', { status: this.i18n.t(`status.${status}`).toLowerCase() }),
-      life: 2000,
-    });
+    this.store.update(a.id, { status }).then(
+      (outcome) =>
+        outcome === 'saved' &&
+        this.toast.add({
+          severity: 'info',
+          summary: this.i18n.t('content.toast.marked', { status: this.i18n.t(`status.${status}`).toLowerCase() }),
+          life: 2000,
+        }),
+    );
   }
 
   protected publish(a: GeneratedAsset, event?: Event) {
-    this.store.publish(a.id);
     confetti(originOf(event));
-    this.toast.add({
-      severity: 'success',
-      summary: this.i18n.t('content.toast.published'),
-      detail: this.i18n.t('content.toast.publishedDetail', { type: this.i18n.t(`assetType.${a.type}`), author: a.origin.author }),
-      life: 3000,
-    });
+    this.store.publish(a.id).then(
+      (outcome) =>
+        outcome === 'saved' &&
+        this.toast.add({
+          severity: 'success',
+          summary: this.i18n.t('content.toast.published'),
+          detail: this.i18n.t('content.toast.publishedDetail', { type: this.i18n.t(`assetType.${a.type}`), author: a.origin.author }),
+          life: 3000,
+        }),
+    );
   }
 
   protected publishAllApproved(event?: Event) {

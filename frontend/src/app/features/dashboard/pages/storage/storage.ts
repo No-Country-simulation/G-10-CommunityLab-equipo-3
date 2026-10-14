@@ -4,7 +4,8 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { ProcessResult, StoredObject } from '../../../../core/api/api.models';
+import { StoredObject } from '../../../../core/api/api.models';
+import { StoredObjectView } from '../../../../core/api/community-lab.api';
 import { downloadBlob } from '../../../../core/banner';
 import { I18n } from '../../../../core/i18n/i18n.service';
 import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
@@ -23,9 +24,10 @@ export class Storage {
   private readonly toast = inject(MessageService);
   private readonly i18n = inject(I18n);
 
+  /** Bucket the backend writes the packages to (backend spec 006) */
   protected readonly bucket = {
-    name: 'kora-assets',
-    namespace: 'axqlc3m1hy2k',
+    name: 'MessagesUsers',
+    namespace: 'gr850hk0ujdi',
     region: 'sa-saopaulo-1',
   };
 
@@ -39,8 +41,8 @@ export class Storage {
     };
   });
 
-  protected readonly viewing = signal<ProcessResult | null>(null);
-  protected readonly viewingJson = computed(() => JSON.stringify(this.viewing(), null, 2));
+  protected readonly viewing = signal<StoredObjectView | null>(null);
+  protected readonly viewingJson = computed(() => JSON.stringify(this.viewing()?.content, null, 2));
   protected readonly loadingObject = signal<string | null>(null);
 
   constructor() {
@@ -51,7 +53,7 @@ export class Storage {
     this.loadingObject.set(o.objectName);
     this.store.getStoredObject(o.objectName).subscribe({
       next: (r) => {
-        this.viewing.set(r);
+        this.viewing.set(r as StoredObjectView);
         this.loadingObject.set(null);
       },
       error: () => this.loadingObject.set(null),
@@ -60,7 +62,8 @@ export class Storage {
 
   download() {
     const r = this.viewing();
-    if (r) downloadBlob(new Blob([this.viewingJson()], { type: 'application/json' }), `${r.batchId}.json`);
+    // Same file name as in the bucket (e.g. paquete-<batchId>.json)
+    if (r) downloadBlob(new Blob([this.viewingJson()], { type: 'application/json' }), r.objectName.split('/').pop()!);
   }
 
   copy(text: string) {
