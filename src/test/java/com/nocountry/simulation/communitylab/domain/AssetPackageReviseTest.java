@@ -43,7 +43,7 @@ class AssetPackageReviseTest {
                 "Conseguí empleo como dev Java", Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 75, null, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, 1);
+                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, false, 1);
     }
 
     private static EnrichedComment fallback(String messageId) {
@@ -52,7 +52,7 @@ class AssetPackageReviseTest {
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 0, EnrichedComment.LLM_FALLBACK, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                null, null, null, List.of(), null, false, 1);
+                null, null, null, List.of(), null, false, false, 1);
     }
 
     // Two real posts and one LLM failure trace, as a flushed batch looks like.
@@ -61,7 +61,7 @@ class AssetPackageReviseTest {
     }
 
     private static PostChange approve() {
-        return new PostChange(true, null, null, null, null, null, null);
+        return new PostChange(null, true, null, null, null, null, null, null);
     }
 
     @Test
@@ -156,7 +156,7 @@ class AssetPackageReviseTest {
 
         // Cuando el texto supera los 280 de X / Entonces la revisión no se construye (→ 400)
         assertThatThrownBy(() -> original.revise("m-1",
-                        new PostChange(null, null, null, null, "a".repeat(300), null, null)))
+                        new PostChange(null, null, null, null, null, "a".repeat(300), null, null)))
                 .isInstanceOf(InvalidAssetException.class);
     }
 

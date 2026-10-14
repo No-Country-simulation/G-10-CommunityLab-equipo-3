@@ -133,11 +133,12 @@ class OciObjectStorageAdapterRevisionTest {
     }
 
     @Test
-    @DisplayName("Dado un paquete guardado antes de 007 (sin approved ni versionMessage), cuando se carga, entonces sale false/1")
+    @DisplayName("Dado un paquete guardado antes de 007 (sin revised, approved ni versionMessage), cuando se carga, entonces sale false/false/1")
     void loadReadsPackagesWrittenBeforeRevisions() {
         // Dado el JSON de un paquete sin los campos de revisión
         ObjectNode tree = (ObjectNode) JSON.readTree(json(discordPackage()));
         ObjectNode record = (ObjectNode) tree.get("enriched").get(0);
+        record.remove("revised");
         record.remove("approved");
         record.remove("versionMessage");
         objectHolds(JSON.writeValueAsBytes(tree));
@@ -146,6 +147,7 @@ class OciObjectStorageAdapterRevisionTest {
         EnrichedComment post = adapter.load(Source.DISCORD, BATCH_ID).orElseThrow().pkg().enriched().get(0);
 
         // Entonces se puede revisar sin migración (RF-01)
+        assertThat(post.revised()).isFalse();
         assertThat(post.approved()).isFalse();
         assertThat(post.versionMessage()).isEqualTo(1);
     }
@@ -366,7 +368,7 @@ class OciObjectStorageAdapterRevisionTest {
                 BATCH_ID, "m-1", "channel-1", "author-1", AUTHOR_NAME, messageAuthor,
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 80, null, EnrichedComment.PROMPT_VERSION, NOW, Source.DISCORD,
-                Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null, false, 1);
+                Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null, false, false, 1);
     }
 
     private static AssetPackage packageOf(Source source, EnrichedComment record) {
@@ -378,7 +380,7 @@ class OciObjectStorageAdapterRevisionTest {
     }
 
     private static AssetPackage revisedPackage() {
-        return discordPackage().revise("m-1", new PostChange(true, null, null, null, null, null, null));
+        return discordPackage().revise("m-1", new PostChange(null, true, null, null, null, null, null, null));
     }
 
     // Why pad messageAuthor: it is the only free-length field (post fields are capped per channel) and

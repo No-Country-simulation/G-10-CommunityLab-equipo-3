@@ -103,9 +103,10 @@ class PatchPostTest {
     }
 
     // Why stub: the controller maps the use case result; an unstubbed mock would return null.
+    // Every result the use case returns comes from a reviewed post, so revised is true.
     private void revisionReturns(int versionMessage, boolean approved, boolean changed) {
         when(revisePostUseCase.revise(any()))
-                .thenReturn(new RevisionResult("b-1", "m-1", versionMessage, approved, changed));
+                .thenReturn(new RevisionResult("b-1", "m-1", versionMessage, approved, true, changed));
     }
 
     private RevisePostCommand capturedCommand() {
@@ -131,7 +132,8 @@ class PatchPostTest {
                 .andExpect(jsonPath("$.batchId").value("b-1"))
                 .andExpect(jsonPath("$.messageId").value("m-1"))
                 .andExpect(jsonPath("$.versionMessage").value(2))
-                .andExpect(jsonPath("$.approved").value(true));
+                .andExpect(jsonPath("$.approved").value(true))
+                .andExpect(jsonPath("$.revised").value(true));
 
         RevisePostCommand command = capturedCommand();
         assertThat(command.source()).isEqualTo(expected);
@@ -276,6 +278,34 @@ class PatchPostTest {
         patchJson(DISCORD_URL, "{\"expectedVersion\":1}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors", hasItem(startsWith("anyChange:"))));
+
+        verify(revisePostUseCase, never()).revise(any());
+    }
+
+    @Test
+    @DisplayName("Dado un post revisado sin cambios, cuando se envía solo revised=true, entonces 200 y el caso de uso recibe la marca")
+    void markingReviewedAloneIsAValidChange() throws Exception {
+        // Dado el caso de uso guardando v2 revisada
+        revisionReturns(2, false, true);
+
+        // Cuando el usuario solo marca el post como revisado
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"revised\":true}")
+                // Entonces cuenta como cambio y la respuesta trae la marca
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.versionMessage").value(2))
+                .andExpect(jsonPath("$.revised").value(true));
+
+        PostChange change = capturedCommand().change();
+        assertThat(change.revised()).isTrue();
+        assertThat(change.approved()).isNull();
+    }
+
+    @Test
+    @DisplayName("Dado revised=false, cuando se envía, entonces 400 (una revisión no se deshace)")
+    void unmarkingReviewedIsRejected() throws Exception {
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"revised\":false}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors", hasItem(startsWith("revisedOnlyTrue:"))));
 
         verify(revisePostUseCase, never()).revise(any());
     }

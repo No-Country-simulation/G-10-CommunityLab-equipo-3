@@ -38,7 +38,7 @@ class ArtifactStoreAdapterTest {
                 "batch-1", "m-1", "channel-1", "author-1", "author-name", "content",
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of(), 80, null, EnrichedComment.PROMPT_VERSION, NOW, Source.DISCORD,
-                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, 1);
+                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, false, 1);
         return AssetPackage.of("batch-1", Source.DISCORD, List.of(post), NOW);
     }
 

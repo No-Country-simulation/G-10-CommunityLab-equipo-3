@@ -235,7 +235,7 @@ class SseEventPublisherAdapterTest {
     }
 
     @Test
-    @DisplayName("Dado una revisión publicada, cuando el frontend lee el data, entonces trae exactamente type, batchId y payload{messageId, versionMessage, approved}")
+    @DisplayName("Dado una revisión publicada, cuando el frontend lee el data, entonces trae exactamente type, batchId y payload{messageId, versionMessage, approved, revised}")
     void revisionDataMatchesTheContractWithoutContent() throws Exception {
         // Dado un suscriptor Telegram
         MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
@@ -243,17 +243,18 @@ class SseEventPublisherAdapterTest {
         // Cuando se publica la revisión
         adapter.publishRevision(revised("m-1", 2, Source.TELEGRAM));
 
-        // Entonces solo ids, versión y aprobación: el contenido se lee por la PAR (RF-07)
+        // Entonces solo ids, versión, aprobación y revisión: el contenido se lee por la PAR (RF-07)
         JsonNode data = json.readTree(dataOf(eventBlock(telegram.getResponse().getContentAsString(), "m-1:v2")));
         assertThat(data.propertyNames()).containsExactly("type", "batchId", "payload");
         assertThat(data.get("type").asString()).isEqualTo("message.revised");
         assertThat(data.get("batchId").asString()).isEqualTo("b-1");
 
         JsonNode payload = data.get("payload");
-        assertThat(payload.propertyNames()).containsExactly("messageId", "versionMessage", "approved");
+        assertThat(payload.propertyNames()).containsExactly("messageId", "versionMessage", "approved", "revised");
         assertThat(payload.get("messageId").asString()).isEqualTo("m-1");
         assertThat(payload.get("versionMessage").asInt()).isEqualTo(2);
         assertThat(payload.get("approved").asBoolean()).isTrue();
+        assertThat(payload.get("revised").asBoolean()).isTrue();
     }
 
     @Test
@@ -310,7 +311,7 @@ class SseEventPublisherAdapterTest {
     // ---------- fixtures ----------
 
     private static MessageRevised revised(String messageId, int versionMessage, Source source) {
-        return new MessageRevised(source, "b-1", messageId, versionMessage, true);
+        return new MessageRevised(source, "b-1", messageId, versionMessage, true, true);
     }
 
     private MvcResult subscribe(String path, String lastEventId) throws Exception {
@@ -360,7 +361,7 @@ class SseEventPublisherAdapterTest {
                 "De la comunidad al primer empleo Java!",
                 List.of("#ONE", "#Java"),
                 "Comparte tu historia",
-                false,
+                false, false,
                 1);
     }
 }

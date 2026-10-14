@@ -84,7 +84,8 @@ class RevisePostServiceTest {
                 "Conseguí empleo como dev Java", Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 75, null, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                Channels.X, null, copy, List.of("#Java"), null, approved, versionMessage);
+                // An approved post was reviewed, so revised follows approved in these fixtures.
+                Channels.X, null, copy, List.of("#Java"), null, approved, approved, versionMessage);
     }
 
     private static EnrichedComment fallback(String messageId) {
@@ -93,7 +94,7 @@ class RevisePostServiceTest {
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 0, EnrichedComment.LLM_FALLBACK, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                null, null, null, List.of(), null, false, 1);
+                null, null, null, List.of(), null, false, false, 1);
     }
 
     private static AssetPackage pkg(EnrichedComment... records) {
@@ -109,11 +110,11 @@ class RevisePostServiceTest {
     }
 
     private static PostChange approve() {
-        return new PostChange(true, null, null, null, null, null, null);
+        return new PostChange(null, true, null, null, null, null, null, null);
     }
 
     private static PostChange editCopy(String copy) {
-        return new PostChange(null, null, null, null, copy, null, null);
+        return new PostChange(null, null, null, null, null, copy, null, null);
     }
 
     private static EnrichedComment record(AssetPackage pkg, String messageId) {
@@ -133,7 +134,7 @@ class RevisePostServiceTest {
         RevisionResult result = service.revise(command("m-1", 1, approve()));
 
         // Entonces el frontend recibe la versión nueva (→ 200)
-        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, true, true));
+        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, true, true, true));
     }
 
     @Test
@@ -168,7 +169,7 @@ class RevisePostServiceTest {
         // Entonces primero se escribe y luego se avisa, por el stream de su fuente y solo con ids + versión
         InOrder order = inOrder(store, events);
         order.verify(store).replace(any(), eq("etag-1"));
-        order.verify(events).publishRevision(new MessageRevised(Source.DISCORD, BATCH_ID, "m-1", 2, true));
+        order.verify(events).publishRevision(new MessageRevised(Source.DISCORD, BATCH_ID, "m-1", 2, true, true));
     }
 
     @Test
@@ -185,7 +186,7 @@ class RevisePostServiceTest {
         // Entonces nunca toca la carpeta de Discord y avisa por el stream de Telegram
         verify(store).load(Source.TELEGRAM, BATCH_ID);
         verify(store, never()).load(eq(Source.DISCORD), anyString());
-        verify(events).publishRevision(new MessageRevised(Source.TELEGRAM, BATCH_ID, "m-1", 2, true));
+        verify(events).publishRevision(new MessageRevised(Source.TELEGRAM, BATCH_ID, "m-1", 2, true, true));
     }
 
     // ---------- no-op (RF-04) ----------
@@ -200,7 +201,7 @@ class RevisePostServiceTest {
         RevisionResult result = service.revise(command("m-1", 2, approve()));
 
         // Entonces 200 con la misma versión, 0 PutObject y 0 eventos
-        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, true, false));
+        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, true, true, false));
         verify(store, never()).replace(any(), anyString());
         verify(events, never()).publishRevision(any());
     }

@@ -46,6 +46,7 @@ class ConvertEnrichedCommentServiceTest {
         EnrichedComment enriched = service.constructMessage(comment(), response, "batch-1");
 
         // Entonces el usuario todavía no lo revisó
+        assertThat(enriched.revised()).isFalse();
         assertThat(enriched.approved()).isFalse();
         assertThat(enriched.versionMessage()).isEqualTo(1);
     }
@@ -59,6 +60,7 @@ class ConvertEnrichedCommentServiceTest {
 
         // Entonces es una traza LLM_FALLBACK con los mismos valores por defecto
         assertThat(enriched.flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
+        assertThat(enriched.revised()).isFalse();
         assertThat(enriched.approved()).isFalse();
         assertThat(enriched.versionMessage()).isEqualTo(1);
     }
