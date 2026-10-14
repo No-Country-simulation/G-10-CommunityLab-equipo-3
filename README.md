@@ -20,9 +20,8 @@ Curar este contenido y redactarlo manualmente para redes sociales toma decenas d
 |------|------------|--------|
 | Frontend | Angular | Definido |
 | Backend | Java + Spring Boot | Definido |
-| Persistencia | OCI Object Storage | Definido |
-| Deploy | OCI - (Backend), Netlify - (Frontend)  | Definido |
-| Testing | Por definir | ⏳ Pendiente |
+| Persistencia | OCI Object Strage + Redis | Definido |
+| Deploy | OCI - (Backend), Netlify - (Frontend)  | Definido 
 
 Versiones backend definidas: Java 21, Spring Boot 4.1.1, Maven 3.9.16. Versiones frontend (Node, Angular CLI) **por definir**.
 
@@ -101,8 +100,6 @@ Placeholder orientativo:
 | Desarrollador Frontend y Diseñador UI | Jeferson Oyola | [@Jefer1026](https://github.com/Jefer1026) |
 | Desarrollador Frontend | Alejandro Moreno | [@alejhomoreno](https://github.com/alejhomoreno) |
 | Arquitecto de Software y Desarrollador Backend | Yersson David | [@YerssonDavid](https://github.com/YerssonDavid) |
-| Arquitecto de BD y Desarrollador Backend | Bruno Vallejos | [@brunovallejos-itti](https://github.com/brunovallejos-itti)
-| Desarrollador Backend | Nahuel Perea | [@nahuelDev19](https://github.com/nahuelDev19) |
 | PO y Scrum Master | Yoant Alnor Ochoa Torre | [@yoant8a-system](https://github.com/yoant8a-system) |
 
 
@@ -127,18 +124,16 @@ git push origin feature/mi-tarea
 
 * Figma: _por definir_
 * Gestión (GitHub Projects): [Scrum](https://github.com/No-Country-simulation/G-10-CommunityLab-equipo-3/projects)
-* Deploy Frontend: _por definir_
-* Deploy Backend / API docs (Swagger): _por definir_
-* Discord / Comunicación: _por definir_
+* Deploy Frontend: https://ukuku.studio/
+* Discord / Comunicación: https://discord.gg/CF75D3mwW - Canal de Discord 
 
 ## 📌 Roadmap
 
 * [x] Primer commit — README inicial
-* [ ] Definir alcance y MVP
-* [ ] Definir arquitectura y modelo de datos
+* [x] Definir alcance y MV
+* [x] Definir arquitectura y modelo de datos
 * [x] Inicializar `frontend/` (Angular).
 * [x] Inicializar `backend/` (Spring Boot)
-* [ ] Definir enlaces y comandos de instalación.
 
 ## 📄 Licencia
 
