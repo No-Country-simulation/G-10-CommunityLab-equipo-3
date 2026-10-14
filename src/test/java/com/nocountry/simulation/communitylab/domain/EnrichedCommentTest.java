@@ -45,7 +45,7 @@ class EnrichedCommentTest {
                 "Conseguí empleo como dev Java", sentiment, Language.ES, messageType,
                 topics, relevance, flag, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                channelPost, titlePost, copy, hashtags, cta, false, 1);
+                channelPost, titlePost, copy, hashtags, cta, false, false, 1);
     }
 
     private static EnrichedComment linkedin(String copy, List<String> hashtags, String cta) {
@@ -298,14 +298,14 @@ class EnrichedCommentTest {
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null, false, 1))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, false, 1))
                 .isInstanceOf(InvalidAssetException.class);
         assertThatThrownBy(() -> new EnrichedComment(
                         "batch-1", null, "listen-123", "author-1", "author-name",
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null, false, 1))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, false, 1))
                 .isInstanceOf(InvalidAssetException.class);
     }
 
@@ -332,13 +332,17 @@ class EnrichedCommentTest {
 
     // Valid X post where only the review attributes vary.
     private static EnrichedComment reviewed(Boolean approved, Integer versionMessage) {
+        return reviewed(false, approved, versionMessage);
+    }
+
+    private static EnrichedComment reviewed(Boolean revised, Boolean approved, Integer versionMessage) {
         return new EnrichedComment(
                 "batch-1", "msg-1", "listen-123", "author-1", "author-name",
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
                 Channels.X, null, "hello", List.of("#ONE"), null,
-                approved, versionMessage);
+                revised, approved, versionMessage);
     }
 
     @Test
@@ -349,6 +353,16 @@ class EnrichedCommentTest {
 
         // Then it reads as pending approval, never null
         assertThat(enriched.approved()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given no review mark (record written before the 2026-10-13 amendment), when built, then it is not reviewed")
+    void nullRevisedDefaultsToFalse() {
+        // Given / When a record without revised
+        var enriched = reviewed(null, false, 1);
+
+        // Then it reads as pending review, never null
+        assertThat(enriched.revised()).isFalse();
     }
 
     @ParameterizedTest(name = "versionMessage={0}")
@@ -366,10 +380,11 @@ class EnrichedCommentTest {
     @Test
     @DisplayName("Given valid review attributes, when built, then they are kept as received")
     void keepsValidReviewAttributes() {
-        // Given / When an approved post already edited twice
-        var enriched = reviewed(true, 3);
+        // Given / When a reviewed and approved post already edited twice
+        var enriched = reviewed(true, true, 3);
 
         // Then nothing is reset
+        assertThat(enriched.revised()).isTrue();
         assertThat(enriched.approved()).isTrue();
         assertThat(enriched.versionMessage()).isEqualTo(3);
     }
@@ -383,7 +398,7 @@ class EnrichedCommentTest {
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                Channels.X, titlePost, "hello", List.of("#ONE"), cta, false, 1);
+                Channels.X, titlePost, "hello", List.of("#ONE"), cta, false, false, 1);
     }
 
     @ParameterizedTest(name = "cta=[{0}]")

@@ -27,7 +27,8 @@ public class PatchPost {
     @Operation(
             summary = "Revise a post",
             description = "Approves and/or edits the editable fields of one post of a stored package. "
-                    + "Every saved change bumps versionMessage and Object Storage keeps the previous version. "
+                    + "Every saved change bumps versionMessage, sets revised=true and Object Storage keeps the previous version. "
+                    + "Send {expectedVersion, revised:true} to mark a post as reviewed without editing it; revised:false is rejected. "
                     + "Send the versionMessage you have as expectedVersion; absent fields keep their value, "
                     + "\"\" clears a text and [] clears a list.")
     @ApiResponse(responseCode = "200", description = "Saved: new versionMessage, or the same one if nothing changed.")
@@ -51,6 +52,6 @@ public class PatchPost {
         Source origin = Source.valueOf(source.toUpperCase(Locale.ROOT));
         RevisionResult result = revisePostUseCase.revise(new RevisePostCommand(
                 origin, batchId, messageId, request.expectedVersion(), request.toChange()));
-        return new RevisePostResponse(result.batchId(), result.messageId(), result.versionMessage(), result.approved());
+        return new RevisePostResponse(result.batchId(), result.messageId(), result.versionMessage(), result.approved(), result.revised());
     }
 }

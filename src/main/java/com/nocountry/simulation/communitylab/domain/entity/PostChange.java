@@ -5,6 +5,7 @@ import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import java.util.List;
 
 public record PostChange (
+        Boolean revised,
         Boolean approved,
         List<String> topics,
         Channels channelPost,

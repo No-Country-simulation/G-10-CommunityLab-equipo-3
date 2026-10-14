@@ -59,6 +59,7 @@ public class RevisePostService implements RevisePostUseCase {
                         command.messageId(),
                         post.versionMessage(),
                         post.approved(),
+                        post.revised(),
                         false
                 );
             }
@@ -69,11 +70,11 @@ public class RevisePostService implements RevisePostUseCase {
             switch (replaceResult) {
                 case REPLACED -> {
                     eventPublishPost.publishRevision(new MessageRevised(command.source(), command.batchId(),
-                            command.messageId(), updated.versionMessage(), updated.approved()));
+                            command.messageId(), updated.versionMessage(), updated.approved(), updated.revised()));
                     log.info("post revised: source={} batchId={} messageId={} versionMessage={}",
                             command.source(), command.batchId(), command.messageId(), updated.versionMessage());
                     return new RevisionResult(command.batchId(), command.messageId(),
-                            updated.versionMessage(), updated.approved(), true);
+                            updated.versionMessage(), updated.approved(), updated.revised(), true);
                 }
                 case CONFLICT -> log.info("revision conflict, retrying: source={} batchId={} messageId={} attempt={}",
                         command.source(), command.batchId(), command.messageId(), attempt);

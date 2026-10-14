@@ -515,7 +515,7 @@ class PackageRunServiceTest {
                 "Mensaje que el LLM no pudo analizar",
                 null, null, null, null, 0, EnrichedComment.LLM_FALLBACK, null,
                 Instant.parse("2026-10-06T10:00:00Z"), source,
-                null, null, null, null, null, false, 1);
+                null, null, null, null, null, false, false, 1);
     }
 
     private static EnrichedComment post(String messageId, Source source) {
@@ -526,6 +526,6 @@ class PackageRunServiceTest {
                 List.of("empleo"), 80, null, null, Instant.parse("2026-10-06T10:00:00Z"), source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null, false, 1);
+                List.of("#EmpleoTech"), null, false, false, 1);
     }
 }

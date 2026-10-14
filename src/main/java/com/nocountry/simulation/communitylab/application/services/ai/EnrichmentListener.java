@@ -111,6 +111,7 @@ public class EnrichmentListener {
                     messageProcessed.outputContentProcessed(),
                     messageProcessed.hashtags(),
                     messageProcessed.cta(),
+                    messageProcessed.revised(),
                     messageProcessed.approved(),
                     messageProcessed.versionMessage()
             );

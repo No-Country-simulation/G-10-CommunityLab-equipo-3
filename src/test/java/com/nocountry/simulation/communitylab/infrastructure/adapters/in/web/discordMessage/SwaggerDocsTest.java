@@ -123,6 +123,9 @@ class SwaggerDocsTest {
                     .andExpect(jsonPath(get + ".description").value(containsString("package.completed")))
                     .andExpect(jsonPath(get + ".responses['200'].content['text/event-stream'].examples['asset.created']")
                             .exists())
+                    // every new post starts pending review (spec 007 RF-01, enmienda 2026-10-13)
+                    .andExpect(jsonPath(get + ".responses['200'].content['text/event-stream'].examples['asset.created'].value.revised")
+                            .value(false))
                     .andExpect(jsonPath(example + ".type").value("package.completed"))
                     .andExpect(jsonPath(example + ".batchId").exists())
                     .andExpect(jsonPath(example + ".payload.assetsCount").exists())
@@ -154,7 +157,7 @@ class SwaggerDocsTest {
     }
 
     @Test
-    @DisplayName("Given started app, when GET /v3/api-docs, then RevisePostResponse carries the saved version and approval")
+    @DisplayName("Given started app, when GET /v3/api-docs, then RevisePostResponse carries the saved version, approval and review mark")
     void documentsRevisionResponseSchema() throws Exception {
         String schema = "$.components.schemas.RevisePostResponse.properties";
         mockMvc.perform(get("/v3/api-docs"))
@@ -163,6 +166,7 @@ class SwaggerDocsTest {
                 .andExpect(jsonPath(schema + ".messageId").exists())
                 .andExpect(jsonPath(schema + ".versionMessage").exists())
                 .andExpect(jsonPath(schema + ".approved").exists())
+                .andExpect(jsonPath(schema + ".revised").exists())
                 // internal flag of the use case, not part of the HTTP contract
                 .andExpect(jsonPath(schema + ".changed").doesNotExist());
     }
@@ -181,6 +185,7 @@ class SwaggerDocsTest {
                     .andExpect(jsonPath(example + ".payload.messageId").exists())
                     .andExpect(jsonPath(example + ".payload.versionMessage").exists())
                     .andExpect(jsonPath(example + ".payload.approved").exists())
+                    .andExpect(jsonPath(example + ".payload.revised").value(true))
                     // the notice carries no content: the post is read through the PAR (RF-07)
                     .andExpect(jsonPath(example + ".payload.outputContentProcessed").doesNotExist());
         }
@@ -194,12 +199,14 @@ class SwaggerDocsTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath(schema + ".expectedVersion").exists())
                 .andExpect(jsonPath(schema + ".approved").exists())
+                .andExpect(jsonPath(schema + ".revised").exists())
                 .andExpect(jsonPath(schema + ".outputContentProcessed").exists())
                 .andExpect(jsonPath(schema + ".channelPost").exists())
                 // internal plumbing must not leak into the public contract
                 .andExpect(jsonPath(schema + ".unknownFields").doesNotExist())
                 .andExpect(jsonPath(schema + ".anyChange").doesNotExist())
                 .andExpect(jsonPath(schema + ".onlyEditableFields").doesNotExist())
+                .andExpect(jsonPath(schema + ".revisedOnlyTrue").doesNotExist())
                 // the AI analysis is not editable, so it is not part of the request
                 .andExpect(jsonPath(schema + ".sentiment").doesNotExist())
                 .andExpect(jsonPath(schema + ".relevance").doesNotExist());

@@ -25,7 +25,8 @@ import com.nocountry.simulation.communitylab.domain.exception.PostNotRevisableEx
  * <p>Derivado de: spec 007 RF-02 (ausente = no cambia, {@code ""}/{@code []} = vaciar) + RF-03
  * (reglas de canal sobre el {@code channelPost} final, {@code LLM_FALLBACK} no revisable) + RF-04
  * (toda actualización guardada sube {@code versionMessage}, editar conserva {@code approved},
- * {@code messageId} nunca cambia, no-op sin cambio) + plan 007 §1.2 (domain), §3.
+ * {@code messageId} nunca cambia, no-op sin cambio; enmienda 2026-10-13: toda revisión guardada deja
+ * {@code revised=true}, {@code revised:true} solo marca revisado) + plan 007 §1.2, §1.3 (domain), §3.
  */
 @DisplayName("EnrichedComment.revise")
 class EnrichedCommentReviseTest {
@@ -37,12 +38,18 @@ class EnrichedCommentReviseTest {
 
     private static EnrichedComment post(Channels channel, String title, String copy, List<String> hashtags,
                                         String cta, Boolean approved, Integer versionMessage, String flag) {
+        return post(channel, title, copy, hashtags, cta, false, approved, versionMessage, flag);
+    }
+
+    private static EnrichedComment post(Channels channel, String title, String copy, List<String> hashtags,
+                                        String cta, Boolean revised, Boolean approved, Integer versionMessage,
+                                        String flag) {
         return new EnrichedComment(
                 "batch-1", "msg-1", "channel-1", "author-1", "author-name",
                 "Conseguí empleo como dev Java", Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo", "java"), 75, flag, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                channel, title, copy, hashtags, cta, approved, versionMessage);
+                channel, title, copy, hashtags, cta, revised, approved, versionMessage);
     }
 
     private static EnrichedComment linkedin(boolean approved, int versionMessage) {
@@ -54,12 +61,21 @@ class EnrichedCommentReviseTest {
         return post(Channels.FAQ, "", "", List.of(), "", false, 1, EnrichedComment.LLM_FALLBACK);
     }
 
+    private static EnrichedComment linkedinReviewed(boolean revised, int versionMessage) {
+        return post(Channels.LINKEDIN, null, LINKEDIN_COPY, List.of("#ONE", "#Java"), CTA,
+                revised, false, versionMessage, null);
+    }
+
+    private static PostChange markReviewed() {
+        return new PostChange(true, null, null, null, null, null, null, null);
+    }
+
     private static PostChange approve(boolean approved) {
-        return new PostChange(approved, null, null, null, null, null, null);
+        return new PostChange(null, approved, null, null, null, null, null, null);
     }
 
     private static PostChange editCopy(String copy) {
-        return new PostChange(null, null, null, null, copy, null, null);
+        return new PostChange(null, null, null, null, null, copy, null, null);
     }
 
     // ---------- RF-04: every saved update bumps the version ----------
@@ -121,7 +137,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando se edita y se desaprueba a la vez
         EnrichedComment revised = original.revise(
-                new PostChange(false, null, null, null, EDITED_COPY, null, null));
+                new PostChange(null, false, null, null, null, EDITED_COPY, null, null));
 
         // Entonces approved es el enviado y la versión sube una sola vez
         assertThat(revised.approved()).isFalse();
@@ -150,7 +166,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando se aprueba y se edita todo lo editable a la vez
         EnrichedComment revised = original.revise(new PostChange(
-                true, List.of("spring"), Channels.X, "", "Nuevo empleo en Java", List.of("#Java"), ""));
+                null, true, List.of("spring"), Channels.X, "", "Nuevo empleo en Java", List.of("#Java"), ""));
 
         // Entonces el hilo de versiones (messageId) y lo que no es editable siguen intactos
         assertThat(revised.messageId()).isEqualTo(original.messageId());
@@ -193,7 +209,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando se reenvía su propio contenido
         EnrichedComment revised = original.revise(new PostChange(
-                false, original.topics(), original.channelPost(), null,
+                null, false, original.topics(), original.channelPost(), null,
                 original.outputContentProcessed(), original.hashtags(), original.cta()));
 
         // Entonces no hay versión nueva
@@ -220,10 +236,127 @@ class EnrichedCommentReviseTest {
         EnrichedComment original = linkedin(false, 1);
 
         // Cuando el cambio llega vacío (el controller ya lo rechaza; el dominio no depende de ello)
-        EnrichedComment revised = original.revise(new PostChange(null, null, null, null, null, null, null));
+        EnrichedComment revised = original.revise(new PostChange(null, null, null, null, null, null, null, null));
 
         // Entonces nada cambia
         assertThat(revised).isEqualTo(original);
+    }
+
+    // ---------- RF-04 (enmienda 2026-10-13): revised ----------
+
+    @Test
+    @DisplayName("Dado un post sin revisar, cuando se edita el texto sin enviar revised, entonces queda revisado y sube la versión")
+    void editingMarksThePostAsReviewed() {
+        // Dado un post recién salido de la IA
+        EnrichedComment original = linkedinReviewed(false, 1);
+
+        // Cuando se edita solo el texto
+        EnrichedComment revised = original.revise(editCopy(EDITED_COPY));
+
+        // Entonces el backend registra que una persona lo revisó
+        assertThat(revised.revised()).isTrue();
+        assertThat(revised.versionMessage()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Dado un post sin revisar, cuando se aprueba, entonces queda revisado y aprobado")
+    void approvingMarksThePostAsReviewed() {
+        // Dado un post recién salido de la IA
+        EnrichedComment original = linkedinReviewed(false, 1);
+
+        // Cuando se aprueba
+        EnrichedComment revised = original.revise(approve(true));
+
+        // Entonces aprobar también es revisar
+        assertThat(revised.revised()).isTrue();
+        assertThat(revised.approved()).isTrue();
+        assertThat(revised.versionMessage()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Dado un post aprobado sin revisar, cuando se desaprueba, entonces queda revisado y no apto")
+    void unapprovingMarksThePostAsReviewed() {
+        // Dado un post aprobado sin la marca (registro anterior a la enmienda)
+        EnrichedComment original = post(Channels.LINKEDIN, null, LINKEDIN_COPY, List.of("#ONE", "#Java"), CTA,
+                false, true, 1, null);
+
+        // Cuando se desaprueba
+        EnrichedComment revised = original.revise(approve(false));
+
+        // Entonces el estado es "revisado y no apto", distinto de "por revisar"
+        assertThat(revised.revised()).isTrue();
+        assertThat(revised.approved()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Dado un post sin revisar, cuando solo se envía revised=true, entonces se guarda revisado en la versión siguiente sin tocar el contenido")
+    void markingReviewedWithoutEditsIsASavedRevision() {
+        // Dado un post recién salido de la IA
+        EnrichedComment original = linkedinReviewed(false, 1);
+
+        // Cuando el usuario lo revisa y no cambia nada
+        EnrichedComment revised = original.revise(markReviewed());
+
+        // Entonces es una revisión guardada: sube la versión y el post sigue igual
+        assertThat(revised.revised()).isTrue();
+        assertThat(revised.versionMessage()).isEqualTo(2);
+        assertThat(revised.approved()).isFalse();
+        assertThat(revised.outputContentProcessed()).isEqualTo(original.outputContentProcessed());
+        assertThat(revised.hashtags()).isEqualTo(original.hashtags());
+        assertThat(revised.cta()).isEqualTo(original.cta());
+    }
+
+    @Test
+    @DisplayName("Dado un post ya revisado, cuando se envía revised=true, entonces es un no-op")
+    void markingAReviewedPostIsANoOp() {
+        // Dado un post ya revisado en v2
+        EnrichedComment original = linkedinReviewed(true, 2);
+
+        // Cuando se marca revisado otra vez
+        EnrichedComment revised = original.revise(markReviewed());
+
+        // Entonces es el mismo registro: el servicio no escribirá en OCI
+        assertThat(revised).isSameAs(original);
+    }
+
+    @Test
+    @DisplayName("Dado un post sin revisar, cuando la petición no cambia nada, entonces sigue sin revisar y en la misma versión")
+    void noOpDoesNotMarkThePostAsReviewed() {
+        // Dado un post recién salido de la IA (sin aprobar)
+        EnrichedComment original = linkedinReviewed(false, 1);
+
+        // Cuando se envía approved=false, que ya tenía
+        EnrichedComment revised = original.revise(approve(false));
+
+        // Entonces no hubo revisión: ni marca ni versión nueva
+        assertThat(revised).isSameAs(original);
+        assertThat(revised.revised()).isFalse();
+        assertThat(revised.versionMessage()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Dado un post revisado, cuando se vuelve a editar, entonces sigue revisado")
+    void editingAReviewedPostKeepsItReviewed() {
+        // Dado un post ya revisado
+        EnrichedComment original = linkedinReviewed(true, 2);
+
+        // Cuando se edita otra vez
+        EnrichedComment revised = original.revise(editCopy(EDITED_COPY));
+
+        // Entonces revised nunca vuelve a false
+        assertThat(revised.revised()).isTrue();
+        assertThat(revised.versionMessage()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("Dado un registro LLM_FALLBACK, cuando se marca revisado, entonces no es revisable")
+    void fallbackCannotBeMarkedReviewed() {
+        // Dado una traza sin post
+        EnrichedComment trace = fallback();
+
+        // Cuando / Entonces
+        assertThatThrownBy(() -> trace.revise(markReviewed()))
+                .isInstanceOf(PostNotRevisableException.class);
     }
 
     // ---------- RF-02: absent keeps, "" and [] clear ----------
@@ -236,7 +369,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando solo llegan hashtags (el resto ausente = null)
         EnrichedComment revised = original.revise(
-                new PostChange(null, null, null, null, null, List.of("#ONE", "#Java", "#Spring"), null));
+                new PostChange(null, null, null, null, null, null, List.of("#ONE", "#Java", "#Spring"), null));
 
         // Entonces ausente significa "no cambia", nunca "vacía"
         assertThat(revised.hashtags()).containsExactly("#ONE", "#Java", "#Spring");
@@ -253,7 +386,7 @@ class EnrichedCommentReviseTest {
                 false, 1, null);
 
         // Cuando se vacía el CTA
-        EnrichedComment revised = original.revise(new PostChange(null, null, null, null, null, null, ""));
+        EnrichedComment revised = original.revise(new PostChange(null, null, null, null, null, null, null, ""));
 
         // Entonces se guarda "" (único valor para "sin CTA") y es un cambio
         assertThat(revised.cta()).isEmpty();
@@ -268,7 +401,7 @@ class EnrichedCommentReviseTest {
                 "¿Cómo desplegar una API en OCI?", List.of("#OCI"), "", false, 1, null);
 
         // Cuando se vacían los hashtags
-        EnrichedComment revised = original.revise(new PostChange(null, null, null, null, null, List.of(), null));
+        EnrichedComment revised = original.revise(new PostChange(null, null, null, null, null, null, List.of(), null));
 
         // Entonces la lista queda vacía
         assertThat(revised.hashtags()).isEmpty();
@@ -298,7 +431,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando pasa a X (admite 1..2) / Entonces el resto del post debe cumplir el canal nuevo
         assertThatThrownBy(() -> original.revise(
-                        new PostChange(null, null, Channels.X, null, null, null, null)))
+                        new PostChange(null, null, null, Channels.X, null, null, null, null)))
                 .isInstanceOf(InvalidAssetException.class);
     }
 
@@ -310,7 +443,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando pasa a FAQ con título y vacía el CTA
         EnrichedComment revised = original.revise(new PostChange(
-                null, null, Channels.FAQ, "Primer empleo en Java", null, null, ""));
+                null, null, null, Channels.FAQ, "Primer empleo en Java", null, null, ""));
 
         // Entonces cumple las reglas de FAQ
         assertThat(revised.channelPost()).isEqualTo(Channels.FAQ);
@@ -327,7 +460,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando pasa a FAQ conservando el CTA (ausente = no cambia) / Entonces FAQ no admite CTA
         assertThatThrownBy(() -> original.revise(new PostChange(
-                        null, null, Channels.FAQ, "Primer empleo en Java", null, null, null)))
+                        null, null, null, Channels.FAQ, "Primer empleo en Java", null, null, null)))
                 .isInstanceOf(InvalidAssetException.class);
     }
 
@@ -352,7 +485,7 @@ class EnrichedCommentReviseTest {
 
         // Cuando se le intenta dar un post completo / Entonces sigue sin ser revisable
         assertThatThrownBy(() -> original.revise(new PostChange(
-                        null, null, Channels.X, null, "Nuevo empleo", List.of("#Java"), null)))
+                        null, null, null, Channels.X, null, "Nuevo empleo", List.of("#Java"), null)))
                 .isInstanceOf(PostNotRevisableException.class);
     }
 }

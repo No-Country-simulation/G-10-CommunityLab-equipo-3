@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.springframework.scheduling.annotation.Scheduled;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -25,6 +27,8 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
 
     private static final long TIMEOUT_MS = 30 * 60 * 1000L;
     private static final int REPLAY_MAX = 100;
+    private static final long HEARTBEAT_SECONDS = 30;
+
     private final Map<Source, List<SseEmitter>> emittersBySource = new ConcurrentHashMap<>();
     private final Map<Source, Deque<StoredEvent>> replayBySource = new ConcurrentHashMap<>();
 
@@ -38,8 +42,30 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
         emitter.onCompletion(() -> subscribers.remove(emitter));
         emitter.onTimeout(() -> subscribers.remove(emitter));
         emitter.onError(e -> subscribers.remove(emitter));
+
+        // Why: Cloudflare cuts a stream silent for 100 s (524); a comment sends a byte without firing onmessage or moving Last-Event-ID.
+        try {
+            emitter.send(SseEmitter.event().comment("connected"));
+        } catch (IOException | IllegalStateException e) {
+            subscribers.remove(emitter);
+            return emitter;
+        }
         replayAfter(source, lastEventId, emitter);
         return emitter;
+    }
+
+    // Why: 30 s stays well under Cloudflare's 100 s idle cut, even if one beat is late or lost.
+    @Scheduled(fixedRate = HEARTBEAT_SECONDS, timeUnit = TimeUnit.SECONDS)
+    public void heartbeat() {
+        for (List<SseEmitter> subscribers : emittersBySource.values()) {
+            for(SseEmitter emitter : subscribers) {
+                try {
+                    emitter.send(SseEmitter.event().comment("heartbeat"));
+                } catch (IOException | IllegalStateException e) {
+                   subscribers.remove(emitter);
+                }
+            }
+        }
     }
 
     @Override
@@ -131,7 +157,7 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
         MessageRevisedEvent messageRevisedEvent = new MessageRevisedEvent(
                 "message.revised",
                 messageRevised.batchId(),
-                new RevisionPayload(messageRevised.messageId(), messageRevised.versionMessage(), messageRevised.approved()));
+                new RevisionPayload(messageRevised.messageId(), messageRevised.versionMessage(), messageRevised.approved(), messageRevised.revised()));
 
         StoredEvent event = new StoredEvent(
                 messageRevised.messageId() + ":v" + messageRevised.versionMessage(),
@@ -152,7 +178,7 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
 
     private record MessageRevisedEvent(String type, String batchId, RevisionPayload payload) {}
 
-    private record RevisionPayload(String messageId, int versionMessage, boolean approved) {}
+    private record RevisionPayload(String messageId, int versionMessage, boolean approved, boolean revised) {}
 
     private record PackageCompletedEvent(String type, String batchId, Payload payload){
 

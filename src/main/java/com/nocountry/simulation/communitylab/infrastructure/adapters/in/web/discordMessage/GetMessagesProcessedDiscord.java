@@ -71,6 +71,7 @@ public class GetMessagesProcessedDiscord {
                                               "outputContentProcessed": "De la comunidad al primer empleo como dev Java. Gracias por el apoyo en el camino!",
                                               "hashtags": ["#ONE", "#EmpleoTech", "#Java"],
                                               "cta": "Comparte tu historia en #logros",
+                                              "revised": false,
                                               "approved": false,
                                               "versionMessage": 1
                                             }"""),
@@ -97,7 +98,8 @@ public class GetMessagesProcessedDiscord {
                                               "payload": {
                                                 "messageId": "msg-1",
                                                 "versionMessage": 2,
-                                                "approved": true
+                                                "approved": true,
+                                                "revised": true
                                               }
                                             }""")
                     }))

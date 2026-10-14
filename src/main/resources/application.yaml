@@ -15,6 +15,12 @@ spring:
     ansi:
       enabled: always
 
+  # Config the size pool threads for task scheduling
+  task:
+    scheduling:
+      pool:
+        size: 2
+
 # Value of buffer max batch size
 redis:
   buffer:

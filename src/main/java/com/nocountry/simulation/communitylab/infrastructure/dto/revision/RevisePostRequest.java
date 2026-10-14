@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public record RevisePostRequest(
+        Boolean revised,
         @NotNull @Min(1) Integer expectedVersion,
         Boolean approved,
         @Size(max = 5) List<@NotBlank @Size(max = 50) String> topics,
@@ -24,17 +25,24 @@ public record RevisePostRequest(
     @JsonIgnore
     @AssertTrue(message = "at least one change is required")
     public boolean isAnyChange() {
-        return approved != null || topics != null || channelPost != null || titlePost != null
+        return revised != null || approved != null || topics != null || channelPost != null || titlePost != null
                 || outputContentProcessed != null || hashtags != null || cta != null;
     }
 
     @JsonIgnore
-    @AssertTrue(message = "editable fields: approved, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta")
+    @AssertTrue(message = "editable fields: approved, revised, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta")
     public boolean isOnlyEditableFields() {
         return unknownFields == null || unknownFields.isEmpty();
     }
 
+    // A review can't be undone (spec 007 RF-02): revised only accepts true.
+    @JsonIgnore
+    @AssertTrue(message = "revised only accepts true")
+    public boolean isRevisedOnlyTrue() {
+        return revised == null || revised;
+    }
+
     public PostChange toChange() {
-        return new PostChange(approved, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta);
+        return new PostChange(revised, approved, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta);
     }
 }
