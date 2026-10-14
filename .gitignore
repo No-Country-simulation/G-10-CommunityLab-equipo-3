@@ -7,3 +7,7 @@
 
 # Local secrets
 .env
+
+# Local Claude Code config (machine paths, dev servers); never committed
+.claude/launch.json
+.claude/settings.local.json
