@@ -75,6 +75,7 @@ public class GetMessageProcessedTelegram {
                                               "outputContentProcessed": "De la comunidad al primer empleo como dev Java. Gracias por el apoyo en el camino!",
                                               "hashtags": ["#ONE", "#EmpleoTech", "#Java"],
                                               "cta": "Comparte tu historia en #logros",
+                                              "revised": false,
                                               "approved": false,
                                               "versionMessage": 1
                                             }"""),
@@ -101,7 +102,8 @@ public class GetMessageProcessedTelegram {
                                               "payload": {
                                                 "messageId": "tg-1",
                                                 "versionMessage": 2,
-                                                "approved": true
+                                                "approved": true,
+                                                "revised": true
                                               }
                                             }""")
                     }))

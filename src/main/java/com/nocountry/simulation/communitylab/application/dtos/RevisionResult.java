@@ -6,6 +6,7 @@ public record RevisionResult(
         String messageId,
         int versionMessage,
         boolean approved,
+        boolean revised,
         boolean changed
 ) {
 }

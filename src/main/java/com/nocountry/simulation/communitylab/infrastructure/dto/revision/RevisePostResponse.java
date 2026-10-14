@@ -4,6 +4,7 @@ public record RevisePostResponse(
         String batchId,
         String messageId,
         int versionMessage,
-        boolean approved
+        boolean approved,
+        boolean revised
 ) {
 }

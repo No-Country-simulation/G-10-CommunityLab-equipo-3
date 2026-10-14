@@ -34,6 +34,7 @@ public record EnrichedComment(
         String outputContentProcessed,
         List<String> hashtags,
         String cta,
+        Boolean revised,
         Boolean approved,
         Integer versionMessage) {
 
@@ -76,6 +77,7 @@ public record EnrichedComment(
         relevance = Math.min(100, Math.max(0, relevance));
         hashtags = hashtags == null ? List.of() : List.copyOf(hashtags);
         approved = approved != null && approved;
+        revised = revised != null && revised;
         versionMessage = versionMessage == null || versionMessage < 1 ? 1 : versionMessage;
         promptVersion = promptVersion == null ? PROMPT_VERSION : promptVersion;
         outputContentProcessed = outputContentProcessed == null ? null : outputContentProcessed.trim();
@@ -96,16 +98,17 @@ public record EnrichedComment(
             throw new PostNotRevisableException("LLM_FALLBACK record has no post to revise");
         }
         // Why build before comparing: the constructor normalizes (trim, empty texts), so equals sees final values.
-        EnrichedComment candidate = merge(change, versionMessage);
+        // The candidate only takes the revised the client sent, so a request that changes nothing stays a no-op.
+        EnrichedComment candidate = merge(change, versionMessage, orKeep(change.revised(), revised));
         if (candidate.equals(this)) {
             return this;
         }
-        // Every saved update bumps the version, approval included; messageId never changes.
-        return merge(change, versionMessage + 1);
+        // Every saved update bumps the version and marks the post as reviewed; messageId never changes.
+        return merge(change, versionMessage + 1, true);
     }
 
     // The constructor re-runs validatePost, so a revision that breaks the final channel's rules can't exist.
-    private EnrichedComment merge(PostChange change, int version) {
+    private EnrichedComment merge(PostChange change, int version, boolean reviewed) {
         return new EnrichedComment(
                 messageBatchId, messageId, channelId, authorId, authorName, messageAuthor,
                 sentiment, language, messageType,
@@ -116,6 +119,7 @@ public record EnrichedComment(
                 orKeep(change.outputContentProcessed(), outputContentProcessed),
                 orKeep(change.hashtags(), hashtags),
                 orKeep(change.cta(), cta),
+                reviewed,
                 orKeep(change.approved(), approved),
                 version);
     }

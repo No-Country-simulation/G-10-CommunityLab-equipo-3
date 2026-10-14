@@ -131,7 +131,7 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
         MessageRevisedEvent messageRevisedEvent = new MessageRevisedEvent(
                 "message.revised",
                 messageRevised.batchId(),
-                new RevisionPayload(messageRevised.messageId(), messageRevised.versionMessage(), messageRevised.approved()));
+                new RevisionPayload(messageRevised.messageId(), messageRevised.versionMessage(), messageRevised.approved(), messageRevised.revised()));
 
         StoredEvent event = new StoredEvent(
                 messageRevised.messageId() + ":v" + messageRevised.versionMessage(),
@@ -152,7 +152,7 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
 
     private record MessageRevisedEvent(String type, String batchId, RevisionPayload payload) {}
 
-    private record RevisionPayload(String messageId, int versionMessage, boolean approved) {}
+    private record RevisionPayload(String messageId, int versionMessage, boolean approved, boolean revised) {}
 
     private record PackageCompletedEvent(String type, String batchId, Payload payload){
 
