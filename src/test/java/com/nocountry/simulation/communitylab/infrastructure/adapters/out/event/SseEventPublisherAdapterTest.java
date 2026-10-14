@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -42,7 +44,8 @@ import tools.jackson.databind.json.JsonMapper;
  * RF-06 ({@code package.completed {type, batchId, payload:{assetsCount, parUrlBase,
  * expiresAt}}} por {@code source}, {@code id=batchId}, replay con {@code Last-Event-ID})
  * + RNF-06 (la PAR nunca en logs) + spec 007 RF-08 ({@code message.revised {type, batchId, payload:{messageId,
- * versionMessage, approved}}} por {@code source}, {@code id={messageId}:v{versionMessage}}, sin contenido) + RNF-04.
+ * versionMessage, approved}}} por {@code source}, {@code id={messageId}:v{versionMessage}}, sin contenido) + RNF-04
+ * + plan 006 §3 (comentario {@code connected} al suscribirse + heartbeat cada 30 s: Cloudflare corta a los 100 s sin bytes).
  * No Spring context: real adapter + real controllers over standalone MockMvc,
  * asserting on the buffered servlet response (the observable send behavior).
  */
@@ -306,6 +309,112 @@ class SseEventPublisherAdapterTest {
 
         // Entonces se puede rastrear el aviso (RNF-04: solo ids y versión)
         assertThat(output.getOut()).contains("source=TELEGRAM", "batchId=b-1", "messageId=m-1", "versionMessage=2");
+    }
+
+    // ---------- connection comment (Cloudflare 524) ----------
+
+    @Test
+    @DisplayName("Dado un dashboard sin eventos previos, cuando se suscribe, entonces el primer frame es el comentario connected sin id ni nombre")
+    void subscribeOpensTheStreamWithAConnectedComment() throws Exception {
+        // Cuando un dashboard se suscribe y todavía no se ha publicado nada
+        String content = subscribe("/api/v1/telegram/messages", null).getResponse().getContentAsString();
+
+        // Entonces recibe un byte enseguida (Cloudflare no espera 100 s en silencio) y es solo un comentario:
+        // sin id: el navegador no lo toma como Last-Event-ID; sin event:/data: no dispara onmessage
+        assertThat(content.split("\n\n")[0]).isEqualTo(":connected");
+    }
+
+    @Test
+    @DisplayName("Dado eventos previos, cuando se reconecta con Last-Event-ID, entonces el comentario connected llega antes que el replay")
+    void connectedCommentPrecedesTheReplay() throws Exception {
+        // Dado dos eventos Telegram ya publicados sin suscriptores
+        adapter.publish(telegramPost("tg-1"));
+        adapter.publish(telegramPost("tg-2"));
+
+        // Cuando el dashboard se reconecta desde tg-1
+        String content = subscribe("/api/v1/telegram/messages", "tg-1").getResponse().getContentAsString();
+
+        // Entonces primero el comentario y después el evento repetido
+        assertThat(content).startsWith(":connected\n\n");
+        assertThat(eventBlock(content, "tg-2")).contains("event:asset.created");
+    }
+
+    @Test
+    @DisplayName("Dado un dashboard ya suscrito, cuando se suscribe otro, entonces el primero no recibe un segundo comentario connected")
+    void connectedCommentGoesOnlyToTheNewSubscriber() throws Exception {
+        // Dado un dashboard Telegram ya conectado
+        MvcResult first = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando se conecta un segundo dashboard a la misma fuente
+        subscribe("/api/v1/telegram/messages", null);
+
+        // Entonces el comentario es por conexión, no un broadcast
+        assertThat(first.getResponse().getContentAsString()).isEqualTo(":connected\n\n");
+    }
+
+    // ---------- heartbeat (Cloudflare 524) ----------
+
+    @Test
+    @DisplayName("Dado dashboards suscritos a ambas fuentes, cuando late el heartbeat, entonces los dos reciben el comentario heartbeat")
+    void heartbeatReachesSubscribersOfEverySource() throws Exception {
+        // Dado un dashboard por fuente
+        MvcResult discord = subscribe("/api/v1/discord/messages", null);
+        MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando late el heartbeat
+        adapter.heartbeat();
+
+        // Entonces Cloudflare ve tráfico en los dos streams, no solo en el de una fuente
+        assertThat(discord.getResponse().getContentAsString()).isEqualTo(":connected\n\n:heartbeat\n\n");
+        assertThat(telegram.getResponse().getContentAsString()).isEqualTo(":connected\n\n:heartbeat\n\n");
+    }
+
+    @Test
+    @DisplayName("Dado un evento ya recibido, cuando late el heartbeat, entonces llega sin id y el último id del stream sigue siendo el del evento")
+    void heartbeatDoesNotMoveTheLastEventId() throws Exception {
+        // Dado un dashboard que ya recibió tg-1
+        MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
+        adapter.publish(telegramPost("tg-1"));
+
+        // Cuando late el heartbeat
+        adapter.heartbeat();
+
+        // Entonces es un bloque de solo comentario: el navegador reconectaría con Last-Event-ID=tg-1
+        String content = telegram.getResponse().getContentAsString();
+        assertThat(content).endsWith("\n\n:heartbeat\n\n");
+        assertThat(content.lines().filter(line -> line.startsWith("id:")).toList()).containsExactly("id:tg-1");
+    }
+
+    @Test
+    @DisplayName("Dado una conexión cerrada antes que una viva, cuando late el heartbeat, entonces no lanza y la viva lo recibe igual")
+    void heartbeatSkipsADeadClientWithoutBreakingTheRest() throws Exception {
+        // Dado un emitter ya cerrado (cliente que se fue) registrado antes que un dashboard vivo
+        adapter.subscribe(Source.TELEGRAM, null).complete();
+        MvcResult alive = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando late el heartbeat / Entonces el fallo del muerto no se propaga al scheduler
+        assertThatCode(() -> adapter.heartbeat()).doesNotThrowAnyException();
+
+        // Y el vivo recibe su latido aunque el muerto iba primero en la lista
+        assertThat(alive.getResponse().getContentAsString()).endsWith(":heartbeat\n\n");
+    }
+
+    @Test
+    @DisplayName("Dado ningún dashboard conectado, cuando late el heartbeat, entonces no lanza")
+    void heartbeatWithoutSubscribersDoesNotThrow() {
+        // Cuando late sin nadie conectado / Entonces el hilo del scheduler nunca recibe una excepción
+        assertThatCode(() -> adapter.heartbeat()).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Dado el heartbeat programado, cuando se lee su intervalo, entonces es fijo y bien por debajo de los 100 s de Cloudflare")
+    void heartbeatIntervalStaysUnderTheCloudflareIdleCut() throws Exception {
+        // Dado el método programado
+        Scheduled scheduled = SseEventPublisherAdapter.class.getMethod("heartbeat").getAnnotation(Scheduled.class);
+
+        // Cuando se lee la anotación / Entonces 30 s a ritmo fijo: un latido perdido sigue dejando margen
+        assertThat(Duration.of(scheduled.fixedRate(), scheduled.timeUnit().toChronoUnit()))
+                .isEqualTo(Duration.ofSeconds(30));
     }
 
     // ---------- fixtures ----------
