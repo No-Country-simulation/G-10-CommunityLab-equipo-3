@@ -10,6 +10,7 @@ public record OciProperties(
         String region,
         String namespace,
         String prefix,
-        int parTtlDays
+        int parTtlDays,
+        String compartmentId
 ) {
 }
