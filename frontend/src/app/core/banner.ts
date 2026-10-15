@@ -1,22 +1,39 @@
 import { GeneratedAsset } from './api/api.models';
+import { I18n } from './i18n/i18n.service';
+import { assetTitle } from './i18n/translate.pipe';
 
-/** Social banner (1200×627, LinkedIn's recommended size) generated client-side as SVG. */
-export function buildBannerSvg(asset: GeneratedAsset): string {
+/**
+ * Whether a post can get a banner: complaints and negative messages are answered, never promoted,
+ * and rejected posts will not be published.
+ */
+export function canHaveBanner(asset: GeneratedAsset): boolean {
+  return (
+    asset.status !== 'rejected' &&
+    asset.origin.route !== 'alert' &&
+    asset.origin.route !== 'discard' &&
+    (asset.type === 'linkedin_post' || asset.type === 'x_post' || asset.type === 'faq')
+  );
+}
+
+/** Social banner (1200×627, LinkedIn's recommended size) generated client-side as SVG, in the UI language. */
+export function buildBannerSvg(asset: GeneratedAsset, i18n: I18n): string {
   const route = asset.origin.route;
   const theme =
     route === 'faq'
-      ? { from: '#1c1917', to: '#b45309', label: 'PREGUNTA FRECUENTE', icon: '?' }
+      ? { from: '#1c1917', to: '#b45309', label: i18n.t('banner.faq'), icon: '?' }
       : route === 'testimonial'
-        ? { from: '#047857', to: '#10b981', label: 'VOZ DE LA COMUNIDAD', icon: '♥' }
-        : { from: '#b45309', to: '#f59e0b', label: 'LOGRO DE LA COMUNIDAD', icon: '★' };
+        ? { from: '#047857', to: '#10b981', label: i18n.t('banner.testimonial'), icon: '♥' }
+        : { from: '#b45309', to: '#f59e0b', label: i18n.t('banner.success'), icon: '★' };
 
-  const headline = route === 'faq' ? asset.title || asset.origin.excerpt : asset.origin.author;
+  const title = assetTitle(asset, i18n);
+  const headline = route === 'faq' ? title || asset.origin.excerpt : asset.origin.author;
   const sub =
     route === 'faq'
-      ? 'Respuesta completa en nuestro FAQ'
+      ? i18n.t('banner.faqAnswer')
       : route === 'testimonial'
         ? `“${truncate(asset.origin.excerpt, 90)}”`
-        : '¡Consiguió su nuevo rol en tecnología gracias a la comunidad!';
+        : // Achievement: what this member actually achieved, as the post's title says
+          truncate(title, 70);
 
   const lines = wrap(headline, route === 'faq' ? 30 : 22).slice(0, 3);
   const size = route === 'faq' ? 56 : 76;
@@ -33,7 +50,7 @@ export function buildBannerSvg(asset: GeneratedAsset): string {
   <circle cx="1130" cy="560" r="140" fill="#fff" opacity=".06"/>
   <text x="1010" y="380" font-family="Inter, Segoe UI, sans-serif" font-size="260" font-weight="700" fill="#fff" opacity=".12">${theme.icon}</text>
   <rect x="80" y="80" width="${theme.label.length * 13 + 48}" height="44" rx="22" fill="#fff" opacity=".18"/>
-  <text x="104" y="109" font-family="Inter, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="2" fill="#fff">${theme.label}</text>
+  <text x="104" y="109" font-family="Inter, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="2" fill="#fff">${esc(theme.label)}</text>
   ${lines
     .map(
       (l, i) =>
@@ -41,7 +58,7 @@ export function buildBannerSvg(asset: GeneratedAsset): string {
     )
     .join('\n  ')}
   <text x="80" y="${startY + lines.length * size * 1.1 + 20}" font-family="Inter, Segoe UI, sans-serif" font-size="28" fill="#fff" opacity=".85">${esc(sub)}</text>
-  <text x="80" y="560" font-family="Inter, Segoe UI, sans-serif" font-size="24" font-weight="700" fill="#fff">Ukuku AI · <tspan font-weight="400" opacity=".85">Tu comunidad habla. Ukuku AI publica.</tspan></text>
+  <text x="80" y="560" font-family="Inter, Segoe UI, sans-serif" font-size="24" font-weight="700" fill="#fff">Ukuku AI · <tspan font-weight="400" opacity=".85">${esc(i18n.t('brand.tagline'))}</tspan></text>
   <text x="1120" y="560" text-anchor="end" font-family="Inter, Segoe UI, sans-serif" font-size="20" fill="#fff" opacity=".8">${esc(asset.hashtags.slice(0, 3).join('  '))}</text>
 </svg>`;
 }

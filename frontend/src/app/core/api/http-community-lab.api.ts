@@ -3,12 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, throwError } from 'rxjs';
 import { AssetPatch, GeneratedAsset, StoredObject } from './api.models';
 import { API_CONFIG, CommunityLabApi, RevisionError, RevisionFailure, StoredObjectView } from './community-lab.api';
+import { CHANNEL_POST } from './live-feed';
 import { OciPackages, PackageRef } from './oci-packages';
 
 /** Body of PATCH /api/v1/{source}/packages/{batchId}/messages/{messageId}: only what changed, plus the version */
 interface RevisePostRequest {
   expectedVersion: number;
   approved?: boolean;
+  channelPost?: string;
   titlePost?: string;
   outputContentProcessed?: string;
   hashtags?: string[];
@@ -123,9 +125,12 @@ function toRevision(asset: GeneratedAsset, patch: AssetPatch): RevisePostRequest
   if (patch.status) body.approved = patch.status === 'approved' || patch.status === 'published';
   if (patch.title !== undefined) body.titlePost = patch.title;
   if (patch.hashtags !== undefined) body.hashtags = patch.hashtags;
+  if (patch.type !== undefined && patch.type !== asset.type) body.channelPost = CHANNEL_POST[patch.type];
+  if (patch.cta !== undefined) body.cta = patch.cta;
   if (patch.body !== undefined) {
     // The UI shows the call to action as the body's last paragraph; the backend keeps it apart (required on LinkedIn)
-    const suffix = asset.cta ? `\n\n${asset.cta}` : '';
+    const cta = patch.cta ?? asset.cta;
+    const suffix = cta ? `\n\n${cta}` : '';
     body.outputContentProcessed = suffix && patch.body.endsWith(suffix) ? patch.body.slice(0, -suffix.length) : patch.body;
   }
   return body;

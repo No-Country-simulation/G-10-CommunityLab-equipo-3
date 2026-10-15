@@ -11,7 +11,7 @@ import {
 } from './api/api.models';
 import { MessageService } from 'primeng/api';
 import { API_CONFIG, CommunityLabApi, RevisionError } from './api/community-lab.api';
-import { LIVE_ASSET_PREFIX, LiveFeed, RevisionNotice, liveAssetId } from './api/live-feed';
+import { LIVE_ASSET_PREFIX, LiveFeed, LiveFeedStatus, RevisionNotice, liveAssetId } from './api/live-feed';
 import { OciPackages, PackageRef } from './api/oci-packages';
 import { I18n } from './i18n/i18n.service';
 
@@ -19,6 +19,9 @@ const SOURCE_KEY = 'active-source';
 
 /** How a curation change ended: stored, waiting for its package (kept in this browser), or refused */
 export type SaveOutcome = 'saved' | 'pending' | 'failed';
+
+/** What the workspace shows: one network, or all of them together */
+export type NetworkFilter = InteractionSource | 'all';
 /** How many recent messages decide the community mood */
 const MOOD_WINDOW = 20;
 
@@ -35,15 +38,27 @@ export class WorkspaceStore {
   private readonly _assets = signal<GeneratedAsset[]>([]);
   private readonly _objects = signal<StoredObject[]>([]);
   private readonly _busyIds = signal<Set<string>>(new Set());
-  private readonly _activeSource = signal<InteractionSource>(readActiveSource());
+  private readonly _activeSource = signal<NetworkFilter>(readActiveSource());
 
-  /** Network the workspace is scoped to (Discord or Telegram). */
+  /** What the workspace is scoped to: Discord, Telegram or 'all'. */
   readonly activeSource = this._activeSource.asReadonly();
 
-  /** Assets of the selected network: what every page lists and counts. */
+  /** The networks behind the selection (both for 'all') */
+  readonly scope = computed<readonly InteractionSource[]>(() => {
+    const active = this._activeSource();
+    return active === 'all' ? INTERACTION_SOURCES : [active];
+  });
+
+  /** Display name of the selection: "Discord: CommunityLab", or "Discord y Telegram" for all */
+  readonly scopeLabel = computed(() => {
+    const active = this._activeSource();
+    return active === 'all' ? this.i18n.t('sidebar.network.allName') : `${active}: CommunityLab`;
+  });
+
+  /** Assets of the selected network(s): what every page lists and counts. */
   readonly assets = computed(() => {
-    const source = this._activeSource();
-    return this._assets().filter((a) => a.origin.source === source);
+    const scope = this.scope();
+    return this._assets().filter((a) => scope.includes(a.origin.source));
   });
 
   readonly objects = this._objects.asReadonly();
@@ -96,7 +111,7 @@ export class WorkspaceStore {
     return { mood, counts, total: latest.length };
   });
 
-  setActiveSource(source: InteractionSource) {
+  setActiveSource(source: NetworkFilter) {
     this._activeSource.set(source);
     try {
       localStorage.setItem(SOURCE_KEY, source);
@@ -128,23 +143,32 @@ export class WorkspaceStore {
 
   private storageRefresh?: ReturnType<typeof setTimeout>;
 
-  /** Whether the selected network already received its history from the backend (spec 008) */
-  readonly historyLoaded = computed(() => this.liveFeed.historyLoaded()[this._activeSource()]);
+  /** Networks of the selection that have a live stream */
+  private readonly streamed = computed(() => this.scope().filter((s) => !!this.liveFeed.urlOf(s)));
 
-  /** Waiting for the history of the selected network: show "loading" instead of an empty list */
+  /** Whether every selected network already received its history from the backend (spec 008) */
+  readonly historyLoaded = computed(() => this.streamed().every((s) => this.liveFeed.historyLoaded()[s]));
+
+  /** Waiting for the history of the selection: show "loading" instead of an empty list */
   readonly historyLoading = computed(
-    () =>
-      !this.config.useMocks &&
-      !!this.liveFeed.urlOf(this._activeSource()) &&
-      this.liveStatus() !== 'error' &&
-      !this.historyLoaded(),
+    () => !this.config.useMocks && this.streamed().length > 0 && this.liveStatus() !== 'error' && !this.historyLoaded(),
   );
 
-  /** Connection state of the selected network's SSE stream. */
-  readonly liveStatus = computed(() => this.liveFeed.status()[this._activeSource()]);
+  /**
+   * Connection state of the selection. For several networks: open only when all are open, error when one
+   * failed (the card says which network fails in its detail row), connecting otherwise.
+   */
+  readonly liveStatus = computed<LiveFeedStatus>(() => {
+    const states = this.streamed().map((s) => this.liveFeed.status()[s]);
+    if (!states.length) return 'off';
+    if (states.every((st) => st === 'open')) return 'open';
+    if (states.some((st) => st === 'error')) return 'error';
+    if (states.every((st) => st === 'off')) return 'off';
+    return 'connecting';
+  });
 
-  /** SSE endpoint of the selected network, if it has one. */
-  readonly liveUrl = computed(() => this.liveFeed.urlOf(this._activeSource()));
+  /** Whether the selection has a live stream at all */
+  readonly liveUrl = computed(() => this.streamed().length > 0);
 
   isBusy(id: string) {
     return this._busyIds().has(id);
@@ -326,11 +350,11 @@ export class WorkspaceStore {
   }
 }
 
-function readActiveSource(): InteractionSource {
+function readActiveSource(): NetworkFilter {
   try {
     const saved = localStorage.getItem(SOURCE_KEY);
-    return INTERACTION_SOURCES.find((s) => s === saved) ?? 'Discord';
+    return saved === 'all' ? 'all' : (INTERACTION_SOURCES.find((s) => s === saved) ?? 'all');
   } catch {
-    return 'Discord';
+    return 'all';
   }
 }

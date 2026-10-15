@@ -776,6 +776,110 @@ html:not(.dark) .p-toast-message {
 }
 
 /* ── Topbar language switch: recessed track, the active language is a raised amber chip ── */
+/* ── Topbar: link back to the public landing page (pill matching the language switch) ── */
+.home-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 0.85rem 0 0.3rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #44403c;
+  background: #fff;
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(28 25 23 / 0.08), 0 2px 6px -2px rgb(120 53 15 / 0.14);
+  transition: color 0.15s, box-shadow 0.2s, transform 0.15s;
+}
+
+.home-link:hover {
+  color: #b45309;
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(217 119 6 / 0.35), 0 6px 14px -6px rgb(217 119 6 / 0.45);
+}
+
+.home-link:active {
+  transform: translateY(1px);
+}
+
+.home-link:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.home-link-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  background: #fef3c7;
+  box-shadow: 0 0 0 1px rgb(245 158 11 / 0.35);
+}
+
+.home-link-icon {
+  display: none;
+  font-size: 0.95rem;
+}
+
+.home-link-arrow {
+  font-size: 0.7rem;
+  color: #a8a29e;
+  transition: transform 0.2s, color 0.15s;
+}
+
+.home-link:hover .home-link-arrow {
+  color: #d97706;
+  transform: translate(2px, -2px);
+}
+
+.dark .home-link {
+  color: #e7e5e4;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.dark .home-link:hover {
+  color: #fcd34d;
+  background: rgb(251 191 36 / 0.08);
+  box-shadow: 0 0 0 1px rgb(251 191 36 / 0.35);
+}
+
+.dark .home-link-arrow {
+  color: #78716c;
+}
+
+.dark .home-link:hover .home-link-arrow {
+  color: #fbbf24;
+}
+
+/* Phones: a round house button (the bear would repeat the logo on the left);
+   the tooltip and aria-label carry the meaning */
+@media (max-width: 767px) {
+  .home-link {
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+  }
+
+  .home-link-icon {
+    display: inline;
+  }
+
+  .home-link-avatar,
+  .home-link-label,
+  .home-link-arrow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-link,
+  .home-link-arrow {
+    transition: none;
+  }
+}
+
 .lang-switch {
   align-items: center;
   gap: 2px;

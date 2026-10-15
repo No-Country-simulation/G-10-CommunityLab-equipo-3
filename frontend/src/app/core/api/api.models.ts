@@ -125,7 +125,14 @@ export interface StoredObject {
 
 export interface AssetPatch {
   title?: string;
+  /** Text as shown in the UI: the post plus, as last paragraph, its call to action */
   body?: string;
   hashtags?: string[];
   status?: AssetStatus;
+  /** Move the post to another platform (backend `channelPost`) */
+  type?: AssetType;
+  /** Call to action; "" removes it (required on LinkedIn, forbidden on FAQ) */
+  cta?: string;
+  /** Tone shown for the new platform (UI only) */
+  tone?: string;
 }

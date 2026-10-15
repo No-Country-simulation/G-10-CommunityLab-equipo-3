@@ -14,7 +14,7 @@
   <div class="min-w-0 flex-1">
     <p class="font-display text-lg font-extrabold text-espresso dark:text-white sm:text-xl">{{ greetingKey | t }} 👋</p>
     <p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-      {{ (pendingCount ? 'summary.hero.pending' : 'summary.hero.clear') | t: { network: store.activeSource() + ': CommunityLab', n: pendingCount } }}
+      {{ (pendingCount ? 'summary.hero.pending' : 'summary.hero.clear') | t: { network: store.scopeLabel(), n: pendingCount } }}
     </p>
   </div>
   @if (pendingCount) {

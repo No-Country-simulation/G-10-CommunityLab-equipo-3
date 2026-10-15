@@ -211,7 +211,7 @@ const TYPE: Record<string, AssetType> = {
 };
 
 /** Tone per channel; translated in the UI by the `tone` pipe. */
-const TONE: Record<AssetType, string> = {
+export const TONE: Record<AssetType, string> = {
   linkedin_post: 'Inspirador',
   x_post: 'Conciso',
   newsletter_highlight: 'Cercano',

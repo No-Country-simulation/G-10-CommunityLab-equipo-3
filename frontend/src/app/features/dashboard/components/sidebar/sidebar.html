@@ -31,13 +31,13 @@
       </button>
     </div>
 
-    <!-- Networks, Discord-server-list style: every network visible, the selected one highlighted,
+    <!-- "All" + every network, Discord-server-list style: the selected one highlighted,
          a red badge with what is waiting for review -->
     <ul class="flex flex-col gap-1.5" [class.lg:items-center]="c" [attr.aria-label]="'sidebar.networks' | t">
       @for (n of networks(); track n.source) {
         <li class="w-full" [class.lg:w-auto]="c">
           <button type="button" (click)="selectNetwork(n.source)" [attr.aria-pressed]="n.active"
-            [pTooltip]="'sidebar.network.tip' | t: { name: n.source, status: n.status }" tooltipPosition="right" [tooltipDisabled]="!c"
+            [pTooltip]="'sidebar.network.tip' | t: { name: n.name, status: n.status }" tooltipPosition="right" [tooltipDisabled]="!c"
             class="relative flex w-full items-center gap-2.5 rounded-2xl border px-3 py-2 text-left transition-all duration-200"
             [class]="n.active
               ? 'border-amber-500/70 bg-white shadow-[0_2px_8px_rgb(217_119_6/0.12)] dark:border-amber-500/60 dark:bg-stone-900'
@@ -50,7 +50,7 @@
               }
             </span>
             <span class="min-w-0 leading-tight" [class.lg:hidden]="c">
-              <span class="block text-[0.86rem] font-bold text-espresso dark:text-white">{{ n.source }}</span>
+              <span class="block text-[0.86rem] font-bold text-espresso dark:text-white">{{ n.name }}</span>
               <span class="block truncate text-[0.74rem]" [class]="n.pending ? 'font-semibold text-rose-600 dark:text-rose-400' : 'text-stone-500 dark:text-stone-400'">{{ n.status }}</span>
             </span>
           </button>
@@ -112,7 +112,8 @@
 
     <!-- Live mode: the title and badge follow the stream of the selected network (connected / connecting / offline) -->
     @let mode = api.useMocks ? 'demo' : store.liveUrl() ? store.liveStatus() : 'open';
-    @let modeText = (mode === 'demo' ? 'sidebar.mode.demo' : 'sidebar.mode.live.' + mode) | t: { name: store.activeSource() };
+    @let modeKey = mode === 'demo' ? 'sidebar.mode.demo' : (store.activeSource() === 'all' ? 'sidebar.mode.liveAll.' : 'sidebar.mode.live.') + mode;
+    @let modeText = modeKey | t: { name: store.activeSource() };
 
     <!-- Community mood: animated bear of the most frequent sentiment in the latest messages -->
     @let m = mood();
@@ -144,7 +145,7 @@
     </div>
 
     <!-- System status widget: explicit backend mode so nobody confuses the demo with the real integration -->
-    <div class="mt-3 flex flex-col gap-1.5 rounded-3xl border border-clay-subtle bg-white px-4 py-2.5 shadow-[0_4px_12px_rgb(28_25_23/0.03)] dark:border-stone-700 dark:bg-stone-900"
+    <div class="mt-3 flex flex-col gap-2 rounded-3xl border border-clay-subtle bg-white px-4 py-2.5 shadow-[0_4px_12px_rgb(28_25_23/0.03)] dark:border-stone-700 dark:bg-stone-900"
       [class.lg:hidden]="c">
       <div class="flex items-center justify-between gap-2 text-[0.8rem] font-bold text-espresso dark:text-white">
         <span class="min-w-0 truncate">{{ modeText }}</span>
@@ -154,15 +155,19 @@
           {{ modeLabel[mode] }}
         </span>
       </div>
-      <p class="text-[0.74rem] leading-snug text-stone-500 dark:text-stone-400">
-        {{ api.useMocks ? ('sidebar.mode.demoDetail' | t) : 'Spring Boot + OCI Object Storage' }}
-      </p>
+      <!-- Demo mode explains itself; the live card shows only the connection state -->
+      @if (api.useMocks) {
+        <p class="text-[0.74rem] leading-snug text-stone-500 dark:text-stone-400">{{ 'sidebar.mode.demoDetail' | t }}</p>
+      }
       <!-- No backend URL here: it means nothing to a CM and does not belong on screen -->
       @if (store.liveUrl()) {
         @let live = store.liveStatus();
-        <div class="flex items-center justify-between gap-2 border-t border-dashed border-stone-200 pt-1.5 text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
+        <div class="flex items-center justify-between gap-2 border-t border-dashed border-stone-200 pt-2 text-[0.72rem] text-stone-500 dark:border-stone-700 dark:text-stone-400">
           <span class="inline-flex items-center gap-1.5 font-semibold">
-            <i [class]="store.activeSource() === 'Telegram' ? 'pi pi-telegram' : 'pi pi-discord'"></i> {{ 'sidebar.live.title' | t }}
+            @for (src of store.scope(); track src) {
+              <i [class]="src === 'Telegram' ? 'pi pi-telegram' : 'pi pi-discord'"></i>
+            }
+            {{ 'sidebar.live.title' | t }}
           </span>
           <span class="inline-flex items-center gap-1.5 font-bold">
             <span class="h-[7px] w-[7px] rounded-full"

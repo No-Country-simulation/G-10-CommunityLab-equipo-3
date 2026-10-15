@@ -4,14 +4,14 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-import { INTERACTION_SOURCES, InteractionSource } from '../../../../core/api/api.models';
+import { INTERACTION_SOURCES } from '../../../../core/api/api.models';
 import { API_CONFIG } from '../../../../core/api/community-lab.api';
 import { I18n } from '../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { SOURCE_BRAND, SOURCE_ICON } from '../../../../core/ui-maps';
 import { SENTIMENT_EXPRESSION } from '../../../../core/mascot';
 import { PAGE_ICON } from '../../../../core/page-icons';
-import { WorkspaceStore } from '../../../../core/workspace.store';
+import { NetworkFilter, WorkspaceStore } from '../../../../core/workspace.store';
 import { Mascot } from '../../../../shared/mascot/mascot';
 
 interface NavItem {
@@ -73,31 +73,47 @@ export class Sidebar {
     { label: 'nav.storage', path: '/app/storage', emoji: PAGE_ICON.storage },
   ];
 
-  /** Every network, Discord-server-list style: one click selects it, each shows what is waiting for review. */
+  /**
+   * "All" first, then every network, Discord-server-list style: one click selects it, each shows what is
+   * waiting for review ("All" adds up both networks).
+   */
   protected readonly networks = computed(() => {
     const active = this.store.activeSource();
     const pending = this.store.pendingBySource();
-    return INTERACTION_SOURCES.map((source) => {
-      const [from, to] = SOURCE_BRAND[source];
-      const n = pending[source];
-      return {
-        source,
-        active: source === active,
-        icon: SOURCE_ICON[source],
-        gradient: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
-        pending: n,
-        status: n ? this.i18n.t('sidebar.network.pending', { n }) : this.i18n.t('sidebar.network.clear'),
-      };
-    });
+    const status = (n: number) => (n ? this.i18n.t('sidebar.network.pending', { n }) : this.i18n.t('sidebar.network.clear'));
+    const total = INTERACTION_SOURCES.reduce((acc, s) => acc + pending[s], 0);
+    return [
+      {
+        source: 'all' as NetworkFilter,
+        name: this.i18n.t('sidebar.network.all'),
+        active: active === 'all',
+        icon: 'pi pi-th-large',
+        gradient: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+        pending: total,
+        status: status(total),
+      },
+      ...INTERACTION_SOURCES.map((source) => {
+        const [from, to] = SOURCE_BRAND[source];
+        return {
+          source: source as NetworkFilter,
+          name: source,
+          active: source === active,
+          icon: SOURCE_ICON[source],
+          gradient: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
+          pending: pending[source],
+          status: status(pending[source]),
+        };
+      }),
+    ];
   });
 
-  protected selectNetwork(source: InteractionSource) {
+  protected selectNetwork(source: NetworkFilter) {
     if (source === this.store.activeSource()) return;
     this.store.setActiveSource(source);
     this.toast.add({
       severity: 'info',
       summary: this.i18n.t('sidebar.network.toast'),
-      detail: this.i18n.t('sidebar.network.toastDetail', { name: `${source}: CommunityLab` }),
+      detail: this.i18n.t('sidebar.network.toastDetail', { name: this.store.scopeLabel() }),
       life: 3000,
     });
   }

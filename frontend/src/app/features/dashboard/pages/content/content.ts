@@ -9,8 +9,10 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { AssetStatus, GeneratedAsset } from '../../../../core/api/api.models';
-import { buildBannerSvg, downloadBannerPng, svgDataUrl } from '../../../../core/banner';
+import { AssetPatch, AssetStatus, AssetType, GeneratedAsset } from '../../../../core/api/api.models';
+import { TONE } from '../../../../core/api/live-feed';
+import { CHANNEL_RULES, PUBLISHING_PLATFORMS, checkPost } from '../../../../core/channel-rules';
+import { buildBannerSvg, canHaveBanner, downloadBannerPng, svgDataUrl } from '../../../../core/banner';
 import { confetti, originOf } from '../../../../core/confetti';
 import { I18n } from '../../../../core/i18n/i18n.service';
 import { AssetTitlePipe, LocalizedDatePipe, TonePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
@@ -94,7 +96,11 @@ export class Content {
     { label: this.i18n.t('content.view.edit'), value: 'edit' },
   ]);
   protected readonly view = signal<'preview' | 'edit'>('preview');
-  protected draft = { title: '', body: '', hashtags: '' };
+  /** Editor state: `body` is the post text WITHOUT its call to action, which has its own field */
+  protected draft = emptyDraft();
+
+  protected readonly platforms = PUBLISHING_PLATFORMS;
+  protected readonly channelRules = CHANNEL_RULES;
 
   protected readonly bannerOpen = signal(false);
   protected readonly bannerSvg = signal('');
@@ -134,7 +140,7 @@ export class Content {
     // Reset the editor whenever another asset is selected
     effect(() => {
       const a = this.selected();
-      this.draft = a ? { title: a.title, body: a.body, hashtags: a.hashtags.join(' ') } : { title: '', body: '', hashtags: '' };
+      this.draft = a ? toDraft(a) : emptyDraft();
     });
   }
 
@@ -144,20 +150,46 @@ export class Content {
   }
 
   protected dirty(a: GeneratedAsset) {
-    return this.draft.title !== a.title || this.draft.body !== a.body || this.draft.hashtags !== a.hashtags.join(' ');
+    const saved = toDraft(a);
+    return (Object.keys(saved) as (keyof Draft)[]).some((k) => this.draft[k] !== saved[k]);
+  }
+
+  /** Requirements of the platform chosen in the editor, checked live against the draft */
+  protected rules() {
+    return checkPost({
+      type: this.draft.type,
+      title: this.draft.title,
+      content: this.draft.body,
+      cta: this.draft.cta,
+      hashtags: parseHashtags(this.draft.hashtags),
+    });
+  }
+
+  /** The draft breaks a rule of its platform: the backend would refuse it, so it cannot be saved */
+  protected blocked() {
+    return this.rules().some((r) => !r.ok);
+  }
+
+  /** Switching platform: FAQ cannot carry a call to action, so it is cleared */
+  protected setPlatform(type: AssetType) {
+    this.draft.type = type;
+    if (CHANNEL_RULES[type]?.cta === 'forbidden') this.draft.cta = '';
   }
 
   protected save(a: GeneratedAsset) {
+    const content = this.draft.body.trim();
+    const cta = this.draft.cta.trim();
+    const patch: AssetPatch = {
+      title: this.draft.title.trim(),
+      // The UI keeps the call to action as the body's last paragraph
+      body: cta ? `${content}\n\n${cta}` : content,
+      cta,
+      hashtags: parseHashtags(this.draft.hashtags),
+    };
+    if (this.draft.type !== a.type) Object.assign(patch, { type: this.draft.type, tone: TONE[this.draft.type] });
     this.view.set('preview');
     this.store
-      .update(a.id, {
-        title: this.draft.title.trim(),
-        body: this.draft.body.trim(),
-        hashtags: this.draft.hashtags
-          .split(/[\s,]+/)
-          .filter(Boolean)
-          .map((h) => (h.startsWith('#') ? h : `#${h}`)),
-      })
+      .update(a.id, patch)
       // "pending" and "failed" already have their own message from the store
       .then((outcome) => outcome === 'saved' && this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.saved'), life: 2000 }));
   }
@@ -195,15 +227,26 @@ export class Content {
     this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.publishedMany', { n: approved.length }), life: 3000 });
   }
 
-  protected copy(a: GeneratedAsset) {
+  /** Post whose text was just copied: its button shows "Copied" for a moment */
+  protected readonly copiedId = signal<string | null>(null);
+  private copiedTimer?: ReturnType<typeof setTimeout>;
+
+  protected async copy(a: GeneratedAsset) {
     const text = a.body + (a.hashtags.length ? `\n\n${a.hashtags.join(' ')}` : '');
-    navigator.clipboard?.writeText(text).then(() =>
-      this.toast.add({ severity: 'info', summary: this.i18n.t('toast.copied.text'), life: 2000 }),
-    );
+    if (!(await writeClipboard(text))) {
+      this.toast.add({ severity: 'warn', summary: this.i18n.t('common.copyFailed'), life: 3000 });
+      return;
+    }
+    this.copiedId.set(a.id);
+    clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => this.copiedId.set(null), 2000);
   }
 
+  protected readonly canHaveBanner = canHaveBanner;
+
   protected openBanner(a: GeneratedAsset) {
-    this.bannerSvg.set(buildBannerSvg(a));
+    if (!canHaveBanner(a)) return;
+    this.bannerSvg.set(buildBannerSvg(a, this.i18n));
     this.bannerOpen.set(true);
   }
 
@@ -211,4 +254,56 @@ export class Content {
     const a = this.selected();
     if (a) downloadBannerPng(this.bannerSvg(), `banner-${a.id}.png`);
   }
+}
+
+/**
+ * Copies text to the clipboard. The Clipboard API needs a secure, focused page and can be blocked by the
+ * browser; the hidden-textarea fallback covers those cases. False when neither worked.
+ */
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(area);
+    area.select();
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      area.remove();
+    }
+  }
+}
+
+interface Draft {
+  type: AssetType;
+  title: string;
+  body: string;
+  cta: string;
+  hashtags: string;
+}
+
+function emptyDraft(): Draft {
+  return { type: 'linkedin_post', title: '', body: '', cta: '', hashtags: '' };
+}
+
+/** Editor fields from a post: the call to action is split off the body's last paragraph */
+function toDraft(a: GeneratedAsset): Draft {
+  const cta = a.cta ?? '';
+  const suffix = cta ? `\n\n${cta}` : '';
+  const body = suffix && a.body.endsWith(suffix) ? a.body.slice(0, -suffix.length) : a.body;
+  return { type: a.type, title: a.title, body, cta, hashtags: a.hashtags.join(' ') };
+}
+
+function parseHashtags(text: string): string[] {
+  return text
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((h) => (h.startsWith('#') ? h : `#${h}`));
 }
