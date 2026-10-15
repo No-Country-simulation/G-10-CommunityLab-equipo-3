@@ -1,0 +1,500 @@
+/*
+ * Series colors, validated with the dataviz palette checker (CVD + normal vision + contrast):
+ *   light (card #ffffff):  Discord #4a3aa7 · Telegram #1baf7a
+ *   dark  (card #292524):  Discord #9085e9 · Telegram #199e70
+ * Telegram is below 3:1 on the light card, so every value is also shown as text (legend, tooltip, table).
+ */
+:host {
+  display: block;
+  --series-discord: #4a3aa7;
+  --series-telegram: #1baf7a;
+  --grid: #eef0f3;
+  --track: #f1f5f9;
+  --band-hover: rgb(148 163 184 / 0.1);
+  --band-selected: rgb(245 158 11 / 0.12);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+:host-context(.dark) {
+  --series-discord: #9085e9;
+  --series-telegram: #199e70;
+  --grid: rgb(255 255 255 / 0.07);
+  --track: rgb(255 255 255 / 0.06);
+  --band-hover: rgb(255 255 255 / 0.05);
+  --band-selected: rgb(245 158 11 / 0.14);
+}
+
+.series-discord {
+  background: var(--series-discord);
+}
+
+.series-telegram {
+  background: var(--series-telegram);
+}
+
+/* Emphasis: hovering a network fades the other one */
+.is-dimmed {
+  opacity: 0.22;
+}
+
+/* ── Period control ── */
+.range-switch {
+  display: inline-flex;
+  gap: 2px;
+  border-radius: 9999px;
+  padding: 3px;
+  background: #f3efe6;
+  box-shadow: inset 0 1px 3px rgb(28 25 23 / 0.1);
+}
+
+.range-option {
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #78716c;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.range-option:hover {
+  color: #1c1917;
+}
+
+.range-option.is-active {
+  color: #fff;
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+}
+
+.range-option:focus-visible,
+.legend-chip:focus-visible,
+.legend-row:focus-visible,
+.scope-chip:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 1px;
+}
+
+:host-context(.dark) .range-switch {
+  background: rgb(0 0 0 / 0.3);
+}
+
+:host-context(.dark) .range-option {
+  color: #a8a29e;
+}
+
+:host-context(.dark) .range-option.is-active {
+  color: #1c1917;
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+}
+
+/* ── Network card ── */
+.scope-chip {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+  background: #fffbeb;
+  animation: chip-in 200ms var(--ease);
+}
+
+:host-context(.dark) .scope-chip {
+  color: #fcd34d;
+  background: rgb(245 158 11 / 0.12);
+}
+
+.is-scoped {
+  box-shadow: 0 0 0 2px rgb(245 158 11 / 0.35);
+  transition: box-shadow 200ms ease;
+}
+
+/* Delta: arrow + sign + words carry the direction; color only reinforces it */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.delta.is-up {
+  color: #047857;
+}
+
+.delta.is-down {
+  color: #be123c;
+}
+
+:host-context(.dark) .delta.is-up {
+  color: #34d399;
+}
+
+:host-context(.dark) .delta.is-down {
+  color: #fb7185;
+}
+
+/* Legend keys mirror the marks: small rectangles */
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  transition: opacity 200ms ease;
+}
+
+/* Legend rows (network card) and chips (columns chart): toggle + emphasis */
+.legend-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 14px;
+  transition: background-color 150ms ease, opacity 200ms ease;
+}
+
+.legend-row:hover,
+.legend-chip:hover {
+  background: var(--band-hover);
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  padding: 4px 10px;
+  color: #475569;
+  transition: background-color 150ms ease, opacity 200ms ease;
+}
+
+:host-context(.dark) .legend-chip {
+  color: #cbd5e1;
+}
+
+.legend-row.is-off,
+.legend-chip.is-off {
+  opacity: 0.45;
+}
+
+.legend-row.is-off .legend-swatch,
+.legend-chip.is-off .legend-swatch {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px #94a3b8;
+}
+
+/* ── Share bar: one stacked bar, 2px surface gap between segments ── */
+.split-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+}
+
+.split-segment {
+  min-width: 4px;
+  flex-basis: 0;
+  border-radius: 4px;
+  transition: flex-grow 500ms var(--ease), opacity 200ms ease, min-width 300ms ease;
+}
+
+.split-segment.is-zero {
+  min-width: 0;
+}
+
+.split-empty {
+  flex-grow: 1;
+  background: var(--track);
+}
+
+/* ── Columns chart ── */
+.chart {
+  position: relative;
+}
+
+.plot {
+  position: relative;
+  height: 210px;
+  margin-left: 28px;
+}
+
+.gridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--grid);
+  transition: bottom 400ms var(--ease);
+}
+
+.tick {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: -7px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
+}
+
+.columns {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+/* The band (a native button) is the hit target: full height, the column sits at its foot */
+.band {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.band.is-active {
+  background: var(--band-hover);
+}
+
+.band.is-selected {
+  background: var(--band-selected);
+}
+
+.band:focus-visible {
+  box-shadow: inset 0 0 0 2px #f59e0b;
+}
+
+/* Thin column (≤ 24px), stacked bottom-up, 4px rounded data end, square at the baseline.
+   Grows from the baseline, one column after another (--i = column index). */
+.column {
+  display: flex;
+  width: min(24px, 60%);
+  flex-direction: column-reverse;
+  gap: 2px;
+  overflow: hidden;
+  border-radius: 4px 4px 0 0;
+  transition: height 650ms var(--ease);
+  transition-delay: calc(var(--i, 0) * 28ms);
+}
+
+.band.is-active .column,
+.band.is-selected .column {
+  transform: scaleX(1.12);
+  transition: height 650ms var(--ease), transform 150ms ease;
+}
+
+.segment {
+  min-height: 2px;
+  flex-basis: 0;
+  transition: flex-grow 500ms var(--ease), opacity 200ms ease;
+}
+
+.segment.is-empty {
+  min-height: 0;
+}
+
+/* The peak's value on its cap */
+.cap-label {
+  position: absolute;
+  left: 50%;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  transform: translateX(-50%);
+  transition: bottom 650ms var(--ease);
+  pointer-events: none;
+}
+
+:host-context(.dark) .cap-label {
+  color: #e2e8f0;
+}
+
+/* Live: the current column pulses when a new message arrives */
+.band.is-pulse .column {
+  animation: pulse 1.6s var(--ease);
+}
+
+.pulse-badge {
+  position: absolute;
+  left: 50%;
+  margin-bottom: 6px;
+  border-radius: 9999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: #d97706;
+  transform: translateX(-50%);
+  animation: float-up 1.6s var(--ease) forwards;
+  pointer-events: none;
+}
+
+.axis {
+  display: flex;
+  margin-left: 28px;
+  padding-top: 8px;
+}
+
+.axis-label {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.axis-label.is-selected {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.chart-empty {
+  position: absolute;
+  inset: 0 0 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+/* ── Tooltip: inside the plot, beside the hovered column, never over the title or the legend ── */
+.tooltip {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 18px);
+  z-index: 5;
+  display: flex;
+  min-width: 9rem;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fff;
+  box-shadow: 0 10px 24px -8px rgb(15 23 42 / 0.25);
+  font-size: 12px;
+  text-align: left;
+  color: #334155;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: tooltip-in 120ms ease-out;
+}
+
+.tooltip-left {
+  left: auto;
+  right: calc(50% + 18px);
+}
+
+.tooltip-title {
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.6;
+}
+
+.tooltip-row.is-off {
+  opacity: 0.45;
+}
+
+.tooltip-row strong {
+  min-width: 1.5rem;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Line keys in the tooltip, not boxes */
+.tooltip-key {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.tooltip-hint {
+  margin-top: 4px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 4px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+:host-context(.dark) .tooltip {
+  border-color: #44403c;
+  background: #1c1917;
+  color: #d6d3d1;
+}
+
+:host-context(.dark) .tooltip-title {
+  color: #a8a29e;
+}
+
+:host-context(.dark) .tooltip-row strong {
+  color: #fff;
+}
+
+:host-context(.dark) .tooltip-hint {
+  border-color: #292524;
+}
+
+.is-selected-row {
+  background: var(--band-selected);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgb(217 119 6 / 0.55); }
+  60% { box-shadow: 0 0 0 8px rgb(217 119 6 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(217 119 6 / 0); }
+}
+
+@keyframes float-up {
+  0% { opacity: 0; transform: translate(-50%, 6px); }
+  20% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column,
+  .segment,
+  .split-segment,
+  .gridline,
+  .cap-label {
+    transition: none;
+  }
+
+  .band.is-pulse .column,
+  .pulse-badge,
+  .tooltip,
+  .scope-chip {
+    animation: none;
+  }
+}

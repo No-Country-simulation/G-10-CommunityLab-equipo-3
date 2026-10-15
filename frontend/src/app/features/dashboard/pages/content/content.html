@@ -12,11 +12,12 @@
 </div>
 
 <div class="card">
-  <!-- Status tabs -->
-  <div class="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 pt-2 dark:border-slate-800">
+  <!-- Status tabs: swipe sideways on narrow screens, without visible scrollbars.
+       The bottom rule is an inset shadow so the active underline covers it without overflowing. -->
+  <div class="flex gap-1 overflow-x-auto overflow-y-hidden px-3 pt-2 shadow-[inset_0_-1px_0_theme(colors.slate.100)] [scrollbar-width:none] dark:shadow-[inset_0_-1px_0_theme(colors.slate.800)] [&::-webkit-scrollbar]:hidden">
     @for (tab of filterTabs; track tab.value) {
       <button type="button" (click)="status.set(tab.value)"
-        class="-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition"
+        class="flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition"
         [class]="status() === tab.value
           ? 'border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300'
           : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'">
@@ -54,14 +55,18 @@
               <i [class]="typeIcon[a.type]" class="text-sm"></i>
             </div>
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a.title }}</p>
+              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a | assetTitle }}</p>
               <p class="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{{ a.body }}</p>
               <div class="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">
                 <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full" [class]="statusDot[a.status]"></span>{{ 'status.' + a.status | t }}</span>
                 <span>·</span>
                 <span>{{ 'assetType.' + a.type | t }}</span>
                 <span>·</span>
-                <span class="truncate">{{ a.origin.author }}</span>
+                <!-- Network of the message: needed when "All" mixes Discord and Telegram -->
+                <span class="inline-flex min-w-0 items-center gap-1" [attr.aria-label]="a.origin.source">
+                  <i [class]="sourceIcon[a.origin.source]" class="text-[10px]" aria-hidden="true"></i>
+                  <span class="truncate">{{ a.origin.author }}</span>
+                </span>
               </div>
             </div>
             @if (store.isBusy(a.id)) {
@@ -74,7 +79,7 @@
           <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
             <i class="pi pi-inbox text-slate-400"></i>
           </div>
-          <p class="font-medium">{{ (store.loaded() ? 'content.empty' : 'common.loading') | t }}</p>
+          <p class="font-medium">{{ (store.historyLoading() ? 'common.loadingHistory' : store.loaded() ? 'content.empty' : 'common.loading') | t }}</p>
           <p class="text-sm text-slate-500 dark:text-slate-400">{{ 'content.emptyText' | t }}</p>
         </li>
       }
@@ -87,7 +92,7 @@
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <span class="chip" [class]="typeTint[a.type]"><i [class]="typeIcon[a.type]" class="text-[10px]"></i>{{ 'assetType.' + a.type | t }}</span>
-              <span class="text-xs text-slate-400">{{ 'content.tone' | t: { tone: a.tone.toLowerCase() } }}</span>
+              <span class="text-xs text-slate-400">{{ 'content.tone' | t: { tone: (a.tone | tone).toLowerCase() } }}</span>
             </div>
             <p class="mt-1 text-xs text-slate-400">
               {{ a.id }} · {{ 'content.created' | t: { date: (a.createdAt | ldate: 'short') } }}
@@ -95,37 +100,94 @@
             </p>
           </div>
           <p-tag [value]="'status.' + a.status | t" [severity]="statusSeverity[a.status]" [rounded]="true" />
-          @if (a.status !== 'published') {
+          <!-- Published and rejected posts are read-only: no edit mode -->
+          @if (a.status !== 'published' && a.status !== 'rejected') {
             <p-selectbutton [options]="viewModes()" [ngModel]="view()" (ngModelChange)="view.set($event)" optionLabel="label"
               optionValue="value" [allowEmpty]="false" size="small" />
           }
         </div>
 
         <div class="p-5">
-          @if (view() === 'edit' && a.status !== 'published') {
+          @if (view() === 'edit' && a.status !== 'published' && a.status !== 'rejected') {
+            @let ctaRule = channelRules[draft.type]?.cta;
+            @let checks = rules();
             <div class="space-y-4">
+              <!-- Publishing platform: the post can be moved to another one (its rules are checked below) -->
+              <div class="text-sm">
+                <span class="mb-1.5 block font-medium text-slate-700 dark:text-slate-300">{{ 'content.field.platform' | t }}</span>
+                <div class="platform-switch" role="radiogroup" [attr.aria-label]="'content.field.platform' | t">
+                  @for (p of platforms; track p) {
+                    <button type="button" role="radio" class="platform-option" [class.is-active]="draft.type === p"
+                      [attr.aria-checked]="draft.type === p" (click)="setPlatform(p)">
+                      <i [class]="typeIcon[p]" class="text-xs" aria-hidden="true"></i>{{ 'assetType.' + p | t }}
+                    </button>
+                  }
+                </div>
+              </div>
+
               <label class="block text-sm">
-                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">{{ 'content.field.title' | t }}</span>
-                <input [(ngModel)]="draft.title"
+                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">
+                  {{ 'content.field.title' | t }}
+                  @if (channelRules[draft.type]?.titleRequired) {
+                    <span class="font-normal text-rose-500">*</span>
+                  }
+                </span>
+                <input [(ngModel)]="draft.title" [placeholder]="'assetTitle.' + draft.type | t"
                   class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
               </label>
               <label class="block text-sm">
-                <span class="mb-1 flex justify-between font-medium text-slate-700 dark:text-slate-300">
-                  {{ 'content.field.body' | t }}
-                  <span class="font-normal text-slate-400" [class.!text-rose-500]="a.type === 'x_post' && draft.body.length > 280">
-                    {{ 'content.field.chars' | t: { n: draft.body.length + (a.type === 'x_post' ? '/280' : '') } }}
-                  </span>
-                </span>
-                <textarea pTextarea [(ngModel)]="draft.body" rows="12" class="w-full !text-sm !leading-relaxed"></textarea>
+                <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">{{ 'content.field.body' | t }}</span>
+                <textarea pTextarea [(ngModel)]="draft.body" rows="10" class="w-full !text-sm !leading-relaxed"></textarea>
               </label>
+
+              <!-- Call to action: required on LinkedIn, optional on X / newsletter, not allowed on FAQ -->
+              @if (ctaRule === 'forbidden') {
+                <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                  <i class="pi pi-info-circle mr-1 text-[11px]" aria-hidden="true"></i>{{ 'content.field.ctaForbidden' | t }}
+                </p>
+              } @else {
+                <label class="block text-sm">
+                  <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">
+                    {{ 'content.field.cta' | t }}
+                    <span class="font-normal" [class]="ctaRule === 'required' ? 'text-rose-500' : 'text-slate-400'">
+                      {{ (ctaRule === 'required' ? 'content.field.ctaRequired' : 'content.field.ctaOptional') | t }}
+                    </span>
+                  </span>
+                  <input [(ngModel)]="draft.cta" [placeholder]="'content.field.ctaPlaceholder' | t"
+                    class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
+                </label>
+              }
+
               <label class="block text-sm">
                 <span class="mb-1 block font-medium text-slate-700 dark:text-slate-300">{{ 'content.field.hashtags' | t }}</span>
-                <input [(ngModel)]="draft.hashtags" placeholder="#Kora #OCI"
+                <input [(ngModel)]="draft.hashtags" placeholder="#UkukuAI #OCI"
                   class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900" />
               </label>
-              <div class="flex justify-end gap-2">
+
+              <!-- Live checklist of the platform's requirements (same limits the backend enforces) -->
+              @if (checks.length) {
+                <div class="rounded-xl border border-slate-100 p-3 dark:border-slate-800" aria-live="polite">
+                  <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    {{ 'content.rules.title' | t: { platform: ('assetType.' + draft.type | t) } }}
+                  </p>
+                  <ul class="grid gap-1.5 sm:grid-cols-2">
+                    @for (c of checks; track c.key) {
+                      <li class="flex items-center gap-2 text-xs" [class]="c.ok ? 'text-slate-600 dark:text-slate-300' : 'font-semibold text-rose-600 dark:text-rose-400'">
+                        <i class="pi text-[11px]" [class]="c.ok ? 'pi-check-circle text-emerald-500' : 'pi-times-circle'" aria-hidden="true"></i>
+                        <span class="sr-only">{{ (c.ok ? 'content.rules.ok' : 'content.rules.fail') | t }}</span>
+                        {{ c.key | t: c.params }}
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+
+              <div class="flex items-center justify-end gap-2">
+                @if (blocked()) {
+                  <span class="mr-auto text-xs text-rose-600 dark:text-rose-400">{{ 'content.rules.blocked' | t }}</span>
+                }
                 <p-button [label]="'content.discard' | t" severity="secondary" [text]="true" size="small" (onClick)="view.set('preview')" />
-                <p-button [label]="'content.save' | t" icon="pi pi-check" size="small" [disabled]="!dirty(a)" (onClick)="save(a)" />
+                <p-button [label]="'content.save' | t" icon="pi pi-check" size="small" [disabled]="!dirty(a) || blocked()" (onClick)="save(a)" />
               </div>
             </div>
           } @else {
@@ -146,20 +208,28 @@
               @case ('rejected') {
                 <p-button [label]="'content.restore' | t" icon="pi pi-replay" size="small" severity="secondary" [outlined]="true" (onClick)="setStatus(a, 'draft')" />
               }
-              @default {
-                <p-button [label]="'content.publishNow' | t" icon="pi pi-send" size="small" severity="success" [loading]="store.isBusy(a.id)" (onClick)="publish(a, $event)"
+              <!-- Approved: ready to publish -->
+              @case ('approved') {
+                <p-button [label]="'content.publishNow' | t" icon="pi pi-check-circle" size="small" severity="success" [loading]="store.isBusy(a.id)" (onClick)="publish(a, $event)"
                   styleClass="shadow-md shadow-emerald-500/25" />
-                @if (a.status !== 'approved') {
-                  <p-button [label]="'common.approve' | t" icon="pi pi-check" size="small" [outlined]="true" (onClick)="setStatus(a, 'approved')" />
-                }
+                <p-button [label]="'content.reject' | t" icon="pi pi-times" size="small" severity="danger" [text]="true" (onClick)="setStatus(a, 'rejected')" />
+              }
+              <!-- To review (draft / in review): approve first, publishing comes after -->
+              @default {
+                <p-button [label]="'common.approve' | t" icon="pi pi-check" size="small" [loading]="store.isBusy(a.id)" (onClick)="setStatus(a, 'approved')"
+                  styleClass="shadow-md shadow-amber-500/25" />
                 <p-button [label]="'content.reject' | t" icon="pi pi-times" size="small" severity="danger" [text]="true" (onClick)="setStatus(a, 'rejected')" />
               }
             }
             <span class="flex-1"></span>
-            @if (a.type === 'linkedin_post' || a.type === 'x_post' || a.type === 'faq') {
+            <!-- No banner for complaints (they are answered, not promoted) nor for rejected posts -->
+            @if (canHaveBanner(a)) {
               <p-button [label]="'content.banner' | t" icon="pi pi-image" size="small" severity="secondary" [outlined]="true" (onClick)="openBanner(a)" />
             }
-            <p-button icon="pi pi-copy" size="small" severity="secondary" [text]="true" [pTooltip]="'common.copyText' | t" (onClick)="copy(a)" [ariaLabel]="'common.copyText' | t" />
+            <!-- Copy the post text (body + hashtags); confirms with a check for a moment -->
+            @let copiedNow = copiedId() === a.id;
+            <p-button [label]="(copiedNow ? 'common.copied' : 'common.copyText') | t" [icon]="copiedNow ? 'pi pi-check' : 'pi pi-clone'"
+              size="small" [severity]="copiedNow ? 'success' : 'secondary'" [outlined]="true" (onClick)="copy(a)" />
           </div>
 
           <!-- Origin -->
@@ -178,6 +248,9 @@
                   <span class="chip bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ 'content.relevance' | t: { pct: (a.origin.relevance | percent) } }}</span>
                 </div>
               </div>
+              <!-- The bear follows the message sentiment (feliz / neutro / triste) unless the LLM sends its own expression -->
+              <app-mascot [expression]="a.origin.expression ?? sentimentExpression[a.origin.sentiment]"
+                [label]="a.origin.expression ? null : ('mood.' + a.origin.sentiment | t)" [size]="56" class="shrink-0 flex-col !gap-1 text-center" />
             </div>
           </div>
         </div>
@@ -191,14 +264,75 @@
   </div>
 </div>
 
+<!-- Banner studio: live preview on top, the few choices that matter below -->
 <p-dialog [header]="'content.bannerDialog' | t" [modal]="true" [visible]="bannerOpen()" (visibleChange)="bannerOpen.set($event)"
-  [style]="{ width: 'min(720px, 95vw)' }" [dismissableMask]="true">
-  @if (bannerUrl()) {
-    <img [src]="bannerUrl()" [alt]="'content.bannerAlt' | t" class="w-full rounded-lg shadow-sm" />
+  [style]="{ width: 'min(820px, 96vw)' }" [dismissableMask]="true" [draggable]="false" appendTo="body" styleClass="banner-studio">
+  @if (bannerAsset(); as ba) {
+    <div class="banner-stage" [class.is-square]="bannerFormat() === 'square'">
+      @if (bannerUrl()) {
+        <img [src]="bannerUrl()" [alt]="'content.bannerAlt' | t" [attr.width]="bannerSize().width" [attr.height]="bannerSize().height" />
+      }
+    </div>
+
+    <div class="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <!-- Headline: the one message people read; editable, with the generated text one click away -->
+      <div class="min-w-0">
+        <div class="mb-1.5 flex items-center justify-between gap-2">
+          <label for="banner-headline" class="text-[0.8rem] font-semibold text-stone-700 dark:text-stone-200">{{ 'banner.headline' | t }}</label>
+          @if (!bannerHeadlineIsDefault()) {
+            <button type="button" class="banner-reset" (click)="resetBannerHeadline()">
+              <i class="pi pi-undo text-[10px]" aria-hidden="true"></i>{{ 'banner.resetHeadline' | t }}
+            </button>
+          }
+        </div>
+        <textarea pTextarea id="banner-headline" rows="2" class="w-full !text-sm" [maxlength]="bannerHeadlineMax"
+          [ngModel]="bannerHeadline()" (ngModelChange)="bannerHeadline.set($event)" aria-describedby="banner-headline-hint"></textarea>
+        <p id="banner-headline-hint" class="mt-1 flex justify-between gap-3 text-[0.72rem] text-stone-500 dark:text-stone-400">
+          <span>{{ 'banner.headlineHint' | t }}</span>
+          <span class="tabular-nums" [class.text-amber-600]="bannerHeadline().length > bannerHeadlineMax - 20">{{ bannerHeadline().length }}/{{ bannerHeadlineMax }}</span>
+        </p>
+        <p class="mt-3 flex items-start gap-1.5 text-[0.72rem] text-stone-500 dark:text-stone-400">
+          <i class="pi pi-info-circle mt-px text-[11px]" aria-hidden="true"></i>{{ 'banner.footHint' | t }}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-4 sm:w-60">
+        <!-- Format: where the image will be posted -->
+        <div>
+          <span class="mb-1.5 block text-[0.8rem] font-semibold text-stone-700 dark:text-stone-200" id="banner-format-label">{{ 'banner.format' | t }}</span>
+          <div class="banner-formats" role="radiogroup" aria-labelledby="banner-format-label">
+            @for (f of bannerFormats(); track f.value) {
+              <button type="button" role="radio" class="banner-format" [class.is-active]="bannerFormat() === f.value"
+                [attr.aria-checked]="bannerFormat() === f.value" (click)="bannerFormat.set(f.value)">
+                <span class="banner-format-shape" [class.is-square]="f.value === 'square'" aria-hidden="true"></span>
+                <span class="flex-1 text-left text-[0.8rem] font-semibold">{{ f.label }}</span>
+                <span class="text-[0.7rem] tabular-nums opacity-70">{{ f.size }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Privacy: the member's name is only published if the community manager keeps it -->
+        @if (ba.origin.route !== 'faq') {
+          <label class="flex cursor-pointer items-start gap-3">
+            <p-toggleswitch [ngModel]="bannerShowAuthor()" (ngModelChange)="bannerShowAuthor.set($event)" inputId="banner-author" />
+            <span class="flex flex-col leading-tight">
+              <span class="text-[0.8rem] font-semibold text-stone-700 dark:text-stone-200">{{ 'banner.showAuthor' | t }}</span>
+              <span class="text-[0.7rem] text-stone-500 dark:text-stone-400">{{ (bannerShowAuthor() ? 'banner.showAuthorOn' : 'banner.showAuthorOff') | t: { name: ba.origin.author } }}</span>
+            </span>
+          </label>
+        }
+      </div>
+    </div>
   }
-  <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">{{ 'content.bannerHint' | t }}</p>
+
   <ng-template #footer>
     <p-button [label]="'common.close' | t" [text]="true" severity="secondary" (onClick)="bannerOpen.set(false)" />
-    <p-button [label]="'content.downloadPng' | t" icon="pi pi-download" (onClick)="downloadBanner()" />
+    @if (canCopyImage) {
+      <p-button [label]="'banner.copy' | t" icon="pi pi-clone" severity="secondary" [outlined]="true" styleClass="whitespace-nowrap"
+        [loading]="bannerBusy() === 'copy'" [disabled]="!!bannerBusy()" (onClick)="copyBanner()" />
+    }
+    <p-button [label]="'content.downloadPng' | t" icon="pi pi-download" styleClass="whitespace-nowrap"
+      [loading]="bannerBusy() === 'download'" [disabled]="!!bannerBusy()" (onClick)="downloadBanner()" />
   </ng-template>
 </p-dialog>
