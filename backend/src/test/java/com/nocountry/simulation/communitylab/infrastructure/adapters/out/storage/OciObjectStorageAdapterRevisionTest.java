@@ -81,7 +81,8 @@ class OciObjectStorageAdapterRevisionTest {
     @BeforeEach
     void setUp() {
         OciProperties properties = new OciProperties(OciAuthMode.SESSION_TOKEN, "dev",
-                "MessagesUsers", "sa-saopaulo-1", "test-namespace", "paquetes/", 1);
+                "MessagesUsers", "sa-saopaulo-1", "test-namespace", "paquetes/", 1,
+                "ocid1.compartment.oc1..test");
         adapter = new OciObjectStorageAdapter(objectStorage, properties, JSON);
     }
 

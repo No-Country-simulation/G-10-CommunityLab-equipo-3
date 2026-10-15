@@ -175,6 +175,10 @@
         </dependency>
         <dependency>
             <groupId>com.oracle.oci.sdk</groupId>
+            <artifactId>oci-java-sdk-monitoring</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.oci.sdk</groupId>
             <artifactId>oci-java-sdk-common-httpclient-jersey3</artifactId>
         </dependency>
 

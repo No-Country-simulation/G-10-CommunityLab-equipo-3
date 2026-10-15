@@ -55,3 +55,10 @@ oci:
   par-ttl-days: ${PAR_TTL_DAYS:3}
   auth-mode: ${OCI_AUTH_MODE:none}
   config-profile: ${OCI_CONFIG_PROFILE}
+  compartment-id: ${OCI_COMPARTMENT_ID}
+
+storage:
+  stats:
+    limit-bytes: ${STORAGE_LIMIT_BYTES:10737418240}
+    monthly-requests-limit: ${STORAGE_REQUESTS_MONTHLY_LIMIT:50000}
+    cache-ttl: ${STORAGE_STATS_CACHE_TTL:60s}
