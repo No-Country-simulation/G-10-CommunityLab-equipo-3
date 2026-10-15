@@ -188,6 +188,19 @@ export class Content {
   protected select(a: GeneratedAsset) {
     this.selectedId.set(a.id);
     this.view.set('preview');
+    // Below lg the editor sits under the list: bring it into view
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      requestAnimationFrame(() => document.getElementById('content-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  }
+
+  /** One-line snippet for the list: the post without markdown marks (**bold**, *italic*, `code`, # headings; underscores stay: snake_case) */
+  protected snippet(body: string) {
+    return body
+      .replace(/^#+\s*/gm, '')
+      .replace(/(\*\*|\*|`)(\S(?:.*?\S)?)\1/g, '$2')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   protected dirty(a: GeneratedAsset) {

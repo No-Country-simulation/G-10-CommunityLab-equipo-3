@@ -5,10 +5,11 @@ import { I18n, LANGS, Lang } from '../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { CurrentPage } from '../../../../core/current-page';
 import { ThemeService } from '../../../../core/theme.service';
+import { Breadcrumb } from '../breadcrumb/breadcrumb';
 
 @Component({
   selector: 'app-topbar',
-  imports: [TooltipModule, TranslatePipe, RouterLink],
+  imports: [TooltipModule, TranslatePipe, RouterLink, Breadcrumb],
   templateUrl: './topbar.html',
   host: {
     // No box of its own: the sticky shell must be a child of the tall page column to stay pinned

@@ -13,13 +13,30 @@ export class TranslatePipe implements PipeTransform {
   }
 }
 
-/** Date pipe that follows the selected UI language: `{{ value | ldate: 'medium' }}`, `{{ value | ldate: 'mediumDate' : 'UTC' }}`. */
+/**
+ * Date pipe that follows the selected UI language: `{{ value | ldate }}`, `{{ value | ldate: 'dateTime' }}`,
+ * `{{ value | ldate: 'mediumDate' : 'UTC' }}`. 'dateTime' is the app's date + time: "20 sept 2026, 14:00" (no seconds).
+ */
 @Pipe({ name: 'ldate', pure: false })
 export class LocalizedDatePipe implements PipeTransform {
   private readonly i18n = inject(I18n);
 
   transform(value: string | number | Date | null | undefined, format = 'mediumDate', timezone?: string): string {
-    return value == null || value === '' ? '' : formatDate(value, format, this.i18n.locale(), timezone);
+    if (value == null || value === '') return '';
+    if (format === 'dateTime') {
+      return new Intl.DateTimeFormat(this.i18n.locale(), { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone }).format(new Date(value));
+    }
+    return formatDate(value, format, this.i18n.locale(), timezone);
+  }
+}
+
+/** Number pipe that follows the selected UI language: `{{ 50000 | lnum }}` → 50.000 / 50,000; `{{ x | lnum: 1 }}` keeps one decimal. */
+@Pipe({ name: 'lnum', pure: false })
+export class LocalizedNumberPipe implements PipeTransform {
+  private readonly i18n = inject(I18n);
+
+  transform(value: number | null | undefined, maximumFractionDigits = 0): string {
+    return value == null ? '' : this.i18n.number(value, maximumFractionDigits);
   }
 }
 

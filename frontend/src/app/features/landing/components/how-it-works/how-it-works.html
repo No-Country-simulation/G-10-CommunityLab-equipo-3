@@ -3,24 +3,15 @@
   <div class="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[650px] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-blue-500/10 blur-3xl opacity-60"></div>
 
   <!-- Header: Eyebrow + Editorial Serif Heading + Lead -->
-  <div class="mx-auto max-w-7xl mb-12 sm:mb-16" appReveal>
-    <div class="inline-flex items-center gap-2 mb-3">
-      <span class="h-1.5 w-4 rounded-full bg-amber-500"></span>
-      <span class="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
-        {{ 'landing.how.stepper.eyebrow' | t }}
-      </span>
-    </div>
+  <div class="mx-auto max-w-6xl mb-12 sm:mb-16" appReveal>
     <div class="max-w-3xl">
-      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-espresso dark:text-white leading-[1.15]">
-        {{ 'landing.how.stepper.title' | t }}
-      </h2>
-      <p class="mt-4 text-base sm:text-lg text-stone-600 dark:text-stone-300 leading-relaxed font-sans">
-        {{ 'landing.how.stepper.lead' | t }}
-      </p>
+      <p class="landing-eyebrow">{{ 'landing.how.stepper.eyebrow' | t }}</p>
+      <h2 class="landing-h2">{{ 'landing.how.stepper.title' | t }}</h2>
+      <p class="landing-lead">{{ 'landing.how.stepper.lead' | t }}</p>
     </div>
   </div>
 
-  <div class="mx-auto max-w-7xl relative" appReveal="60">
+  <div class="mx-auto max-w-6xl relative" appReveal="60">
     <!-- ========================================================================= -->
     <!-- SLIDER RAIL CON NODOS CIRCULARES Y BOTONES DE NAVEGACIÓN (Zapier Stepper)   -->
     <!-- ========================================================================= -->
@@ -29,8 +20,8 @@
       <button
         type="button"
         (click)="prevStep()"
-        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 shadow-sm hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
-        aria-label="Paso anterior"
+        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 shadow-sm hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
+        [attr.aria-label]="'landing.ui.prevStep' | t"
       >
         <i class="pi pi-chevron-left text-xs sm:text-sm"></i>
       </button>
@@ -57,7 +48,7 @@
                 [class]="activeStep() === i
                   ? 'bg-white dark:bg-stone-900 border-[2.5px] border-stone-900 dark:border-white shadow-md scale-110 sm:scale-125 ring-4 ring-amber-500/20'
                   : (i < activeStep()
-                      ? 'bg-white dark:bg-stone-850 border-2 border-stone-800 dark:border-stone-300 shadow-sm hover:scale-105'
+                      ? 'bg-white dark:bg-stone-800 border-2 border-stone-800 dark:border-stone-300 shadow-sm hover:scale-105'
                       : 'bg-white/95 dark:bg-stone-800 border-2 border-stone-400 dark:border-stone-600 opacity-70 hover:opacity-100 hover:scale-105')"
                 [attr.aria-label]="'Ir al paso ' + (i + 1)"
               >
@@ -78,8 +69,8 @@
       <button
         type="button"
         (click)="nextStep()"
-        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 shadow-sm hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
-        aria-label="Paso siguiente"
+        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 shadow-sm hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
+        [attr.aria-label]="'landing.ui.nextStep' | t"
       >
         <i class="pi pi-chevron-right text-xs sm:text-sm"></i>
       </button>
@@ -95,7 +86,7 @@
           (click)="setStep(i)"
           class="group text-left p-5 sm:p-6 rounded-2xl sm:rounded-[22px] transition-all duration-300 flex flex-col justify-start cursor-pointer"
           [class]="activeStep() === i
-            ? 'border-[2.5px] border-stone-900 dark:border-stone-100 bg-white dark:bg-stone-850 shadow-xl -translate-y-1 ring-2 ring-black/5 dark:ring-white/10'
+            ? 'border-[2.5px] border-stone-900 dark:border-stone-100 bg-white dark:bg-stone-800 shadow-xl -translate-y-1 ring-2 ring-black/5 dark:ring-white/10'
             : 'border border-stone-200/80 dark:border-stone-800 bg-[#fbf9f5] dark:bg-stone-900/50 hover:bg-white dark:hover:bg-stone-800/60 hover:border-stone-300 dark:hover:border-stone-700 opacity-80 hover:opacity-100'"
         >
           <div class="flex items-center justify-between w-full mb-2">
@@ -172,21 +163,21 @@
                     </span>
                     <span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                       <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                      Escucha activa 0ms
+                      {{ 'landing.ui.listening' | t }}
                     </span>
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
                       <p class="text-[10px] font-bold text-espresso dark:text-white">WebSocket JDA</p>
-                      <p class="text-[9px] text-stone-500">Eventos en streaming</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.streaming' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Webhooks Seguros</p>
-                      <p class="text-[9px] text-stone-500">Zero latencia</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.secureWebhooks' | t }}</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.zeroLatency' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Filtro Anti-Spam</p>
-                      <p class="text-[9px] text-stone-500">Sin duplicados</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.antiSpam' | t }}</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.noDupes' | t }}</p>
                     </div>
                   </div>
                 </div>
@@ -200,12 +191,12 @@
                 <!-- Bottom Outputs -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-espresso dark:text-white">Mensajes en tiempo real</span>
-                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Capturado ✓</span>
+                    <span class="text-xs font-semibold text-espresso dark:text-white">{{ 'landing.ui.realtime' | t }}</span>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{{ 'landing.ui.captured' | t }}</span>
                   </div>
                   <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-espresso dark:text-white">Configuración manual</span>
-                    <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400">0 Pasos requeridos</span>
+                    <span class="text-xs font-semibold text-espresso dark:text-white">{{ 'landing.ui.manualSetup' | t }}</span>
+                    <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400">{{ 'landing.ui.zeroSteps' | t }}</span>
                   </div>
                 </div>
               </div>
@@ -220,13 +211,13 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div class="rounded-xl bg-white/80 dark:bg-stone-900/80 p-2.5 shadow-sm border border-amber-900/10 dark:border-amber-400/20 opacity-75">
                     <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 mb-1">
-                      Ruido diario (95%)
+                      {{ 'landing.ui.dailyNoise' | t }}
                     </span>
                     <p class="text-[11px] text-stone-600 dark:text-stone-300 italic truncate">«¡Hola a todos! Buen lunes a la comunidad»</p>
                   </div>
                   <div class="rounded-xl bg-white/95 dark:bg-stone-900/95 p-2.5 shadow-sm border-2 border-amber-500/40">
                     <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 mb-1">
-                      Hito detectado (Top 5%)
+                      {{ 'landing.ui.milestone' | t }}
                     </span>
                     <p class="text-[11px] text-espresso dark:text-white font-semibold italic truncate">«¡Conseguí empleo como Jr AI Dev!»</p>
                   </div>
@@ -250,16 +241,16 @@
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Filtro de Ruido</p>
-                      <p class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">95% descartado</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.noiseFilter' | t }}</p>
+                      <p class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">{{ 'landing.ui.discarded' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Sentimiento</p>
-                      <p class="text-[9px] text-amber-600 dark:text-amber-400 font-semibold">Altamente inspirador</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.sentimentShort' | t }}</p>
+                      <p class="text-[9px] text-amber-600 dark:text-amber-400 font-semibold">{{ 'landing.ui.inspiring' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Clasificación</p>
-                      <p class="text-[9px] text-blue-600 dark:text-blue-400 font-semibold">Victoria / Testimonio</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.classification' | t }}</p>
+                      <p class="text-[9px] text-blue-600 dark:text-blue-400 font-semibold">{{ 'landing.ui.winTestimonial' | t }}</p>
                     </div>
                   </div>
                 </div>
@@ -274,17 +265,17 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
                     <div class="flex items-center justify-between text-xs font-semibold text-espresso dark:text-white">
-                      <span>Rama 1: Historia de éxito</span>
+                      <span>{{ 'landing.ui.branch1' | t }}</span>
                       <i class="pi pi-star-fill text-amber-500 text-[10px]"></i>
                     </div>
-                    <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Dirigido a: Redacción X & LinkedIn</p>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">{{ 'landing.ui.target1' | t }}</p>
                   </div>
                   <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
                     <div class="flex items-center justify-between text-xs font-semibold text-espresso dark:text-white">
-                      <span>Rama 2: Duda técnica recurrente</span>
+                      <span>{{ 'landing.ui.branch2' | t }}</span>
                       <i class="pi pi-question-circle text-violet-500 text-[10px]"></i>
                     </div>
-                    <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Dirigido a: Auto-generación de FAQ</p>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">{{ 'landing.ui.target2' | t }}</p>
                   </div>
                 </div>
               </div>
@@ -298,11 +289,11 @@
                 <!-- Top Inputs -->
                 <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
                   <div>
-                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Input de la comunidad</span>
+                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">{{ 'landing.ui.communityInput' | t }}</span>
                     <p class="text-xs font-bold text-espresso dark:text-white">«Mariana: contratada como Jr AI Dev con OCI»</p>
                   </div>
                   <span class="rounded bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                    Verificado 100%
+                    {{ 'landing.ui.verified' | t }}
                   </span>
                 </div>
 
@@ -317,20 +308,20 @@
                     <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
                       Adaptive Copywriting Engine
                     </span>
-                    <span class="text-[10px] font-bold text-stone-500">Multi-formato simultáneo</span>
+                    <span class="text-[10px] font-bold text-stone-500">{{ 'landing.ui.multiFormat' | t }}</span>
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Voz de Marca</p>
-                      <p class="text-[9px] text-stone-500">Cercano & Profesional</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.brandVoice' | t }}</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.brandVoiceValue' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Gancho Viral</p>
-                      <p class="text-[9px] text-stone-500">Alto engagement</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.hook' | t }}</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.engagement' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Anti-Alucinación</p>
-                      <p class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">100% Hechos reales</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.antiHallucination' | t }}</p>
+                      <p class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">{{ 'landing.ui.realFacts' | t }}</p>
                     </div>
                   </div>
                 </div>
@@ -350,7 +341,7 @@
                           <path d="m236 0h46l-101 115 118 156h-92.6l-72.5-94.8-83 94.8h-46l107-123-113-148h94.9l65.5 86.6zm-16.1 244h25.5l-165-218h-27.4z"/>
                         </svg>
                       </span>
-                      <span class="text-xs font-bold text-espresso dark:text-white">Hilo para X (Twitter)</span>
+                      <span class="text-xs font-bold text-espresso dark:text-white">{{ 'landing.ui.xThread' | t }}</span>
                     </div>
                     <p class="text-[10px] text-stone-500 dark:text-stone-400 truncate">«De estudiante a Jr AI Dev: cómo Mariana lo logró...»</p>
                   </div>
@@ -359,7 +350,7 @@
                       <span class="flex h-5 w-5 items-center justify-center rounded bg-[#0a66c2] text-white text-[10px]">
                         <i class="pi pi-linkedin"></i>
                       </span>
-                      <span class="text-xs font-bold text-espresso dark:text-white">Post para LinkedIn</span>
+                      <span class="text-xs font-bold text-espresso dark:text-white">{{ 'landing.ui.linkedinPost' | t }}</span>
                     </div>
                     <p class="text-[10px] text-stone-500 dark:text-stone-400 truncate">«Celebramos el talento de nuestra comunidad...»</p>
                   </div>
@@ -375,11 +366,11 @@
                 <!-- Top Inputs -->
                 <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
                   <div>
-                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Borradores generados</span>
-                    <p class="text-xs font-bold text-espresso dark:text-white">Hilo de X + Post LinkedIn listos</p>
+                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">{{ 'landing.ui.drafts' | t }}</span>
+                    <p class="text-xs font-bold text-espresso dark:text-white">{{ 'landing.ui.draftsReady' | t }}</p>
                   </div>
                   <span class="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                    Esperando aprobación
+                    {{ 'landing.ui.awaiting' | t }}
                   </span>
                 </div>
 
@@ -392,7 +383,7 @@
                 <div class="rounded-2xl border border-amber-900/25 dark:border-amber-400/30 bg-white/70 dark:bg-stone-900/80 p-4 shadow-sm backdrop-blur-md">
                   <div class="flex items-center justify-between mb-3">
                     <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                      Consola de Curaduría (Humano en el bucle)
+                      {{ 'landing.ui.console' | t }}
                     </span>
                     <span class="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                       <i class="pi pi-shield"></i> OAuth 1.0a
@@ -400,18 +391,18 @@
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
-                      <p class="text-[10px] font-bold text-espresso dark:text-white">Edición Libre</p>
-                      <p class="text-[9px] text-stone-500">Ajusta palabras</p>
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">{{ 'landing.ui.freeEdit' | t }}</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.adjust' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-emerald-600 text-white p-2 text-center shadow-md">
                       <p class="text-[10px] font-bold flex items-center justify-center gap-1">
-                        <i class="pi pi-check text-[9px]"></i> 1-Clic Aprobar
+                        <i class="pi pi-check text-[9px]"></i> {{ 'landing.ui.oneClickApprove' | t }}
                       </p>
-                      <p class="text-[9px] text-emerald-100">Disparo directo</p>
+                      <p class="text-[9px] text-emerald-100">{{ 'landing.ui.direct' | t }}</p>
                     </div>
                     <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
                       <p class="text-[10px] font-bold text-espresso dark:text-white">OCI Object Storage</p>
-                      <p class="text-[9px] text-stone-500">Lote &lt;1MB archivado</p>
+                      <p class="text-[9px] text-stone-500">{{ 'landing.ui.archived' | t }}</p>
                     </div>
                   </div>
                 </div>
@@ -431,9 +422,9 @@
                           <path d="m236 0h46l-101 115 118 156h-92.6l-72.5-94.8-83 94.8h-46l107-123-113-148h94.9l65.5 86.6zm-16.1 244h25.5l-165-218h-27.4z"/>
                         </svg>
                       </span>
-                      <span class="text-xs font-semibold text-espresso dark:text-white">En vivo en X (Twitter)</span>
+                      <span class="text-xs font-semibold text-espresso dark:text-white">{{ 'landing.ui.liveX' | t }}</span>
                     </div>
-                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Publicado ✓</span>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{{ 'landing.ui.published' | t }}</span>
                   </div>
                   <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -442,7 +433,7 @@
                       </span>
                       <span class="text-xs font-semibold text-espresso dark:text-white">OCI Always Free</span>
                     </div>
-                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">$0.00 Costo ✓</span>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{{ 'landing.ui.cost' | t }}</span>
                   </div>
                 </div>
               </div>
@@ -457,14 +448,14 @@
         <!-- Step Phase Badge -->
         <div class="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
           <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span>Fase 0{{ currentStep().number }} de 04</span>
+          <span>{{ 'landing.ui.phase' | t: { n: '0' + currentStep().number, total: '04' } }}</span>
         </div>
 
         <!-- Editorial Heading (Serif + Italics subtitle) -->
         <div>
-          <h3 class="font-serif text-3xl sm:text-4xl lg:text-[2.65rem] font-medium text-espresso dark:text-white leading-[1.18]">
-            {{ currentStep().mainTitleKey | t }}:
-            <span class="block italic font-normal text-amber-600 dark:text-amber-400 mt-1">
+          <h3 class="font-display text-2xl font-extrabold leading-tight tracking-tight text-espresso dark:text-white sm:text-3xl">
+            {{ currentStep().mainTitleKey | t }}
+            <span class="mt-1 block font-semibold text-amber-600 dark:text-amber-400">
               {{ currentStep().mainSubtitleKey | t }}
             </span>
           </h3>
@@ -476,7 +467,7 @@
         <!-- 3 Feature Chips -->
         <div class="pt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
           @for (chip of currentStep().chips; track chip) {
-            <div class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-stone-850 px-3.5 py-2 text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-stone-700/80 shadow-sm">
+            <div class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-stone-800 px-3.5 py-2 text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-stone-700/80 shadow-sm">
               <i class="pi pi-check-circle text-emerald-600 dark:text-emerald-400 text-sm"></i>
               <span>{{ chip | t }}</span>
             </div>
@@ -509,7 +500,7 @@
             {{ 'landing.how.pipeline.footerTime' | t }}
           </p>
           <p class="text-xs sm:text-sm text-stone-500 dark:text-stone-400">
-            Automatización autónoma que ahorra horas semanales de curaduría manual y redacción repetitiva.
+            {{ 'landing.ui.autonomy' | t }}
           </p>
         </div>
       </div>

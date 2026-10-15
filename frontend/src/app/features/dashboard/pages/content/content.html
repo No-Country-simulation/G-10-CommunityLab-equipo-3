@@ -56,7 +56,7 @@
             </div>
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium text-slate-900 dark:text-white">{{ a | assetTitle }}</p>
-              <p class="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{{ a.body }}</p>
+              <p class="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{{ snippet(a.body) }}</p>
               <div class="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">
                 <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full" [class]="statusDot[a.status]"></span>{{ 'status.' + a.status | t }}</span>
                 <span>·</span>
@@ -86,20 +86,20 @@
     </ul>
 
     <!-- Editor -->
-    <div class="border-t border-slate-100 dark:border-slate-800 lg:col-span-3 lg:border-t-0">
+    <div id="content-editor" class="scroll-mt-24 border-t border-slate-100 dark:border-slate-800 lg:col-span-3 lg:border-t-0">
       @if (selected(); as a) {
         <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-              <span class="chip" [class]="typeTint[a.type]"><i [class]="typeIcon[a.type]" class="text-[10px]"></i>{{ 'assetType.' + a.type | t }}</span>
+          <div class="min-w-0 basis-full sm:basis-auto sm:flex-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="chip whitespace-nowrap" [class]="typeTint[a.type]"><i [class]="typeIcon[a.type]" class="text-[10px]"></i>{{ 'assetType.' + a.type | t }}</span>
               <span class="text-xs text-slate-400">{{ 'content.tone' | t: { tone: (a.tone | tone).toLowerCase() } }}</span>
             </div>
             <p class="mt-1 text-xs text-slate-400">
-              {{ a.id }} · {{ 'content.created' | t: { date: (a.createdAt | ldate: 'short') } }}
-              @if (a.publishedAt) { · {{ 'content.publishedAt' | t: { date: (a.publishedAt | ldate: 'short') } }} }
+              {{ a.id }} · {{ 'content.created' | t: { date: (a.createdAt | ldate: 'dateTime') } }}
+              @if (a.publishedAt) { · {{ 'content.publishedAt' | t: { date: (a.publishedAt | ldate: 'dateTime') } }} }
             </p>
           </div>
-          <p-tag [value]="'status.' + a.status | t" [severity]="statusSeverity[a.status]" [rounded]="true" />
+          <p-tag class="sm:ml-auto" [value]="'status.' + a.status | t" [severity]="statusSeverity[a.status]" [rounded]="true" />
           <!-- Published and rejected posts are read-only: no edit mode -->
           @if (a.status !== 'published' && a.status !== 'rejected') {
             <p-selectbutton [options]="viewModes()" [ngModel]="view()" (ngModelChange)="view.set($event)" optionLabel="label"
@@ -202,7 +202,7 @@
             @switch (a.status) {
               @case ('published') {
                 <span class="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                  <i class="pi pi-check-circle animate-pop"></i> {{ 'content.publishedOn' | t: { date: (a.publishedAt | ldate: 'medium') } }}
+                  <i class="pi pi-check-circle animate-pop"></i> {{ 'content.publishedOn' | t: { date: (a.publishedAt | ldate: 'dateTime') } }}
                 </span>
               }
               @case ('rejected') {

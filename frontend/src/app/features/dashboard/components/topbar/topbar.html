@@ -14,6 +14,9 @@
     <span class="font-display text-base font-extrabold text-espresso dark:text-white">Ukuku <span class="text-amber-600 dark:text-amber-400">AI</span></span>
   </a>
 
+  <!-- Where you are (desktop); phones show it under the bar -->
+  <div class="hidden min-w-0 lg:block"><app-breadcrumb /></div>
+
   <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
     <!-- Language: ES · EN · PT segmented switch (tablet/desktop) -->
     <div class="lang-switch hidden sm:inline-flex" role="radiogroup" [attr.aria-label]="'topbar.language' | t">

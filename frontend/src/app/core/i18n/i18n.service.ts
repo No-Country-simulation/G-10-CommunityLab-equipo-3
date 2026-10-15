@@ -57,10 +57,25 @@ export class I18n {
     return this.dictionaries[this._lang()][key as MessageKey] ?? this.dictionaries.es[key as MessageKey] ?? null;
   }
 
-  /** Translates a key, filling `{name}` placeholders. Unknown keys fall back to the key itself. */
+  /**
+   * Translates a key, filling `{name}` placeholders (numbers formatted for the language).
+   * With a numeric `n`, `key.one` / `key.other` are preferred when they exist. Unknown keys fall back to the key itself.
+   */
   t(key: MessageKey | string, params?: Record<string, string | number | null>): string {
-    const text = this.dictionaries[this._lang()][key as MessageKey] ?? this.dictionaries.es[key as MessageKey] ?? key;
-    return params ? text.replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? '')) : text;
+    const n = params?.['n'];
+    const plural = typeof n === 'number' ? this.find(`${key}.${n === 1 ? 'one' : 'other'}`) : null;
+    const text = plural ?? this.find(key) ?? key;
+    if (!params) return text;
+    const numbers = new Intl.NumberFormat(this.locale());
+    return text.replace(/\{(\w+)\}/g, (_, name) => {
+      const value = params[name];
+      return typeof value === 'number' ? numbers.format(value) : String(value ?? '');
+    });
+  }
+
+  /** A number in the UI language: 50.000 (es/pt) · 50,000 (en) */
+  number(value: number, maximumFractionDigits = 0): string {
+    return new Intl.NumberFormat(this.locale(), { maximumFractionDigits }).format(value);
   }
 }
 

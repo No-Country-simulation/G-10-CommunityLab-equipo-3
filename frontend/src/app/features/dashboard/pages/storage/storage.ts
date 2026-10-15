@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -8,7 +7,7 @@ import { StoredObject } from '../../../../core/api/api.models';
 import { StoredObjectView } from '../../../../core/api/community-lab.api';
 import { downloadBlob } from '../../../../core/banner';
 import { I18n } from '../../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { LocalizedDatePipe, LocalizedNumberPipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 
 /** Bucket limit when the backend stats are not available */
@@ -26,7 +25,7 @@ const REQUEST_KINDS = [
 
 @Component({
   selector: 'app-storage',
-  imports: [ButtonModule, DialogModule, TooltipModule, DecimalPipe, TranslatePipe, LocalizedDatePipe],
+  imports: [ButtonModule, DialogModule, TooltipModule, TranslatePipe, LocalizedDatePipe, LocalizedNumberPipe],
   templateUrl: './storage.html',
 })
 export class Storage {
@@ -117,6 +116,11 @@ export class Storage {
     }
     const digits = i === 0 || bytes >= 100 ? 0 : 1;
     return `${new Intl.NumberFormat(this.i18n.locale(), { maximumFractionDigits: digits }).format(bytes)} ${units[i]}`;
+  }
+
+  /** 0.6 → "0,6 %" (es) / "0.6%" (en) */
+  percent(pct: number) {
+    return new Intl.NumberFormat(this.i18n.locale(), { style: 'percent', maximumFractionDigits: 1 }).format(pct / 100);
   }
 
   /** Bar color by how close it is to the limit */
