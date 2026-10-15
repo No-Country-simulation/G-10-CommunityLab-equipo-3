@@ -1432,3 +1432,127 @@ html:not(.dark) .p-toast-message {
     animation: none;
   }
 }
+
+/* ── Banner studio (the dialog is appended to <body>, so its styles are global) ── */
+.banner-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 1px 1px, rgb(120 113 108 / 0.18) 1px, transparent 0) 0 0 / 14px 14px,
+    #f5f5f4;
+}
+
+.dark .banner-stage {
+  background:
+    radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0) 0 0 / 14px 14px,
+    #0c0a09;
+}
+
+.banner-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
+  animation: banner-in 0.25s ease-out;
+}
+
+/* A square image as wide as the dialog would push the controls off screen */
+.banner-stage.is-square img {
+  width: auto;
+  max-width: 100%;
+  max-height: min(40vh, 380px);
+}
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+.banner-formats {
+  display: grid;
+  gap: 6px;
+}
+
+.banner-format {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  color: #57534e;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.1);
+  transition: box-shadow 0.15s, color 0.15s, background 0.15s;
+}
+
+.banner-format:hover {
+  box-shadow: 0 0 0 1px rgb(217 119 6 / 0.45);
+}
+
+.banner-format.is-active {
+  color: #92400e;
+  background: #fffbeb;
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+
+.banner-format:focus-visible,
+.banner-reset:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.banner-format-shape {
+  flex-shrink: 0;
+  width: 22px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.8;
+}
+
+.banner-format-shape.is-square {
+  width: 16px;
+  height: 16px;
+}
+
+.dark .banner-format {
+  color: #d6d3d1;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
+}
+
+.dark .banner-format.is-active {
+  color: #fcd34d;
+  background: rgb(251 191 36 / 0.1);
+  box-shadow: 0 0 0 2px #fbbf24;
+}
+
+.banner-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.banner-reset:hover {
+  text-decoration: underline;
+}
+
+.dark .banner-reset {
+  color: #fbbf24;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-stage img {
+    animation: none;
+  }
+}

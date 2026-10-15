@@ -264,14 +264,75 @@
   </div>
 </div>
 
+<!-- Banner studio: live preview on top, the few choices that matter below -->
 <p-dialog [header]="'content.bannerDialog' | t" [modal]="true" [visible]="bannerOpen()" (visibleChange)="bannerOpen.set($event)"
-  [style]="{ width: 'min(720px, 95vw)' }" [dismissableMask]="true">
-  @if (bannerUrl()) {
-    <img [src]="bannerUrl()" [alt]="'content.bannerAlt' | t" class="w-full rounded-lg shadow-sm" />
+  [style]="{ width: 'min(820px, 96vw)' }" [dismissableMask]="true" [draggable]="false" appendTo="body" styleClass="banner-studio">
+  @if (bannerAsset(); as ba) {
+    <div class="banner-stage" [class.is-square]="bannerFormat() === 'square'">
+      @if (bannerUrl()) {
+        <img [src]="bannerUrl()" [alt]="'content.bannerAlt' | t" [attr.width]="bannerSize().width" [attr.height]="bannerSize().height" />
+      }
+    </div>
+
+    <div class="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <!-- Headline: the one message people read; editable, with the generated text one click away -->
+      <div class="min-w-0">
+        <div class="mb-1.5 flex items-center justify-between gap-2">
+          <label for="banner-headline" class="text-[0.8rem] font-semibold text-stone-700 dark:text-stone-200">{{ 'banner.headline' | t }}</label>
+          @if (!bannerHeadlineIsDefault()) {
+            <button type="button" class="banner-reset" (click)="resetBannerHeadline()">
+              <i class="pi pi-undo text-[10px]" aria-hidden="true"></i>{{ 'banner.resetHeadline' | t }}
+            </button>
+          }
+        </div>
+        <textarea pTextarea id="banner-headline" rows="2" class="w-full !text-sm" [maxlength]="bannerHeadlineMax"
+          [ngModel]="bannerHeadline()" (ngModelChange)="bannerHeadline.set($event)" aria-describedby="banner-headline-hint"></textarea>
+        <p id="banner-headline-hint" class="mt-1 flex justify-between gap-3 text-[0.72rem] text-stone-500 dark:text-stone-400">
+          <span>{{ 'banner.headlineHint' | t }}</span>
+          <span class="tabular-nums" [class.text-amber-600]="bannerHeadline().length > bannerHeadlineMax - 20">{{ bannerHeadline().length }}/{{ bannerHeadlineMax }}</span>
+        </p>
+        <p class="mt-3 flex items-start gap-1.5 text-[0.72rem] text-stone-500 dark:text-stone-400">
+          <i class="pi pi-info-circle mt-px text-[11px]" aria-hidden="true"></i>{{ 'banner.footHint' | t }}
+        </p>
+      </div>
+
+      <div class="flex flex-col gap-4 sm:w-60">
+        <!-- Format: where the image will be posted -->
+        <div>
+          <span class="mb-1.5 block text-[0.8rem] font-semibold text-stone-700 dark:text-stone-200" id="banner-format-label">{{ 'banner.format' | t }}</span>
+          <div class="banner-formats" role="radiogroup" aria-labelledby="banner-format-label">
+            @for (f of bannerFormats(); track f.value) {
+              <button type="button" role="radio" class="banner-format" [class.is-active]="bannerFormat() === f.value"
+                [attr.aria-checked]="bannerFormat() === f.value" (click)="bannerFormat.set(f.value)">
+                <span class="banner-format-shape" [class.is-square]="f.value === 'square'" aria-hidden="true"></span>
+                <span class="flex-1 text-left text-[0.8rem] font-semibold">{{ f.label }}</span>
+                <span class="text-[0.7rem] tabular-nums opacity-70">{{ f.size }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Privacy: the member's name is only published if the community manager keeps it -->
+        @if (ba.origin.route !== 'faq') {
+          <label class="flex cursor-pointer items-start gap-3">
+            <p-toggleswitch [ngModel]="bannerShowAuthor()" (ngModelChange)="bannerShowAuthor.set($event)" inputId="banner-author" />
+            <span class="flex flex-col leading-tight">
+              <span class="text-[0.8rem] font-semibold text-stone-700 dark:text-stone-200">{{ 'banner.showAuthor' | t }}</span>
+              <span class="text-[0.7rem] text-stone-500 dark:text-stone-400">{{ (bannerShowAuthor() ? 'banner.showAuthorOn' : 'banner.showAuthorOff') | t: { name: ba.origin.author } }}</span>
+            </span>
+          </label>
+        }
+      </div>
+    </div>
   }
-  <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">{{ 'content.bannerHint' | t }}</p>
+
   <ng-template #footer>
     <p-button [label]="'common.close' | t" [text]="true" severity="secondary" (onClick)="bannerOpen.set(false)" />
-    <p-button [label]="'content.downloadPng' | t" icon="pi pi-download" (onClick)="downloadBanner()" />
+    @if (canCopyImage) {
+      <p-button [label]="'banner.copy' | t" icon="pi pi-clone" severity="secondary" [outlined]="true" styleClass="whitespace-nowrap"
+        [loading]="bannerBusy() === 'copy'" [disabled]="!!bannerBusy()" (onClick)="copyBanner()" />
+    }
+    <p-button [label]="'content.downloadPng' | t" icon="pi pi-download" styleClass="whitespace-nowrap"
+      [loading]="bannerBusy() === 'download'" [disabled]="!!bannerBusy()" (onClick)="downloadBanner()" />
   </ng-template>
 </p-dialog>

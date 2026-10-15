@@ -7,12 +7,25 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 import { AssetPatch, AssetStatus, AssetType, GeneratedAsset } from '../../../../core/api/api.models';
 import { TONE } from '../../../../core/api/live-feed';
 import { CHANNEL_RULES, PUBLISHING_PLATFORMS, checkPost } from '../../../../core/channel-rules';
-import { buildBannerSvg, canHaveBanner, downloadBannerPng, svgDataUrl } from '../../../../core/banner';
+import {
+  BANNER_FORMATS,
+  BANNER_HEADLINE_MAX,
+  BannerFormat,
+  bannerFileName,
+  buildBannerSvg,
+  canHaveBanner,
+  defaultBannerHeadline,
+  downloadBlob,
+  loadBannerLogo,
+  renderBannerPng,
+  svgDataUrl,
+} from '../../../../core/banner';
 import { confetti, originOf } from '../../../../core/confetti';
 import { I18n } from '../../../../core/i18n/i18n.service';
 import { AssetTitlePipe, LocalizedDatePipe, TonePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
@@ -49,6 +62,7 @@ const FILTER_STATUSES: Record<Filter, AssetStatus[] | null> = {
     SelectButtonModule,
     TagModule,
     TextareaModule,
+    ToggleSwitchModule,
     TooltipModule,
     FormsModule,
     PercentPipe,
@@ -102,8 +116,35 @@ export class Content {
   protected readonly platforms = PUBLISHING_PLATFORMS;
   protected readonly channelRules = CHANNEL_RULES;
 
+  // ── Banner studio: format, editable headline and author privacy, previewed live ──
   protected readonly bannerOpen = signal(false);
-  protected readonly bannerSvg = signal('');
+  protected readonly bannerAsset = signal<GeneratedAsset | null>(null);
+  protected readonly bannerFormat = signal<BannerFormat>('landscape');
+  protected readonly bannerHeadline = signal('');
+  protected readonly bannerShowAuthor = signal(true);
+  protected readonly bannerBusy = signal<'copy' | 'download' | null>(null);
+  private readonly bannerLogo = signal<string | undefined>(undefined);
+  protected readonly bannerHeadlineMax = BANNER_HEADLINE_MAX;
+  protected readonly bannerFormats = computed(() =>
+    (Object.keys(BANNER_FORMATS) as BannerFormat[]).map((f) => ({
+      value: f,
+      label: this.i18n.t(`banner.format.${f}`),
+      size: `${BANNER_FORMATS[f].width} × ${BANNER_FORMATS[f].height}`,
+    })),
+  );
+  /** Image clipboard is missing in some browsers (Firefox without flags): the button is hidden there */
+  protected readonly canCopyImage = typeof ClipboardItem !== 'undefined' && !!navigator.clipboard?.write;
+  protected readonly bannerSvg = computed(() => {
+    const a = this.bannerAsset();
+    return a
+      ? buildBannerSvg(a, this.i18n, {
+          format: this.bannerFormat(),
+          headline: this.bannerHeadline(),
+          showAuthor: this.bannerShowAuthor(),
+          logo: this.bannerLogo(),
+        })
+      : '';
+  });
   // Our own SVG with escaped text; Angular would otherwise block data:image/svg+xml
   protected readonly bannerUrl = computed(() =>
     this.bannerSvg() ? this.sanitizer.bypassSecurityTrustUrl(svgDataUrl(this.bannerSvg())) : null,
@@ -246,13 +287,58 @@ export class Content {
 
   protected openBanner(a: GeneratedAsset) {
     if (!canHaveBanner(a)) return;
-    this.bannerSvg.set(buildBannerSvg(a, this.i18n));
+    this.bannerAsset.set(a);
+    this.bannerHeadline.set(defaultBannerHeadline(a, this.i18n));
     this.bannerOpen.set(true);
+    // The preview shows at once; the logo joins it as soon as it is loaded (cached afterwards)
+    loadBannerLogo().then((logo) => this.bannerLogo.set(logo));
   }
 
-  protected downloadBanner() {
-    const a = this.selected();
-    if (a) downloadBannerPng(this.bannerSvg(), `banner-${a.id}.png`);
+  protected resetBannerHeadline() {
+    const a = this.bannerAsset();
+    if (a) this.bannerHeadline.set(defaultBannerHeadline(a, this.i18n));
+  }
+
+  protected bannerHeadlineIsDefault() {
+    const a = this.bannerAsset();
+    return !a || this.bannerHeadline() === defaultBannerHeadline(a, this.i18n);
+  }
+
+  protected bannerSize() {
+    const { width, height } = BANNER_FORMATS[this.bannerFormat()];
+    return { width, height };
+  }
+
+  protected async downloadBanner() {
+    const a = this.bannerAsset();
+    if (!a || this.bannerBusy()) return;
+    this.bannerBusy.set('download');
+    try {
+      const format = this.bannerFormat();
+      const blob = await renderBannerPng(this.bannerSvg(), format);
+      downloadBlob(blob, bannerFileName(a, this.bannerHeadline() || defaultBannerHeadline(a, this.i18n), format));
+      this.toast.add({ severity: 'success', summary: this.i18n.t('banner.toast.downloaded'), life: 2000 });
+    } catch {
+      this.toast.add({ severity: 'error', summary: this.i18n.t('banner.toast.failed'), life: 3000 });
+    } finally {
+      this.bannerBusy.set(null);
+    }
+  }
+
+  /** Copies the PNG itself, ready to paste into LinkedIn, X or a chat */
+  protected async copyBanner() {
+    if (!this.bannerAsset() || this.bannerBusy()) return;
+    this.bannerBusy.set('copy');
+    try {
+      // The promise form keeps the user gesture alive while the PNG is rendered (Safari requires it)
+      const png = renderBannerPng(this.bannerSvg(), this.bannerFormat());
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      this.toast.add({ severity: 'success', summary: this.i18n.t('banner.toast.copied'), life: 2000 });
+    } catch {
+      this.toast.add({ severity: 'error', summary: this.i18n.t('banner.toast.copyFailed'), life: 3000 });
+    } finally {
+      this.bannerBusy.set(null);
+    }
   }
 }
 
