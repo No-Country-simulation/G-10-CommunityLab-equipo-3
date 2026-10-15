@@ -7,6 +7,7 @@ import {
   INTERACTION_SOURCES,
   InteractionSource,
   Sentiment,
+  StorageStats,
   StoredObject,
 } from './api/api.models';
 import { MessageService } from 'primeng/api';
@@ -37,6 +38,7 @@ export class WorkspaceStore {
 
   private readonly _assets = signal<GeneratedAsset[]>([]);
   private readonly _objects = signal<StoredObject[]>([]);
+  private readonly _storageStats = signal<StorageStats | null>(null);
   private readonly _busyIds = signal<Set<string>>(new Set());
   private readonly _activeSource = signal<NetworkFilter>(readActiveSource());
 
@@ -62,6 +64,10 @@ export class WorkspaceStore {
   });
 
   readonly objects = this._objects.asReadonly();
+  /** Bucket usage and request counters from the backend; null until the first answer */
+  readonly storageStats = this._storageStats.asReadonly();
+  /** The stats endpoint failed: the storage page falls back to what this browser knows */
+  readonly storageStatsFailed = signal(false);
   readonly loaded = signal(false);
 
   readonly pipeline = computed(() => {
@@ -197,6 +203,13 @@ export class WorkspaceStore {
       next: (objects) => this._objects.set(objects),
       // No storage endpoint yet: keep the current (empty) list
       error: () => {},
+    });
+    this.api.getStorageStats().subscribe({
+      next: (stats) => {
+        this._storageStats.set(stats);
+        this.storageStatsFailed.set(false);
+      },
+      error: () => this.storageStatsFailed.set(true),
     });
   }
 

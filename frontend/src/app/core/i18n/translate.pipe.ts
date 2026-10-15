@@ -13,13 +13,13 @@ export class TranslatePipe implements PipeTransform {
   }
 }
 
-/** Date pipe that follows the selected UI language: `{{ value | ldate: 'medium' }}`. */
+/** Date pipe that follows the selected UI language: `{{ value | ldate: 'medium' }}`, `{{ value | ldate: 'mediumDate' : 'UTC' }}`. */
 @Pipe({ name: 'ldate', pure: false })
 export class LocalizedDatePipe implements PipeTransform {
   private readonly i18n = inject(I18n);
 
-  transform(value: string | number | Date | null | undefined, format = 'mediumDate'): string {
-    return value == null || value === '' ? '' : formatDate(value, format, this.i18n.locale());
+  transform(value: string | number | Date | null | undefined, format = 'mediumDate', timezone?: string): string {
+    return value == null || value === '' ? '' : formatDate(value, format, this.i18n.locale(), timezone);
   }
 }
 

@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, throwError } from 'rxjs';
-import { AssetPatch, GeneratedAsset, StoredObject } from './api.models';
+import { AssetPatch, GeneratedAsset, StorageStats, StoredObject } from './api.models';
 import { API_CONFIG, CommunityLabApi, RevisionError, RevisionFailure, StoredObjectView } from './community-lab.api';
 import { CHANNEL_POST } from './live-feed';
 import { OciPackages, PackageRef } from './oci-packages';
@@ -97,6 +97,10 @@ export class HttpCommunityLabApi extends CommunityLabApi {
     const ref = this.packages.refs().find((r) => objectNameOf(r) === objectName);
     if (!ref) return throwError(() => new Error('Paquete no encontrado'));
     return this.packages.load(ref).pipe(map((content) => ({ objectName, content })));
+  }
+
+  getStorageStats(): Observable<StorageStats> {
+    return this.http.get<StorageStats>(`${this.base}/storage/stats`);
   }
 }
 

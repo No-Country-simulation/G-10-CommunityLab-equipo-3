@@ -123,6 +123,32 @@ export interface StoredObject {
   url: string;
 }
 
+/** Bucket usage measured by the backend (GET /api/v1/storage/stats). */
+export interface StorageStats {
+  storage: {
+    tier: string;
+    usedBytes: number;
+    limitBytes: number;
+    objectCount: number;
+    measuredAt: string;
+  };
+  /** Requests to the bucket since the start of the billing period */
+  requests: {
+    periodStart: string;
+    limit: number;
+    total: number;
+    get: number;
+    put: number;
+    list: number;
+    head: number;
+    delete: number;
+    clientErrors: number;
+  };
+  generatedAt: string;
+  /** true → the backend could not reach OCI and is serving its last measurement */
+  stale: boolean;
+}
+
 export interface AssetPatch {
   title?: string;
   /** Text as shown in the UI: the post plus, as last paragraph, its call to action */

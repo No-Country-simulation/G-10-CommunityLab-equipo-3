@@ -14,19 +14,65 @@
     </div>
     <div>
       <p class="font-semibold text-slate-900 dark:text-white">{{ bucket.name }}</p>
-      <p class="text-xs text-slate-500 dark:text-slate-400">{{ bucket.region }} · Always Free · $0.00</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400">{{ bucket.region }} · {{ store.storageStats()?.storage?.tier ?? 'STANDARD' }} · Always Free · $0.00</p>
     </div>
   </div>
-  <div class="sm:ml-auto sm:w-64">
-    <div class="flex justify-between text-xs">
-      <span class="text-slate-500 dark:text-slate-400">{{ 'storage.usage' | t: { n: totals().objects, kb: (totals().bytes / 1024 | number: '1.1-1') } }}</span>
-      <span class="text-slate-400">{{ 'storage.of' | t }}</span>
+  <div class="sm:ml-auto sm:w-72">
+    <div class="flex justify-between gap-3 text-xs">
+      <span class="text-slate-500 dark:text-slate-400">{{ 'storage.usage' | t: { n: totals().objects, size: formatBytes(totals().bytes) } }}</span>
+      <span class="shrink-0 text-slate-400">{{ 'storage.of' | t: { limit: formatBytes(totals().limit) } }}</span>
     </div>
     <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-      <div class="animate-grow-x h-full rounded-full bg-emerald-500" [style.width.%]="totals().usagePct < 1 ? 1 : totals().usagePct"></div>
+      <div class="animate-grow-x h-full rounded-full" [class]="barColor(totals().usagePct)" [style.width.%]="totals().usagePct < 1 ? 1 : totals().usagePct"></div>
     </div>
+    <p class="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+      @if (store.storageStats(); as stats) {
+        <span>{{ 'storage.measuredAt' | t: { time: (stats.storage.measuredAt | ldate: 'short') } }}</span>
+        @if (stats.stale) {
+          <span class="rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+            [pTooltip]="'storage.staleHint' | t" tooltipPosition="top">{{ 'storage.stale' | t }}</span>
+        }
+      } @else if (store.storageStatsFailed()) {
+        <span>{{ 'storage.statsUnavailable' | t }}</span>
+      }
+    </p>
   </div>
 </section>
+
+<!-- Bucket requests in the current period -->
+@if (requests(); as r) {
+  <section class="card mt-6 overflow-hidden">
+    <div class="card-header flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="card-title">{{ 'storage.requests' | t }}</h2>
+      <span class="text-xs text-slate-400">{{ 'storage.requestsSince' | t: { date: (r.periodStart | ldate: 'mediumDate' : 'UTC') } }}</span>
+    </div>
+    <div class="p-5">
+      <div class="flex justify-between gap-3 text-xs">
+        <span class="text-slate-500 dark:text-slate-400">{{ 'storage.requestsUsage' | t: { total: (r.total | number), limit: (r.limit | number) } }}</span>
+        <span class="shrink-0 tabular-nums text-slate-400">{{ r.usagePct | number: '1.0-1' }}%</span>
+      </div>
+      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div class="animate-grow-x h-full rounded-full" [class]="barColor(r.usagePct)" [style.width.%]="r.usagePct < 1 ? 1 : r.usagePct"></div>
+      </div>
+      <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        @for (k of r.kinds; track k.key) {
+          <div class="rounded-xl border border-slate-100 p-3 dark:border-slate-800">
+            <p class="flex items-center gap-1.5 font-mono text-[11px] font-semibold" [class]="k.key === 'clientErrors' && k.count > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'">
+              <i class="text-[11px]" [class]="k.icon"></i>{{ k.method }}
+            </p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums text-slate-900 dark:text-white">{{ k.count | number }}</p>
+            <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ 'storage.req.' + k.key | t }}</p>
+            @if (k.key !== 'clientErrors') {
+              <div class="mt-2 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div class="h-full rounded-full bg-[#c74634]/70" [style.width.%]="k.share"></div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+}
 
 <!-- Object list -->
 <section class="card mt-6 overflow-hidden">

@@ -4,6 +4,7 @@ import {
   AssetPatch,
   GeneratedAsset,
   InteractionSource,
+  StorageStats,
   StoredObject,
 } from './api.models';
 
@@ -59,4 +60,5 @@ export abstract class CommunityLabApi {
   abstract publishAsset(asset: GeneratedAsset): Observable<GeneratedAsset>;
   abstract listStoredObjects(): Observable<StoredObject[]>;
   abstract getStoredObject(objectName: string): Observable<StoredObjectView>;
+  abstract getStorageStats(): Observable<StorageStats>;
 }

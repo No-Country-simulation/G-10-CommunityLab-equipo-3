@@ -5,6 +5,7 @@ import {
   AssetStatus,
   GeneratedAsset,
   ProcessResult,
+  StorageStats,
   StoredObject,
 } from './api.models';
 import { CommunityLabApi, StoredObjectView } from './community-lab.api';
@@ -76,6 +77,31 @@ export class MockCommunityLabApi extends CommunityLabApi {
     return found
       ? of({ objectName, content: clone(found) }).pipe(delay(200))
       : throwError(() => new Error('Objeto no encontrado'));
+  }
+
+  /** Same shape as the backend: size and count from the stored batches, plausible request counters. */
+  getStorageStats(): Observable<StorageStats> {
+    const batches = [...this.batches.values()];
+    const now = new Date();
+    const n = batches.length;
+    const requests = { get: n * 4, put: n * 2, list: n * 3, head: n, delete: 0, clientErrors: 1 };
+    return of({
+      storage: {
+        tier: 'STANDARD',
+        usedBytes: batches.reduce((acc, r) => acc + r.storage.sizeBytes, 0),
+        limitBytes: 10 * 1024 ** 3,
+        objectCount: n,
+        measuredAt: now.toISOString(),
+      },
+      requests: {
+        periodStart: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
+        limit: 50_000,
+        total: requests.get + requests.put + requests.list + requests.head + requests.delete,
+        ...requests,
+      },
+      generatedAt: now.toISOString(),
+      stale: false,
+    }).pipe(delay(250));
   }
 
   private save(result: ProcessResult) {
