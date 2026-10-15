@@ -26,6 +26,8 @@ import org.springframework.context.annotation.Configuration;
 import com.oracle.bmc.auth.BasicAuthenticationDetailsProvider;
 import com.oracle.bmc.auth.SimpleAuthenticationDetailsProvider;
 import com.oracle.bmc.auth.StringPrivateKeySupplier;
+import com.oracle.bmc.monitoring.Monitoring;
+import com.oracle.bmc.monitoring.MonitoringClient;
 import com.oracle.bmc.objectstorage.ObjectStorage;
 import com.oracle.bmc.objectstorage.ObjectStorageClient;
 import com.oracle.bmc.objectstorage.requests.GetNamespaceRequest;
@@ -37,11 +39,13 @@ import com.sun.net.httpserver.HttpServer;
  * -> cliente; fallo explicito, no silencioso) + RNF-02 + plan 006 §3 (TASK-006-00: Jersey 3.0.8 alineado,
  * verificado en runtime al construir el cliente real) + TASK-006-06 (2026-10-12: sin default `dev` en
  * `oci.config-profile`; session-token sin perfil falla nombrando OCI_CONFIG_PROFILE y el modo).
+ * Spec 009 plan §1.1 (TASK-009-01): cliente Monitoring con el mismo proveedor y región; exige OCI_COMPARTMENT_ID.
  */
 @DisplayName("OciConfig")
 class OciConfigTest {
 
     private static final String TEST_NAMESPACE = "test-namespace";
+    private static final String TEST_COMPARTMENT = "ocid1.compartment.oc1..test";
 
     @Nested
     @DisplayName("Activacion por OCI_AUTH_MODE")
@@ -59,6 +63,7 @@ class OciConfigTest {
                 assertThat(context).hasNotFailed();
                 assertThat(context).doesNotHaveBean(BasicAuthenticationDetailsProvider.class);
                 assertThat(context).doesNotHaveBean(ObjectStorage.class);
+                assertThat(context).doesNotHaveBean(Monitoring.class);
             });
         }
 
@@ -72,6 +77,7 @@ class OciConfigTest {
                     .run(context -> {
                         assertThat(context).hasNotFailed();
                         assertThat(context).doesNotHaveBean(ObjectStorage.class);
+                        assertThat(context).doesNotHaveBean(Monitoring.class);
                     });
         }
 
@@ -186,13 +192,45 @@ class OciConfigTest {
                     .hasMessageContaining("OCI_AUTH_MODE=SESSION_TOKEN");
         }
 
+        @Test
+        @DisplayName("Dado OCI configurado con compartment, cuando se crea Monitoring, entonces devuelve un MonitoringClient real")
+        void buildsRealMonitoringClient() throws Exception {
+            // Dado la misma configuracion y el mismo tipo de proveedor que Object Storage (la identidad es la VM)
+            OciProperties properties = properties("MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/");
+
+            // Cuando se construye el cliente de metricas
+            try (Monitoring client = config.monitoring(fakeProvider(), properties)) {
+                // Entonces es el cliente del SDK, no un stub
+                assertThat(client).isInstanceOf(MonitoringClient.class);
+            }
+        }
+
+        @ParameterizedTest(name = "{0}=\"{1}\"")
+        @MethodSource("com.nocountry.simulation.communitylab.infrastructure.config.oci.OciConfigTest#missingMonitoringValues")
+        @DisplayName("Dado OCI activo sin region o compartment, cuando se crea Monitoring, entonces falla nombrando la variable")
+        void monitoringFailsFastOnMissingRequiredValue(String envName, String badValue) {
+            // Dado la region o el compartment nulos, en blanco o con el placeholder literal "${...}"
+            OciProperties properties = switch (envName) {
+                case "OCI_REGION" -> properties("MessagesUsers", badValue, TEST_NAMESPACE, "paquetes/");
+                case "OCI_COMPARTMENT_ID" -> new OciProperties(OciAuthMode.SESSION_TOKEN, "dev",
+                        "MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/", 7, badValue);
+                default -> throw new IllegalArgumentException(envName);
+            };
+
+            // Cuando se crea, entonces falla al arrancar y no en la primera consulta de metricas
+            assertThatThrownBy(() -> config.monitoring(fakeProvider(), properties))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining(envName)
+                    .hasMessageContaining("OCI_AUTH_MODE=SESSION_TOKEN");
+        }
+
         @ParameterizedTest(name = "OCI_CONFIG_PROFILE=\"{0}\"")
         @MethodSource("com.nocountry.simulation.communitylab.infrastructure.config.oci.OciConfigTest#missingProfileValues")
         @DisplayName("Dado session-token sin perfil (vacío o sin resolver), cuando se pide el proveedor, entonces falla nombrando OCI_CONFIG_PROFILE")
         void sessionTokenRequiresAProfile(String badProfile) {
             // Dado session-token sin OCI_CONFIG_PROFILE (sin default en application.yaml queda "${OCI_CONFIG_PROFILE}")
             OciProperties properties = new OciProperties(OciAuthMode.SESSION_TOKEN, badProfile,
-                    "MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/", 7);
+                    "MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/", 7, TEST_COMPARTMENT);
 
             // Cuando se pide el proveedor, entonces falla con un mensaje claro antes de leer ~/.oci/config
             assertThatThrownBy(() -> config.ociAuthProvider(properties))
@@ -206,7 +244,7 @@ class OciConfigTest {
         void providerRejectsNoneMode() {
             // Dado un modo none que llegara al bean pese a la condicion de clase
             OciProperties properties = new OciProperties(OciAuthMode.NONE, null,
-                    "MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/", 7);
+                    "MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/", 7, TEST_COMPARTMENT);
 
             // Cuando se pide el proveedor, entonces se niega en vez de inventar una identidad
             assertThatThrownBy(() -> config.ociAuthProvider(properties))
@@ -222,12 +260,20 @@ class OciConfigTest {
                         Arguments.of(env, "${" + env + "}")));
     }
 
+    static Stream<Arguments> missingMonitoringValues() {
+        return Stream.of("OCI_REGION", "OCI_COMPARTMENT_ID")
+                .flatMap(env -> Stream.of(
+                        Arguments.of(env, null),
+                        Arguments.of(env, "   "),
+                        Arguments.of(env, "${" + env + "}")));
+    }
+
     static Stream<String> missingProfileValues() {
         return Stream.of(null, "   ", "${OCI_CONFIG_PROFILE}");
     }
 
     private static OciProperties properties(String bucket, String region, String namespace, String prefix) {
-        return new OciProperties(OciAuthMode.SESSION_TOKEN, "dev", bucket, region, namespace, prefix, 7);
+        return new OciProperties(OciAuthMode.SESSION_TOKEN, "dev", bucket, region, namespace, prefix, 7, TEST_COMPARTMENT);
     }
 
     // Why a generated key: building the client must not depend on the developer's ~/.oci or a live session.
