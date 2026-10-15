@@ -11,12 +11,14 @@ export interface LangOption {
   code: Lang;
   label: string;
   short: string;
+  /** Flag shown in the language switchers (public/image/flags/) */
+  flag: string;
 }
 
 export const LANGS: readonly LangOption[] = [
-  { code: 'es', label: 'Español', short: 'ES' },
-  { code: 'en', label: 'English', short: 'EN' },
-  { code: 'pt', label: 'Português', short: 'PT' },
+  { code: 'es', label: 'Español', short: 'ES', flag: 'image/flags/es.svg' },
+  { code: 'en', label: 'English', short: 'EN', flag: 'image/flags/us.svg' },
+  { code: 'pt', label: 'Português', short: 'PT', flag: 'image/flags/br.svg' },
 ];
 
 /** Locale ids for Angular's date formatting */
@@ -48,6 +50,11 @@ export class I18n {
     } catch {
       // choice just won't persist
     }
+  }
+
+  /** Like `t`, but null when no dictionary has the key (for values that may or may not be translatable). */
+  find(key: string): string | null {
+    return this.dictionaries[this._lang()][key as MessageKey] ?? this.dictionaries.es[key as MessageKey] ?? null;
   }
 
   /** Translates a key, filling `{name}` placeholders. Unknown keys fall back to the key itself. */

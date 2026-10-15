@@ -1,1 +1,523 @@
-<section id="como-funciona" class="landing-band px-4 py-16 sm:px-6 lg:py-24"><div class="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16"><div class="relative mx-auto w-full max-w-sm" appReveal><div class="landing-mascot landing-mascot-soft relative flex aspect-[4/5] items-end justify-center overflow-hidden rounded-clay p-6"><span class="landing-bubble left-5 top-8">🎉 ¡Me contrataron!</span><span class="landing-bubble right-4 top-24">¿Cómo uso LangGraph?</span><span class="landing-bubble left-8 top-40">🙌 Gracias, comunidad</span><app-bear pose="mensajes" [alt]="'landing.how.alt' | t" imgClass="relative z-10 h-[62%] w-auto object-contain" /></div></div><div><div appReveal><p class="landing-eyebrow">{{ 'landing.how.eyebrow' | t }}</p><h2 class="landing-h2">{{ 'landing.how.title1' | t }} <span class="text-amber-600 dark:text-amber-400">{{ 'landing.how.highlight' | t }}</span></h2><p class="mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300">{{ 'landing.how.lead' | t }}</p></div><ol class="mt-8 space-y-3">@for (step of steps(); track step.title; let i = $index) {<li class="landing-card flex gap-4 p-5" [appReveal]="i * 90"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-700 font-display text-sm font-bold text-white shadow-btn">{{ i + 1 }}</span><div><h3 class="font-display text-base font-bold text-espresso dark:text-white">{{ step.title | t }}</h3><p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-400">{{ step.text | t }}</p></div></li>}</ol><div class="mt-8 flex flex-wrap gap-3" appReveal><a routerLink="/app/ingest" class="landing-btn landing-btn-primary">{{ 'landing.how.cta' | t }} <i class="pi pi-arrow-right text-xs"></i></a><a routerLink="/app/content" class="landing-btn landing-btn-outline">{{ 'landing.how.secondary' | t }}</a></div></div></div></section>
+<section id="como-funciona" class="relative px-4 py-20 sm:px-6 sm:py-28 lg:py-32 overflow-hidden bg-stone-50/40 dark:bg-stone-900/30 border-y border-stone-200/60 dark:border-stone-800/60">
+  <!-- Soft Ambient Glow Background -->
+  <div class="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[650px] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-blue-500/10 blur-3xl opacity-60"></div>
+
+  <!-- Header: Eyebrow + Editorial Serif Heading + Lead -->
+  <div class="mx-auto max-w-7xl mb-12 sm:mb-16" appReveal>
+    <div class="inline-flex items-center gap-2 mb-3">
+      <span class="h-1.5 w-4 rounded-full bg-amber-500"></span>
+      <span class="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+        {{ 'landing.how.stepper.eyebrow' | t }}
+      </span>
+    </div>
+    <div class="max-w-3xl">
+      <h2 class="font-serif text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-espresso dark:text-white leading-[1.15]">
+        {{ 'landing.how.stepper.title' | t }}
+      </h2>
+      <p class="mt-4 text-base sm:text-lg text-stone-600 dark:text-stone-300 leading-relaxed font-sans">
+        {{ 'landing.how.stepper.lead' | t }}
+      </p>
+    </div>
+  </div>
+
+  <div class="mx-auto max-w-7xl relative" appReveal="60">
+    <!-- ========================================================================= -->
+    <!-- SLIDER RAIL CON NODOS CIRCULARES Y BOTONES DE NAVEGACIÓN (Zapier Stepper)   -->
+    <!-- ========================================================================= -->
+    <div class="flex items-center gap-3 sm:gap-4 mb-6">
+      <!-- Previous Step Button -->
+      <button
+        type="button"
+        (click)="prevStep()"
+        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 shadow-sm hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
+        aria-label="Paso anterior"
+      >
+        <i class="pi pi-chevron-left text-xs sm:text-sm"></i>
+      </button>
+
+      <!-- Gradient Slider Track -->
+      <div class="relative flex-1 py-3">
+        <!-- Base Unfilled Neutral Rail Line -->
+        <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 sm:h-2.5 rounded-full bg-stone-200/90 dark:bg-stone-800 shadow-inner overflow-hidden">
+          <!-- Active Animated Gradient Fill Line -->
+          <div
+            class="h-full w-full bg-gradient-to-r from-[#ea580c] via-[#f43f5e] via-[#a855f7] to-[#3b82f6] transition-[clip-path] duration-500 ease-out"
+            [style.clip-path]="progressClipPath()"
+          ></div>
+        </div>
+
+        <!-- 4 Step Dots aligned with columns -->
+        <div class="relative z-10 grid grid-cols-4">
+          @for (step of stepItems; track step.id; let i = $index) {
+            <div class="flex justify-center">
+              <button
+                type="button"
+                (click)="setStep(i)"
+                class="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full transition-all duration-300 cursor-pointer"
+                [class]="activeStep() === i
+                  ? 'bg-white dark:bg-stone-900 border-[2.5px] border-stone-900 dark:border-white shadow-md scale-110 sm:scale-125 ring-4 ring-amber-500/20'
+                  : (i < activeStep()
+                      ? 'bg-white dark:bg-stone-850 border-2 border-stone-800 dark:border-stone-300 shadow-sm hover:scale-105'
+                      : 'bg-white/95 dark:bg-stone-800 border-2 border-stone-400 dark:border-stone-600 opacity-70 hover:opacity-100 hover:scale-105')"
+                [attr.aria-label]="'Ir al paso ' + (i + 1)"
+              >
+                @if (activeStep() === i) {
+                  <span class="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-stone-900 dark:bg-white"></span>
+                } @else if (i < activeStep()) {
+                  <span class="h-1.5 w-1.5 rounded-full bg-stone-800 dark:bg-stone-300"></span>
+                } @else {
+                  <span class="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-600"></span>
+                }
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Next Step Button -->
+      <button
+        type="button"
+        (click)="nextStep()"
+        class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-850 text-stone-700 dark:text-stone-300 shadow-sm hover:border-stone-400 dark:hover:border-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all cursor-pointer"
+        aria-label="Paso siguiente"
+      >
+        <i class="pi pi-chevron-right text-xs sm:text-sm"></i>
+      </button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 4 PESTAÑAS HORIZONTALES (1. Conecta | 2. Detecta | 3. Redacta | 4. Publica)-->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-10 sm:mb-14">
+      @for (step of stepItems; track step.id; let i = $index) {
+        <button
+          type="button"
+          (click)="setStep(i)"
+          class="group text-left p-5 sm:p-6 rounded-2xl sm:rounded-[22px] transition-all duration-300 flex flex-col justify-start cursor-pointer"
+          [class]="activeStep() === i
+            ? 'border-[2.5px] border-stone-900 dark:border-stone-100 bg-white dark:bg-stone-850 shadow-xl -translate-y-1 ring-2 ring-black/5 dark:ring-white/10'
+            : 'border border-stone-200/80 dark:border-stone-800 bg-[#fbf9f5] dark:bg-stone-900/50 hover:bg-white dark:hover:bg-stone-800/60 hover:border-stone-300 dark:hover:border-stone-700 opacity-80 hover:opacity-100'"
+        >
+          <div class="flex items-center justify-between w-full mb-2">
+            <h3 class="text-base sm:text-lg font-bold text-espresso dark:text-white leading-snug">
+              {{ step.tabTitleKey | t }}
+            </h3>
+            @if (activeStep() === i) {
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-stone-900 text-white dark:bg-white dark:text-stone-900 text-[10px]">
+                <i class="pi pi-check"></i>
+              </span>
+            }
+          </div>
+          <p class="text-xs sm:text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+            {{ step.tabDescKey | t }}
+          </p>
+        </button>
+      }
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- LOWER SPLIT SHOWCASE STAGE                                                -->
+    <!-- Izquierda: Canvas Sunset Cálido con Diagrama Mockup                       -->
+    <!-- Derecha: Tipografía Editorial Serif con Explicación y Badges              -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+
+      <!-- LEFT COLUMN: Warm Sunset Gradient Canvas Mockup (7 cols) -->
+      <div class="lg:col-span-7">
+        <div class="relative rounded-3xl sm:rounded-[32px] p-6 sm:p-9 overflow-hidden bg-gradient-to-br from-[#fed7aa] via-[#fba96b] to-[#ea580c] dark:from-[#7c2d12]/75 dark:via-[#431407]/85 dark:to-stone-950 border border-amber-500/30 shadow-2xl">
+          <!-- Subtle Decorative Grid Lines -->
+          <div class="pointer-events-none absolute inset-0 opacity-15 [background-image:radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+          <!-- Outer Dashed Inner Frame (Zapier Style) -->
+          <div class="relative rounded-2xl sm:rounded-[24px] border border-dashed border-amber-950/20 dark:border-amber-400/25 p-5 sm:p-7 backdrop-blur-[2px] bg-white/20 dark:bg-black/25">
+
+            <!-- =============================================== -->
+            <!-- STEP 0: 1. CONECTA (Escucha en vivo)            -->
+            <!-- =============================================== -->
+            @if (activeStep() === 0) {
+              <div class="space-y-4 animate-fade-in">
+                <!-- Top Inputs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="flex items-center gap-2.5 rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#5865f2]/15 text-[#5865f2] shrink-0">
+                      <i class="pi pi-discord text-sm"></i>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="text-xs font-bold text-espresso dark:text-white truncate">Discord Server</p>
+                      <p class="text-[10px] text-stone-500 dark:text-stone-400">#general · #logros</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2.5 rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#229ed9]/15 text-[#229ed9] shrink-0">
+                      <i class="pi pi-telegram text-sm"></i>
+                    </span>
+                    <div class="min-w-0">
+                      <p class="text-xs font-bold text-espresso dark:text-white truncate">Telegram Community</p>
+                      <p class="text-[10px] text-stone-500 dark:text-stone-400">@comunidad_tech</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-around text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Center Box: Gateway -->
+                <div class="rounded-2xl border border-amber-900/25 dark:border-amber-400/30 bg-white/70 dark:bg-stone-900/80 p-4 shadow-sm backdrop-blur-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Ukuku Ingestion Gateway
+                    </span>
+                    <span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                      Escucha activa 0ms
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">WebSocket JDA</p>
+                      <p class="text-[9px] text-stone-500">Eventos en streaming</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Webhooks Seguros</p>
+                      <p class="text-[9px] text-stone-500">Zero latencia</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Filtro Anti-Spam</p>
+                      <p class="text-[9px] text-stone-500">Sin duplicados</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-around text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Bottom Outputs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-espresso dark:text-white">Mensajes en tiempo real</span>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Capturado ✓</span>
+                  </div>
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-espresso dark:text-white">Configuración manual</span>
+                    <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400">0 Pasos requeridos</span>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- =============================================== -->
+            <!-- STEP 1: 2. DETECTA (Señal vs Ruido)             -->
+            <!-- =============================================== -->
+            @if (activeStep() === 1) {
+              <div class="space-y-4 animate-fade-in">
+                <!-- Top Inputs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="rounded-xl bg-white/80 dark:bg-stone-900/80 p-2.5 shadow-sm border border-amber-900/10 dark:border-amber-400/20 opacity-75">
+                    <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 mb-1">
+                      Ruido diario (95%)
+                    </span>
+                    <p class="text-[11px] text-stone-600 dark:text-stone-300 italic truncate">«¡Hola a todos! Buen lunes a la comunidad»</p>
+                  </div>
+                  <div class="rounded-xl bg-white/95 dark:bg-stone-900/95 p-2.5 shadow-sm border-2 border-amber-500/40">
+                    <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 mb-1">
+                      Hito detectado (Top 5%)
+                    </span>
+                    <p class="text-[11px] text-espresso dark:text-white font-semibold italic truncate">«¡Conseguí empleo como Jr AI Dev!»</p>
+                  </div>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-around text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Center Box: LLM Brain -->
+                <div class="rounded-2xl border border-amber-900/25 dark:border-amber-400/30 bg-white/70 dark:bg-stone-900/80 p-4 shadow-sm backdrop-blur-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                      <i class="pi pi-sparkles text-xs"></i> Ukuku LLM Signal Filter
+                    </span>
+                    <span class="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300">
+                      Score: 96 / 100
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Filtro de Ruido</p>
+                      <p class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">95% descartado</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Sentimiento</p>
+                      <p class="text-[9px] text-amber-600 dark:text-amber-400 font-semibold">Altamente inspirador</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Clasificación</p>
+                      <p class="text-[9px] text-blue-600 dark:text-blue-400 font-semibold">Victoria / Testimonio</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-around text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Bottom Outputs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
+                    <div class="flex items-center justify-between text-xs font-semibold text-espresso dark:text-white">
+                      <span>Rama 1: Historia de éxito</span>
+                      <i class="pi pi-star-fill text-amber-500 text-[10px]"></i>
+                    </div>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Dirigido a: Redacción X & LinkedIn</p>
+                  </div>
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
+                    <div class="flex items-center justify-between text-xs font-semibold text-espresso dark:text-white">
+                      <span>Rama 2: Duda técnica recurrente</span>
+                      <i class="pi pi-question-circle text-violet-500 text-[10px]"></i>
+                    </div>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Dirigido a: Auto-generación de FAQ</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- =============================================== -->
+            <!-- STEP 2: 3. REDACTA (El tono de tu marca)        -->
+            <!-- =============================================== -->
+            @if (activeStep() === 2) {
+              <div class="space-y-4 animate-fade-in">
+                <!-- Top Inputs -->
+                <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
+                  <div>
+                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Input de la comunidad</span>
+                    <p class="text-xs font-bold text-espresso dark:text-white">«Mariana: contratada como Jr AI Dev con OCI»</p>
+                  </div>
+                  <span class="rounded bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                    Verificado 100%
+                  </span>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-center text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Center Box: Adaptive Copy Engine -->
+                <div class="rounded-2xl border border-amber-900/25 dark:border-amber-400/30 bg-white/70 dark:bg-stone-900/80 p-4 shadow-sm backdrop-blur-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Adaptive Copywriting Engine
+                    </span>
+                    <span class="text-[10px] font-bold text-stone-500">Multi-formato simultáneo</span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Voz de Marca</p>
+                      <p class="text-[9px] text-stone-500">Cercano & Profesional</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Gancho Viral</p>
+                      <p class="text-[9px] text-stone-500">Alto engagement</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Anti-Alucinación</p>
+                      <p class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">100% Hechos reales</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-around text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Bottom Outputs: 3 Formats Generated -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="flex h-5 w-5 items-center justify-center rounded bg-stone-900 text-white text-[10px]">
+                        <svg class="h-2.5 w-2.5 fill-current" viewBox="0 0 300 271">
+                          <path d="m236 0h46l-101 115 118 156h-92.6l-72.5-94.8-83 94.8h-46l107-123-113-148h94.9l65.5 86.6zm-16.1 244h25.5l-165-218h-27.4z"/>
+                        </svg>
+                      </span>
+                      <span class="text-xs font-bold text-espresso dark:text-white">Hilo para X (Twitter)</span>
+                    </div>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 truncate">«De estudiante a Jr AI Dev: cómo Mariana lo logró...»</p>
+                  </div>
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="flex h-5 w-5 items-center justify-center rounded bg-[#0a66c2] text-white text-[10px]">
+                        <i class="pi pi-linkedin"></i>
+                      </span>
+                      <span class="text-xs font-bold text-espresso dark:text-white">Post para LinkedIn</span>
+                    </div>
+                    <p class="text-[10px] text-stone-500 dark:text-stone-400 truncate">«Celebramos el talento de nuestra comunidad...»</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- =============================================== -->
+            <!-- STEP 3: 4. PUBLICA (Tú tienes el control final)  -->
+            <!-- =============================================== -->
+            @if (activeStep() === 3) {
+              <div class="space-y-4 animate-fade-in">
+                <!-- Top Inputs -->
+                <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
+                  <div>
+                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Borradores generados</span>
+                    <p class="text-xs font-bold text-espresso dark:text-white">Hilo de X + Post LinkedIn listos</p>
+                  </div>
+                  <span class="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                    Esperando aprobación
+                  </span>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-center text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Center Box: CM Control Console -->
+                <div class="rounded-2xl border border-amber-900/25 dark:border-amber-400/30 bg-white/70 dark:bg-stone-900/80 p-4 shadow-sm backdrop-blur-md">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Consola de Curaduría (Humano en el bucle)
+                    </span>
+                    <span class="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      <i class="pi pi-shield"></i> OAuth 1.0a
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">Edición Libre</p>
+                      <p class="text-[9px] text-stone-500">Ajusta palabras</p>
+                    </div>
+                    <div class="rounded-lg bg-emerald-600 text-white p-2 text-center shadow-md">
+                      <p class="text-[10px] font-bold flex items-center justify-center gap-1">
+                        <i class="pi pi-check text-[9px]"></i> 1-Clic Aprobar
+                      </p>
+                      <p class="text-[9px] text-emerald-100">Disparo directo</p>
+                    </div>
+                    <div class="rounded-lg bg-amber-50/80 dark:bg-stone-800/90 p-2 text-center border border-amber-200/50 dark:border-stone-700">
+                      <p class="text-[10px] font-bold text-espresso dark:text-white">OCI Object Storage</p>
+                      <p class="text-[9px] text-stone-500">Lote &lt;1MB archivado</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Down Connectors -->
+                <div class="flex justify-around text-amber-900/50 dark:text-amber-400/50 py-0.5">
+                  <i class="pi pi-arrow-down text-xs"></i>
+                  <i class="pi pi-arrow-down text-xs"></i>
+                </div>
+
+                <!-- Bottom Outputs: Published & Stored -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-5 w-5 items-center justify-center rounded bg-stone-900 text-white text-[10px]">
+                        <svg class="h-2.5 w-2.5 fill-current" viewBox="0 0 300 271">
+                          <path d="m236 0h46l-101 115 118 156h-92.6l-72.5-94.8-83 94.8h-46l107-123-113-148h94.9l65.5 86.6zm-16.1 244h25.5l-165-218h-27.4z"/>
+                        </svg>
+                      </span>
+                      <span class="text-xs font-semibold text-espresso dark:text-white">En vivo en X (Twitter)</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Publicado ✓</span>
+                  </div>
+                  <div class="rounded-xl bg-white/90 dark:bg-stone-900/90 p-3 shadow-sm border border-amber-900/10 dark:border-amber-400/20 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="flex h-5 w-5 items-center justify-center rounded bg-[#c74634]/15 text-[#c74634] text-[10px]">
+                        <i class="pi pi-cloud"></i>
+                      </span>
+                      <span class="text-xs font-semibold text-espresso dark:text-white">OCI Always Free</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">$0.00 Costo ✓</span>
+                  </div>
+                </div>
+              </div>
+            }
+
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Editorial Serif Typography & Feature Badges (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        <!-- Step Phase Badge -->
+        <div class="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
+          <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>Fase 0{{ currentStep().number }} de 04</span>
+        </div>
+
+        <!-- Editorial Heading (Serif + Italics subtitle) -->
+        <div>
+          <h3 class="font-serif text-3xl sm:text-4xl lg:text-[2.65rem] font-medium text-espresso dark:text-white leading-[1.18]">
+            {{ currentStep().mainTitleKey | t }}:
+            <span class="block italic font-normal text-amber-600 dark:text-amber-400 mt-1">
+              {{ currentStep().mainSubtitleKey | t }}
+            </span>
+          </h3>
+          <p class="mt-4 text-base sm:text-lg text-stone-600 dark:text-stone-300 leading-relaxed font-sans">
+            {{ currentStep().descKey | t }}
+          </p>
+        </div>
+
+        <!-- 3 Feature Chips -->
+        <div class="pt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
+          @for (chip of currentStep().chips; track chip) {
+            <div class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-stone-850 px-3.5 py-2 text-xs sm:text-sm font-semibold text-stone-700 dark:text-stone-200 border border-stone-200/80 dark:border-stone-700/80 shadow-sm">
+              <i class="pi pi-check-circle text-emerald-600 dark:text-emerald-400 text-sm"></i>
+              <span>{{ chip | t }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="pt-4 flex flex-wrap items-center gap-3">
+          <a routerLink="/app/content" class="landing-btn landing-btn-primary !py-2.5 !text-xs sm:!text-sm">
+            {{ 'landing.how.cta' | t }} <i class="pi pi-arrow-right text-xs"></i>
+          </a>
+          <a routerLink="/app/storage" class="landing-btn landing-btn-ghost !py-2.5 !text-xs sm:!text-sm">
+            {{ 'landing.how.secondary' | t }}
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PERFORMANCE BOTTOM BANNER (Tiempo de ciclo total)                          -->
+    <!-- ========================================================================= -->
+    <div class="mt-12 sm:mt-16 rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-white/90 dark:bg-stone-900/90 p-5 sm:p-6 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-5 shadow-sm">
+      <div class="flex items-center gap-3.5">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          <i class="pi pi-bolt text-xl"></i>
+        </span>
+        <div>
+          <p class="text-sm sm:text-base font-bold text-espresso dark:text-white">
+            {{ 'landing.how.pipeline.footerTime' | t }}
+          </p>
+          <p class="text-xs sm:text-sm text-stone-500 dark:text-stone-400">
+            Automatización autónoma que ahorra horas semanales de curaduría manual y redacción repetitiva.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <a routerLink="/app/content" class="landing-btn landing-btn-primary !py-2.5 !text-xs sm:!text-sm">
+          {{ 'landing.how.cta' | t }} <i class="pi pi-arrow-right text-xs"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

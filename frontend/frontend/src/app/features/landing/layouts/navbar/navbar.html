@@ -3,7 +3,7 @@
     [class.is-scrolled]="scrolled() || open()" [attr.aria-label]="'sidebar.navAria' | t">
     <a href="#inicio" (click)="navigate.emit({ id: 'inicio', event: $event })" class="flex shrink-0 items-center gap-2.5">
       <img src="image/logo/oso-head.png" alt="" width="36" height="36" class="h-9 w-9 rounded-xl border border-amber-500/30 bg-amber-100 object-cover" />
-      <span class="font-display text-lg font-extrabold text-espresso dark:text-white">Kora <span class="text-amber-600 dark:text-amber-400">AI</span></span>
+      <span class="font-display text-lg font-extrabold text-espresso dark:text-white">Ukuku <span class="text-amber-600 dark:text-amber-400">AI</span></span>
     </a>
     <ul class="mx-auto hidden items-center gap-1 lg:flex">
       @for (section of sections(); track section.id) {
@@ -15,7 +15,7 @@
         <i class="pi pi-globe lang-switch-globe" aria-hidden="true"></i>
         @for (lang of langs(); track lang.code) {
           <button type="button" role="radio" class="lang-switch-option" [class.is-active]="i18n().lang() === lang.code"
-            [attr.aria-checked]="i18n().lang() === lang.code" [attr.lang]="lang.code" [attr.title]="lang.label" (click)="setLanguage.emit(lang.code)">{{ lang.short }}</button>
+            [attr.aria-checked]="i18n().lang() === lang.code" [attr.lang]="lang.code" [attr.title]="lang.label" [attr.aria-label]="lang.label" (click)="setLanguage.emit(lang.code)"><img class="lang-flag" [src]="lang.flag" alt="" /></button>
         }
       </div>
       <button type="button" class="nav-tile hidden h-10 w-10 items-center justify-center rounded-xl text-stone-500 hover:text-amber-600 dark:text-stone-400 dark:hover:bg-stone-800 sm:flex"
@@ -33,7 +33,7 @@
         }
       </ul>
       <div class="mt-3 flex items-center gap-2 border-t border-clay-border pt-3 dark:border-stone-800">
-        @for (lang of langs(); track lang.code) { <button type="button" class="lang-switch-option" [class.is-active]="i18n().lang() === lang.code" (click)="setLanguage.emit(lang.code)">{{ lang.short }}</button> }
+        @for (lang of langs(); track lang.code) { <button type="button" class="lang-switch-option" [class.is-active]="i18n().lang() === lang.code" [attr.lang]="lang.code" [attr.title]="lang.label" [attr.aria-label]="lang.label" (click)="setLanguage.emit(lang.code)"><img class="lang-flag" [src]="lang.flag" alt="" /></button> }
         <button type="button" class="nav-tile ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-stone-500 dark:text-stone-400" (click)="theme().toggle()" [attr.aria-label]="(theme().isDark() ? 'topbar.toLight' : 'topbar.toDark') | t"><i [class]="theme().isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i></button>
       </div>
       <a routerLink="/app" class="landing-btn landing-btn-primary mt-3 w-full justify-center">{{ 'landing.nav.open' | t }} <i class="pi pi-arrow-right text-xs"></i></a>
