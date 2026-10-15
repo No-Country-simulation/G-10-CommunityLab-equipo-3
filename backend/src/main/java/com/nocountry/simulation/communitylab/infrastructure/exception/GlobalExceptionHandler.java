@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.nocountry.simulation.communitylab.application.exception.PackageTooLargeException;
 import com.nocountry.simulation.communitylab.application.exception.StorageFailureException;
+import com.nocountry.simulation.communitylab.application.exception.StorageMetricsUnavailableException;
 import com.nocountry.simulation.communitylab.application.exception.StorageNotConfiguredException;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
 import com.nocountry.simulation.communitylab.domain.exception.PostNotFoundException;
@@ -76,6 +77,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(StorageNotConfiguredException.class)
     public ResponseEntity<ProblemDetail> handleNotConfigured(StorageNotConfiguredException ex) {
         return problem(HttpStatus.SERVICE_UNAVAILABLE, "OCI_NOT_CONFIGURED");
+    }
+
+    @ExceptionHandler(StorageMetricsUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleMetricsUnavailable(StorageMetricsUnavailableException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "storage metrics unavailable");
     }
 
     private static ResponseEntity<ProblemDetail> problem(HttpStatus status, String detail) {

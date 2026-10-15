@@ -25,7 +25,8 @@ import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
  * <p>Derivado de: spec 004 RF-04 (Swagger documenta el único GET) + spec 005 RF-07
  * (Swagger documenta el GET Telegram) + spec 006 RF-06 + TASK-006-04 (evento {@code package.completed}
  * en ambos GET SSE, sin {@code GET /packages*}) + spec 007 RF-02 (PATCH de revisión) + spec 008 RF-04
- * (historial al conectar y {@code snapshot.completed} documentados en ambos GET SSE) + constitution P3.
+ * (historial al conectar y {@code snapshot.completed} documentados en ambos GET SSE) + spec 009 RF-06
+ * ({@code GET /api/v1/storage/stats} con ejemplo y {@code 503}) + constitution P3.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -227,5 +228,21 @@ class SwaggerDocsTest {
                 // the AI analysis is not editable, so it is not part of the request
                 .andExpect(jsonPath(schema + ".sentiment").doesNotExist())
                 .andExpect(jsonPath(schema + ".relevance").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Given started app, when GET /v3/api-docs, then the storage stats endpoint is documented with its example and 503")
+    void documentsStorageStatsEndpoint() throws Exception {
+        String get = "$.paths['/api/v1/storage/stats'].get";
+        String example = get + ".responses['200'].content['application/json'].examples['snapshot'].value";
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(get + ".summary").value("Object Storage usage"))
+                .andExpect(jsonPath(get + ".description").value(containsString("used / limit")))
+                .andExpect(jsonPath(example + ".storage.limitBytes").value(10_737_418_240L))
+                .andExpect(jsonPath(example + ".requests.limit").value(50_000))
+                .andExpect(jsonPath(example + ".requests.periodStart").value("2026-10-01T00:00:00Z"))
+                .andExpect(jsonPath(get + ".responses['503']").exists())
+                .andExpect(jsonPath("$.components.schemas.StorageStats.properties.stale").exists());
     }
 }
