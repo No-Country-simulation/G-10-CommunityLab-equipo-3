@@ -23,6 +23,7 @@ import com.nocountry.simulation.communitylab.application.command.IngestDiscordCo
 import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEvent;
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
+import com.nocountry.simulation.communitylab.domain.vo.MessageContent;
 
 
 /**
@@ -60,7 +61,7 @@ class IngestDiscordServiceTest {
                 "listen-123",
                 "author-1",
                 "author-name",
-                "  sample content  ",
+                "  Consegui mi primer empleo como dev Java  ",
                 Instant.parse("2026-09-24T10:00:00Z"));
 
         // When ingested
@@ -68,7 +69,7 @@ class IngestDiscordServiceTest {
 
         // Then normalized DTO (trimmed, trace preserved, batchId from lote abierto)
         assertThat(result).isPresent();
-        assertThat(result.get().content()).isEqualTo("sample content");
+        assertThat(result.get().content()).isEqualTo("Consegui mi primer empleo como dev Java");
         assertThat(result.get().truncated()).isFalse();
         assertThat(result.get().channelId()).isEqualTo("listen-123");
         assertThat(result.get().source()).isEqualTo(Source.DISCORD);
@@ -107,6 +108,24 @@ class IngestDiscordServiceTest {
     }
 
     @Test
+    @DisplayName("Given content below the minimum length, when ingested, then it returns empty without triggering 002")
+    void discardsShortMessage() {
+        // Given a command one character below MessageContent.MIN_LENGTH
+        IngestDiscordCommand command = new IngestDiscordCommand(
+                "msg-5",
+                "listen-123",
+                "author-1",
+                "author-name",
+                "a".repeat(MessageContent.MIN_LENGTH - 1),
+                Instant.parse("2026-09-24T10:00:00Z"));
+
+        // When ingested then rejected at the entry: no event, so no LLM call downstream
+        assertThat(useCase.ingest(command)).isEmpty();
+        verifyNoInteractions(events);
+        verify(buffer, never()).appendToBatch(any());
+    }
+
+    @Test
     @DisplayName("Given >2000 chars, when ingested, then it truncates to 2000 with flag")
     void truncatesLongMessage() {
         // Given contenido de 3500 chars (RF-02/RF-03: truncado uniforme 2000 + flag)
@@ -141,7 +160,7 @@ class IngestDiscordServiceTest {
                 "listen-123",
                 "author-1",
                 "author-name",
-                "hello",
+                "Consegui mi primer empleo como dev Java",
                 Instant.parse("2026-09-24T10:00:00Z"));
 
         // When se mide latencia local sin LLM

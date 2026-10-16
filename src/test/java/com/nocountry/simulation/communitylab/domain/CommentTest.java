@@ -20,16 +20,18 @@ import com.nocountry.simulation.communitylab.domain.exception.InvalidCommentExce
 class CommentTest {
 
     private static final Instant SENT = Instant.parse("2026-09-24T10:00:00Z");
+    // Above MessageContent.MIN_LENGTH so id checks are what actually rejects.
+    private static final String VALID_CONTENT = "Consegui mi primer empleo como dev Java";
 
     @Test
     @DisplayName("Given padded text, when validated, then it is trimmed without truncation")
     void trimsContent() {
         // Given padded content
         var comment = Comment.create(
-                "msg-1", "listen-123", "author-1", "author-name", "  hola  ", SENT, Source.DISCORD);
+                "msg-1", "listen-123", "author-1", "author-name", "  Consegui mi primer empleo como dev Java  ", SENT, Source.DISCORD);
 
         // Then trimmed, intact
-        assertThat(comment.content()).isEqualTo("hola");
+        assertThat(comment.content()).isEqualTo("Consegui mi primer empleo como dev Java");
         assertThat(comment.truncated()).isFalse();
     }
 
@@ -100,7 +102,7 @@ class CommentTest {
     @DisplayName("Given trace ids, when validated, then channel and source are preserved")
     void preservesTrace() {
         var comment = Comment.create(
-                "msg-1", "listen-123", "author-1", "author-name", "hello", SENT, Source.DISCORD);
+                "msg-1", "listen-123", "author-1", "author-name", VALID_CONTENT, SENT, Source.DISCORD);
 
         assertThat(comment.messageId()).isEqualTo("msg-1");
         assertThat(comment.channelId()).isEqualTo("listen-123");
@@ -112,16 +114,16 @@ class CommentTest {
     @DisplayName("Given missing ids, when validated, then it is rejected")
     void rejectsMissingIds() {
         assertThatThrownBy(() -> Comment.create(
-                        null, "listen-123", "author-1", "author-name", "hello", SENT, Source.DISCORD))
+                        null, "listen-123", "author-1", "author-name", VALID_CONTENT, SENT, Source.DISCORD))
                 .isInstanceOf(InvalidCommentException.class);
         assertThatThrownBy(() -> Comment.create(
-                        "msg-1", "listen-123", " ", "author-name", "hello", SENT, Source.DISCORD))
+                        "msg-1", "listen-123", " ", "author-name", VALID_CONTENT, SENT, Source.DISCORD))
                 .isInstanceOf(InvalidCommentException.class);
         assertThatThrownBy(() -> Comment.create(
-                        "msg-1", "listen-123", "author-1", "author-name", "hello", null, Source.DISCORD))
+                        "msg-1", "listen-123", "author-1", "author-name", VALID_CONTENT, null, Source.DISCORD))
                 .isInstanceOf(InvalidCommentException.class);
         assertThatThrownBy(() -> Comment.create(
-                        "msg-1", "listen-123", "author-1", "author-name", "hello", SENT, null))
+                        "msg-1", "listen-123", "author-1", "author-name", VALID_CONTENT, SENT, null))
                 .isInstanceOf(InvalidCommentException.class);
     }
 }

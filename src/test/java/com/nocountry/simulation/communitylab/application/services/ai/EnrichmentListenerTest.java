@@ -148,7 +148,7 @@ class EnrichmentListenerTest {
                 .thenReturn(fallbackPost);
 
         // When processed then no exception escapes
-        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"))).doesNotThrowAnyException();
 
         // Then the converter received exactly the neutral fallback response
         var responseCaptor = ArgumentCaptor.forClass(ResponseModel.class);
@@ -187,7 +187,9 @@ class EnrichmentListenerTest {
                 .thenThrow(new InvalidAssetException("copy is required"));
 
         // When processed then no exception escapes and nothing is published or buffered
-        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"))).doesNotThrowAnyException();
+        // Why: proves the discard comes from the converter, not from an earlier content rejection
+        verify(converter).constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID));
         verify(publisher, never()).publish(any());
         verify(buffer, never()).appendToBatch(any());
         verifyNoInteractions(packageRun);
@@ -207,7 +209,7 @@ class EnrichmentListenerTest {
                 .thenReturn(fallbackPost);
 
         // When processed
-        listener.on(event("hola comunidad"));
+        listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
 
         // Then the flag-first check lets the auditable trace through
         var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
@@ -226,7 +228,7 @@ class EnrichmentListenerTest {
                 .thenReturn(fallbackPost);
 
         // When processed then no exception escapes (listener maps to LLM_FALLBACK)
-        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"))).doesNotThrowAnyException();
 
         // Then the flagged trace still goes out and into the buffer
         var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
