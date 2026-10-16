@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -47,7 +48,9 @@ class ConvertEnrichedCommentServiceTest {
 
         // Entonces el usuario todavía no lo revisó
         assertThat(enriched.revised()).isFalse();
-        assertThat(enriched.approved()).isFalse();
+        assertThat(enriched.approved()).isEqualTo(ApprovalStatus.IN_REVIEW);
+        assertThat(enriched.reject()).isFalse();
+        assertThat(enriched.publishedAt()).isNull();
         assertThat(enriched.versionMessage()).isEqualTo(1);
     }
 
@@ -61,7 +64,9 @@ class ConvertEnrichedCommentServiceTest {
         // Entonces es una traza LLM_FALLBACK con los mismos valores por defecto
         assertThat(enriched.flag()).isEqualTo(EnrichedComment.LLM_FALLBACK);
         assertThat(enriched.revised()).isFalse();
-        assertThat(enriched.approved()).isFalse();
+        assertThat(enriched.approved()).isEqualTo(ApprovalStatus.IN_REVIEW);
+        assertThat(enriched.reject()).isFalse();
+        assertThat(enriched.publishedAt()).isNull();
         assertThat(enriched.versionMessage()).isEqualTo(1);
     }
 

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -63,6 +64,6 @@ class ResponseClientTest {
                 Channels.LINKEDIN, "Titulo del post",
                 "De la comunidad al primer empleo: hoy celebramos a una dev Java que consiguio su primer trabajo gracias al apoyo de todos.",
                 List.of("#ONE", "#Java"), "Comparte tu historia",
-                true, false, 2);
+                true, ApprovalStatus.IN_REVIEW, 2, null, null);
     }
 }

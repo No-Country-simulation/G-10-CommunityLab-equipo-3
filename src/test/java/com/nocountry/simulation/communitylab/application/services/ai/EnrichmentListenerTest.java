@@ -33,6 +33,7 @@ import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMPr
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -204,7 +205,7 @@ class EnrichmentListenerTest {
                 BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
-                Channels.FAQ, null, null, List.of(), null, false, false, 1);
+                Channels.FAQ, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
         when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
                 .thenReturn(fallbackPost);
 
@@ -328,7 +329,7 @@ class EnrichmentListenerTest {
                 "Consegui mi primer empleo como dev Java, gracias comunidad",
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo", "java"), 85, null, null, Instant.now(), Source.DISCORD,
-                Channels.FAQ, "Primer empleo dev", copy, List.of("#EmpleoTech"), null, false, false, 1);
+                Channels.FAQ, "Primer empleo dev", copy, List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private EnrichedComment fallbackPost() {
@@ -336,7 +337,7 @@ class EnrichmentListenerTest {
                 BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
-                Channels.FAQ, null, null, List.of(), null, false, false, 1);
+                Channels.FAQ, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private EnrichedComment validTelegramPost() {
@@ -347,7 +348,7 @@ class EnrichmentListenerTest {
                 List.of("empleo", "java"), 85, null, null, Instant.now(), Source.TELEGRAM,
                 Channels.FAQ, "Primer empleo dev",
                 "Conseguiste tu primer empleo como dev gracias a la comunidad?",
-                List.of("#EmpleoTech"), null, false, false, 1);
+                List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     // Mirror of the listener's EnrichedComment -> ResponseClient mapping; a record
@@ -360,7 +361,7 @@ class EnrichmentListenerTest {
                 source.flag(), source.sentTime(), source.source(),
                 source.channelPost(), source.titlePost(), source.outputContentProcessed(),
                 source.hashtags(), source.cta(),
-                source.revised(), source.approved(), source.versionMessage());
+                source.revised(), source.approved(), source.versionMessage(), source.reject(), source.publishedAt());
     }
 
     // ---------- unexpected failures leave a trace (revisión 2026-10-12) ----------
