@@ -8,7 +8,7 @@ import { INTERACTION_SOURCES } from '../../../../core/api/api.models';
 import { API_CONFIG } from '../../../../core/api/community-lab.api';
 import { I18n } from '../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
-import { SOURCE_BRAND, SOURCE_ICON } from '../../../../core/ui-maps';
+import { SOURCE_BRAND, SOURCE_ICON, SOURCE_TINT } from '../../../../core/ui-maps';
 import { SENTIMENT_EXPRESSION } from '../../../../core/mascot';
 import { PAGE_ICON } from '../../../../core/page-icons';
 import { NetworkFilter, WorkspaceStore } from '../../../../core/workspace.store';
@@ -36,6 +36,8 @@ export class Sidebar {
   protected readonly api = inject(API_CONFIG);
 
   /** Status card badge per mode: demo, or the live stream state of the selected network */
+  protected readonly sourceIcon = SOURCE_ICON;
+  protected readonly sourceTint = SOURCE_TINT;
   protected readonly modeBadge: Record<string, string> = {
     demo: 'border-amber-500/20 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
     open: 'border-emerald-500/20 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
