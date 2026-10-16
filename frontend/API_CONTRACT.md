@@ -172,6 +172,20 @@ Publicación con un clic. El backend marca `status: "published"`, completa `publ
 hay integración, publica en el canal (por ejemplo con un webhook de n8n). Body vacío `{}`.
 Devuelve el `GeneratedAsset` actualizado.
 
+> **Implementación actual (backend spec 007, enmienda 2026-10-16).** Los puntos 3 y 4 se resuelven con
+> `PATCH /api/v1/{discord|telegram}/packages/{batchId}/messages/{messageId}`. El backend guarda en cada post
+> `approved: "IN_REVIEW" | "APPROVED" | "REJECTED"` y `publishedAt`; el frontend lo traduce así:
+>
+> | UI `status` | Backend |
+> |-------------|---------|
+> | `in_review` (y `draft` al restaurar) | `IN_REVIEW` |
+> | `approved` | `APPROVED`, `publishedAt: null` |
+> | `published` | `APPROVED` + `publishedAt` (lo envía el frontend al publicar) |
+> | `rejected` | `REJECTED` |
+>
+> Los paquetes guardados antes de la enmienda traen `approved` booleano: `true` → `APPROVED`;
+> `false` con `revised: true` → `REJECTED`; si no, `IN_REVIEW`. Un post publicado no puede salir de `APPROVED`.
+
 ## 5. `GET /storage/objects`
 
 Lista de los paquetes del bucket (uno por lote), del más reciente al más antiguo:

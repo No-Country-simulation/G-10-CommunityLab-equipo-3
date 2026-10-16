@@ -1,6 +1,7 @@
 import { Injectable, NgZone, OnDestroy, inject, signal } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import {
+  AssetStatus,
   AssetType,
   ContentRoute,
   GeneratedAsset,
@@ -44,11 +45,21 @@ export interface BackendPost {
   hashtags: string[] | null;
   /** Required for LinkedIn, forbidden for FAQ */
   cta: string | null;
-  /** true once the CM approved it (PATCH …/packages/{batchId}/messages/{messageId}) */
-  approved?: boolean | null;
+  /**
+   * Review state (PATCH …/packages/{batchId}/messages/{messageId}). Packages stored before backend spec 007
+   * (amendment 2026-10-16) still carry a boolean until their next revision: see `toAssetStatus`.
+   */
+  approved?: ApprovalState | boolean | null;
+  /** A person already reviewed the post; with the old boolean it tells rejected from not reviewed */
+  revised?: boolean | null;
+  /** When the CM published the post on its channel; only with approved=APPROVED */
+  publishedAt?: string | number | null;
   /** Version stored in OCI; starts at 1, each saved revision bumps it */
   versionMessage?: number | null;
 }
+
+/** Backend review state of a post */
+export type ApprovalState = 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
 
 /** `package.completed`: a batch was stored in OCI; its JSON is readable through `parUrlBase` until `expiresAt`. */
 export interface PackageNotice {
@@ -66,7 +77,7 @@ export interface RevisionNotice {
   batchId: string;
   messageId: string;
   versionMessage: number;
-  approved: boolean;
+  approved: ApprovalState;
 }
 
 /** Envelope of `package.completed` and `message.revised` (`asset.created` is the bare post). */
@@ -172,8 +183,16 @@ export class LiveFeed implements OnDestroy {
       if (!n.payload?.parUrlBase) throw new Error('package.completed sin parUrlBase');
       this.packages$.next({ source, batchId: n.batchId, ...n.payload });
     });
-    on<BackendNotice<{ messageId: string; versionMessage: number; approved: boolean }>>('message.revised', (n) =>
-      this.revisions$.next({ source, batchId: n.batchId, ...n.payload }),
+    on<BackendNotice<{ messageId: string; versionMessage: number; approved: ApprovalState | boolean; revised?: boolean }>>(
+      'message.revised',
+      (n) =>
+        this.revisions$.next({
+          source,
+          batchId: n.batchId,
+          messageId: n.payload.messageId,
+          versionMessage: n.payload.versionMessage,
+          approved: toApprovalState(n.payload.approved, n.payload.revised),
+        }),
     );
     // End of the history block: the same ids may arrive again later, the store updates instead of duplicating
     on<{ packages: number; pending: number }>('snapshot.completed', () =>
@@ -249,6 +268,28 @@ export const CHANNEL_POST: Partial<Record<AssetType, string>> = {
 };
 
 /**
+ * Review state of a post, also from records stored before the enum (same table as backend spec 007 RF-01):
+ * true → APPROVED; false with revised → REJECTED; false without revised, or missing → IN_REVIEW.
+ */
+export function toApprovalState(approved: ApprovalState | boolean | null | undefined, revised?: boolean | null): ApprovalState {
+  if (approved === 'APPROVED' || approved === 'REJECTED' || approved === 'IN_REVIEW') return approved;
+  if (approved === true) return 'APPROVED';
+  return approved === false && revised ? 'REJECTED' : 'IN_REVIEW';
+}
+
+/** UI status of a reviewed post: an approved post with `publishedAt` is published */
+export function toAssetStatus(state: ApprovalState, published: boolean): AssetStatus {
+  if (state === 'APPROVED') return published ? 'published' : 'approved';
+  return state === 'REJECTED' ? 'rejected' : 'in_review';
+}
+
+/** Backend review state for a UI status (published is APPROVED plus `publishedAt`) */
+export function toApprovalStateOf(status: AssetStatus): ApprovalState {
+  if (status === 'approved' || status === 'published') return 'APPROVED';
+  return status === 'rejected' ? 'REJECTED' : 'IN_REVIEW';
+}
+
+/**
  * @param stream network of the stream the event arrived on; used when the payload has no
  *               `source`, so a Telegram post is never filed under Discord.
  * @param packageId batchId of the OCI package the post was read from, when it comes from one.
@@ -278,8 +319,9 @@ export function toGeneratedAsset(post: BackendPost, stream: InteractionSource, p
     body,
     hashtags: post.hashtags ?? [],
     // LLM fallback records are traces, not publishable content
-    status: post.flag ? 'draft' : post.approved ? 'approved' : 'in_review',
+    status: post.flag ? 'draft' : toAssetStatus(toApprovalState(post.approved, post.revised), post.publishedAt != null),
     createdAt: toIso(post.sentTime),
+    publishedAt: post.publishedAt == null ? undefined : toIso(post.publishedAt),
     cta: post.cta ?? undefined,
     versionMessage: post.versionMessage ?? 1,
     packageId,

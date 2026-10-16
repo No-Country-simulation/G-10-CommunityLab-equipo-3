@@ -3,13 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, throwError } from 'rxjs';
 import { AssetPatch, GeneratedAsset, StorageStats, StoredObject } from './api.models';
 import { API_CONFIG, CommunityLabApi, RevisionError, RevisionFailure, StoredObjectView } from './community-lab.api';
-import { CHANNEL_POST } from './live-feed';
+import { ApprovalState, CHANNEL_POST, toApprovalStateOf, toAssetStatus } from './live-feed';
 import { OciPackages, PackageRef } from './oci-packages';
 
 /** Body of PATCH /api/v1/{source}/packages/{batchId}/messages/{messageId}: only what changed, plus the version */
 interface RevisePostRequest {
   expectedVersion: number;
-  approved?: boolean;
+  approved?: ApprovalState;
+  /** When the post was published; needs approved=APPROVED, can't be in the future nor cleared */
+  publishedAt?: string;
   channelPost?: string;
   titlePost?: string;
   outputContentProcessed?: string;
@@ -21,10 +23,13 @@ interface RevisePostResponse {
   batchId: string;
   messageId: string;
   versionMessage: number;
-  approved: boolean;
+  approved: ApprovalState;
 }
 
 const FAILURE_BY_STATUS: Record<number, RevisionFailure> = { 400: 'invalid', 404: 'not-found', 409: 'conflict' };
+
+/** How far back publishedAt is dated, so a browser clock slightly ahead of the server's isn't refused */
+const CLOCK_MARGIN_MS = 5000;
 
 /**
  * Real backend client. Enabled with `useMocks: false` in app.config.ts.
@@ -57,14 +62,18 @@ export class HttpCommunityLabApi extends CommunityLabApi {
     if (!asset.packageId) return throwError(() => new RevisionError('not-packaged'));
     const source = asset.origin.source.toLowerCase();
     const url = `${this.base}/${source}/packages/${asset.packageId}/messages/${asset.interactionId}`;
-    return this.http.patch<RevisePostResponse>(url, toRevision(asset, patch)).pipe(
-      map((res) => ({
-        ...asset,
-        ...patch,
-        versionMessage: res.versionMessage,
-        // The backend only knows "approved": keep the finer UI status (published, rejected) when it agrees
-        status: patch.status ?? (res.approved && asset.status !== 'published' ? 'approved' : asset.status),
-      })),
+    const revision = toRevision(asset, patch);
+    return this.http.patch<RevisePostResponse>(url, revision).pipe(
+      map((res) => {
+        const publishedAt = revision.publishedAt ?? asset.publishedAt;
+        return {
+          ...asset,
+          ...patch,
+          versionMessage: res.versionMessage,
+          publishedAt,
+          status: toAssetStatus(res.approved, !!publishedAt),
+        };
+      }),
       catchError((err: HttpErrorResponse) => {
         const detail = typeof err.error?.detail === 'string' ? err.error.detail : undefined;
         return throwError(() => new RevisionError(FAILURE_BY_STATUS[err.status] ?? 'unavailable', detail));
@@ -72,11 +81,9 @@ export class HttpCommunityLabApi extends CommunityLabApi {
     );
   }
 
-  /** There is no publishing endpoint yet: publishing approves the post in OCI and is marked here. */
+  /** Publishing is manual (the CM posts it on the channel): the backend stores it as APPROVED + publishedAt. */
   publishAsset(asset: GeneratedAsset): Observable<GeneratedAsset> {
-    return this.updateAsset(asset, { status: 'published' }).pipe(
-      map((a) => ({ ...a, publishedAt: new Date().toISOString() })),
-    );
+    return this.updateAsset(asset, { status: 'published' });
   }
 
   listStoredObjects(): Observable<StoredObject[]> {
@@ -126,7 +133,9 @@ function toStoredObject(ref: PackageRef, sizeBytes: number, generatedAt?: string
 /** UI patch → backend revision: approval flag and the edited fields, nothing else. */
 function toRevision(asset: GeneratedAsset, patch: AssetPatch): RevisePostRequest {
   const body: RevisePostRequest = { expectedVersion: asset.versionMessage ?? 1 };
-  if (patch.status) body.approved = patch.status === 'approved' || patch.status === 'published';
+  if (patch.status) body.approved = toApprovalStateOf(patch.status);
+  // A little in the past: the backend refuses a publishedAt ahead of its own clock
+  if (patch.status === 'published' && !asset.publishedAt) body.publishedAt = new Date(Date.now() - CLOCK_MARGIN_MS).toISOString();
   if (patch.title !== undefined) body.titlePost = patch.title;
   if (patch.hashtags !== undefined) body.hashtags = patch.hashtags;
   if (patch.type !== undefined && patch.type !== asset.type) body.channelPost = CHANNEL_POST[patch.type];

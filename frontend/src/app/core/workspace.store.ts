@@ -12,7 +12,7 @@ import {
 } from './api/api.models';
 import { MessageService } from 'primeng/api';
 import { API_CONFIG, CommunityLabApi, RevisionError } from './api/community-lab.api';
-import { LIVE_ASSET_PREFIX, LiveFeed, LiveFeedStatus, RevisionNotice, liveAssetId } from './api/live-feed';
+import { LIVE_ASSET_PREFIX, LiveFeed, LiveFeedStatus, RevisionNotice, liveAssetId, toAssetStatus } from './api/live-feed';
 import { OciPackages, PackageRef } from './api/oci-packages';
 import { I18n } from './i18n/i18n.service';
 
@@ -232,7 +232,7 @@ export class WorkspaceStore {
           this.pending.delete(before.id);
           // Keep what the CM sees, take the new version from the backend
           const current = this.find(before.id) ?? saved;
-          this.replace({ ...current, versionMessage: saved.versionMessage, status: saved.status });
+          this.replace({ ...current, versionMessage: saved.versionMessage, status: saved.status, publishedAt: saved.publishedAt });
           this.release(before.id);
           resolve('saved');
         },
@@ -279,19 +279,21 @@ export class WorkspaceStore {
     // Our own save echoing back, or an older event replayed on reconnect
     if (asset && (asset.versionMessage ?? 0) >= n.versionMessage) return;
     const ref = this.packages.find(n.source, n.batchId);
+    if (asset) {
+      // The tabs move at once; the package read below brings the content and publishedAt (not in the notice).
+      // The version stays until then, so that read is not skipped as already known.
+      const status = toAssetStatus(n.approved, !!asset.publishedAt);
+      this.replace(ref ? { ...asset, status } : { ...asset, status, versionMessage: n.versionMessage });
+    }
     if (ref) {
       this.packages.invalidate(ref);
       this.loadPackage(ref);
-    } else if (asset) {
-      // Package not known to this browser: at least reflect the approval
-      this.replace({ ...asset, versionMessage: n.versionMessage, status: n.approved ? 'approved' : 'in_review' });
     }
   }
 
   /**
    * A post from the stream or from an OCI package. New posts are added (newest first); known ones take the
-   * backend copy, except for what only this browser knows: unsent changes, "published" and "rejected"
-   * (the backend only stores approved yes/no).
+   * backend copy (status and publishedAt included), plus the changes still waiting for their package.
    */
   private mergeFromServer(incoming: GeneratedAsset) {
     const current = this.find(incoming.id);
@@ -301,16 +303,7 @@ export class WorkspaceStore {
     }
     if ((incoming.versionMessage ?? 0) < (current.versionMessage ?? 0)) return;
     const waiting = this.pending.get(incoming.id);
-    const status =
-      current.status === 'published' && incoming.status === 'approved' ? 'published'
-        : current.status === 'rejected' && incoming.status === 'in_review' ? 'rejected'
-          : incoming.status;
-    const stored: GeneratedAsset = {
-      ...incoming,
-      status,
-      publishedAt: current.publishedAt,
-      packageId: incoming.packageId ?? current.packageId,
-    };
+    const stored: GeneratedAsset = { ...incoming, packageId: incoming.packageId ?? current.packageId };
     // What the CM sees: the stored post plus the changes still waiting to be sent
     this.replace({ ...stored, ...waiting });
     // The batch just reached OCI: send what the CM changed meanwhile

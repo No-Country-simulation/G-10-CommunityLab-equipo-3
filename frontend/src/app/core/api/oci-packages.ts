@@ -49,7 +49,8 @@ export class OciPackages {
   loadRaw(ref: PackageRef): Observable<{ pkg: BackendPackage; sizeBytes: number }> {
     let request = this.cache.get(ref.parUrlBase);
     if (!request) {
-      request = this.http.get(ref.parUrlBase, { responseType: 'text' }).pipe(
+      // The PAR URL never changes while the package is revised: revalidate (ETag) so a revision is never read stale
+      request = this.http.get(ref.parUrlBase, { responseType: 'text', cache: 'no-cache' }).pipe(
         map((text) => ({ pkg: JSON.parse(text) as BackendPackage, sizeBytes: new Blob([text]).size })),
         shareReplay({ bufferSize: 1, refCount: false }),
       );
