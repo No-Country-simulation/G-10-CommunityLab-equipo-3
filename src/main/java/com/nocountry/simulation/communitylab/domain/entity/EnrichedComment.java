@@ -3,6 +3,7 @@ package com.nocountry.simulation.communitylab.domain.entity;
 import java.time.Instant;
 import java.util.List;
 
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -35,8 +36,10 @@ public record EnrichedComment(
         List<String> hashtags,
         String cta,
         Boolean revised,
-        Boolean approved,
-        Integer versionMessage) {
+        ApprovalStatus approved,
+        Integer versionMessage,
+        Boolean reject,
+        Instant publishedAt) {
 
     public static final String LLM_FALLBACK = "LLM_FALLBACK";
 
@@ -76,8 +79,17 @@ public record EnrichedComment(
         topics = topics == null ? List.of() : List.copyOf(topics);
         relevance = Math.min(100, Math.max(0, relevance));
         hashtags = hashtags == null ? List.of() : List.copyOf(hashtags);
-        approved = approved != null && approved;
         revised = revised != null && revised;
+        // Why from revised: records saved before the enum carry approved=false (read as null); revised tells
+        // "nobody reviewed it" (IN_REVIEW) from "reviewed and not fit" (REJECTED), spec 007 §4.
+        if (approved == null) {
+            approved = revised ? ApprovalStatus.REJECTED : ApprovalStatus.IN_REVIEW;
+        }
+        // Why derived: reject mirrors approved, so a stored post can never be APPROVED with reject=true.
+        reject = approved == ApprovalStatus.REJECTED;
+        if (publishedAt != null && approved != ApprovalStatus.APPROVED) {
+            throw new InvalidAssetException("publishedAt requires approved=APPROVED");
+        }
         versionMessage = versionMessage == null || versionMessage < 1 ? 1 : versionMessage;
         promptVersion = promptVersion == null ? PROMPT_VERSION : promptVersion;
         outputContentProcessed = outputContentProcessed == null ? null : outputContentProcessed.trim();
@@ -121,7 +133,9 @@ public record EnrichedComment(
                 orKeep(change.cta(), cta),
                 reviewed,
                 orKeep(change.approved(), approved),
-                version);
+                version,
+                null, // reject: the constructor derives it from approved
+                orKeep(change.publishedAt(), publishedAt));
     }
 
     // null in PostChange means "not sent": keep the stored value ("" / [] are the way to clear, spec 007 RF-02).

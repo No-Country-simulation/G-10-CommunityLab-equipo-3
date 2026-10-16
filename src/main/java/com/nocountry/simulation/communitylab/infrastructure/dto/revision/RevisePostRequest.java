@@ -3,34 +3,38 @@ package com.nocountry.simulation.communitylab.infrastructure.dto.revision;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.nocountry.simulation.communitylab.domain.entity.PostChange;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 public record RevisePostRequest(
         Boolean revised,
         @NotNull @Min(1) Integer expectedVersion,
-        Boolean approved,
+        ApprovalStatus approved,
         @Size(max = 5) List<@NotBlank @Size(max = 50) String> topics,
         Channels channelPost,
         @Size(max = 200) String titlePost,
         @Size(max = 4000) String outputContentProcessed,
         @Size(max = 5) List<@NotBlank @Size(max = 50) String> hashtags,
         @Size(max = 300) String cta,
+        // Why not future: it records when the post was already published on its channel (spec 007 RF-02).
+        @PastOrPresent Instant publishedAt,
         @JsonAnySetter @Schema(hidden = true) Map<String, Object> unknownFields
 ) {
     @JsonIgnore
     @AssertTrue(message = "at least one change is required")
     public boolean isAnyChange() {
         return revised != null || approved != null || topics != null || channelPost != null || titlePost != null
-                || outputContentProcessed != null || hashtags != null || cta != null;
+                || outputContentProcessed != null || hashtags != null || cta != null || publishedAt != null;
     }
 
     @JsonIgnore
-    @AssertTrue(message = "editable fields: approved, revised, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta")
+    @AssertTrue(message = "editable fields: approved, revised, publishedAt, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta")
     public boolean isOnlyEditableFields() {
         return unknownFields == null || unknownFields.isEmpty();
     }
@@ -43,6 +47,6 @@ public record RevisePostRequest(
     }
 
     public PostChange toChange() {
-        return new PostChange(revised, approved, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta);
+        return new PostChange(revised, approved, topics, channelPost, titlePost, outputContentProcessed, hashtags, cta, publishedAt);
     }
 }

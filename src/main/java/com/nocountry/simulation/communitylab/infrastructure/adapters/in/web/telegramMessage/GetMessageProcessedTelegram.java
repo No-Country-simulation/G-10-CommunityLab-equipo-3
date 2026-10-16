@@ -83,8 +83,10 @@ public class GetMessageProcessedTelegram {
                                               "hashtags": ["#ONE", "#EmpleoTech", "#Java"],
                                               "cta": "Comparte tu historia en #logros",
                                               "revised": false,
-                                              "approved": false,
-                                              "versionMessage": 1
+                                              "approved": "IN_REVIEW",
+                                              "versionMessage": 1,
+                                              "reject": false,
+                                              "publishedAt": null
                                             }"""),
                             @ExampleObject(
                                     name = "package.completed",
@@ -109,7 +111,7 @@ public class GetMessageProcessedTelegram {
                                               "payload": {
                                                 "messageId": "tg-1",
                                                 "versionMessage": 2,
-                                                "approved": true,
+                                                "approved": "APPROVED",
                                                 "revised": true
                                               }
                                             }"""),

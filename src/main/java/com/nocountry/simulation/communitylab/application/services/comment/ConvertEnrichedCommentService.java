@@ -4,6 +4,7 @@ import com.nocountry.simulation.communitylab.application.port.out.EnrichedCommen
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.policy.RelevancePolicy;
 import org.springframework.stereotype.Service;
 
@@ -41,7 +42,9 @@ public class ConvertEnrichedCommentService implements EnrichedCommentFromAi {
                 responseFromModel.hashtags(),
                 responseFromModel.cta(),
                 false,
-                false,
-                1);
+                ApprovalStatus.IN_REVIEW,
+                1,
+                null, // reject: derived from approved
+                null); // publishedAt: set later by the dashboard
     }
 }
