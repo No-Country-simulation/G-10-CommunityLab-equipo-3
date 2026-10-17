@@ -35,6 +35,7 @@ import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ValueOperations;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -308,7 +309,7 @@ class RedisBufferAdapterTest {
     }
 
     @Test
-    @DisplayName("Dado un registro sellado antes de spec 007 (sin revised/approved/versionMessage), cuando se lee, entonces no se descarta y queda false/false/1")
+    @DisplayName("Dado un registro sellado antes de spec 007 (sin revised/approved/versionMessage), cuando se lee, entonces no se descarta y queda false/IN_REVIEW/1")
     void readSealedKeepsRecordWrittenBeforeReviewAttributes() {
         // Dado el JSON de un registro bufferizado antes del despliegue de 007
         EnrichedComment current = post("m-1", Source.DISCORD);
@@ -324,7 +325,7 @@ class RedisBufferAdapterTest {
         // Entonces el mensaje sigue en el lote (no "sealed record skipped") con los valores por defecto
         assertThat(records).containsExactly(current);
         assertThat(records.getFirst().revised()).isFalse();
-        assertThat(records.getFirst().approved()).isFalse();
+        assertThat(records.getFirst().approved()).isEqualTo(ApprovalStatus.IN_REVIEW);
         assertThat(records.getFirst().versionMessage()).isEqualTo(1);
     }
 
@@ -421,6 +422,6 @@ class RedisBufferAdapterTest {
                 List.of("empleo"), 80, null, null, Instant.parse("2026-10-06T10:00:00Z"), source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null, false, false, 1);
+                List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 }

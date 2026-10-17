@@ -1,6 +1,7 @@
 package com.nocountry.simulation.communitylab.application.dtos;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -29,8 +30,10 @@ public record ResponseClient(
         List<String> hashtags,
         String cta,
         Boolean revised,
-        Boolean approved,
-        Integer versionMessage) {
+        ApprovalStatus approved,
+        Integer versionMessage,
+        Boolean reject,
+        Instant publishedAt) {
 
     // Why one place: the live event and the history snapshot must never send different shapes of the same post.
     public static ResponseClient from(EnrichedComment comment) {
@@ -54,7 +57,9 @@ public record ResponseClient(
                 comment.cta(),
                 comment.revised(),
                 comment.approved(),
-                comment.versionMessage()
+                comment.versionMessage(),
+                comment.reject(),
+                comment.publishedAt()
         );
     }
 }

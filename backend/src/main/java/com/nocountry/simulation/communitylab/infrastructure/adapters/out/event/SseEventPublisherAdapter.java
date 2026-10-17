@@ -6,6 +6,7 @@ import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
 import com.nocountry.simulation.communitylab.application.port.out.EventPublishPost;
 import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -218,7 +219,7 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
 
     private record MessageRevisedEvent(String type, String batchId, RevisionPayload payload) {}
 
-    private record RevisionPayload(String messageId, int versionMessage, boolean approved, boolean revised) {}
+    private record RevisionPayload(String messageId, int versionMessage, ApprovalStatus approved, boolean revised) {}
 
     private record PackageCompletedEvent(String type, String batchId, Payload payload){
 

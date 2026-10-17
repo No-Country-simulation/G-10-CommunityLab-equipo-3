@@ -17,6 +17,7 @@ import com.nocountry.simulation.communitylab.application.event.IngestAcceptedEve
 import com.nocountry.simulation.communitylab.application.port.out.BufferPort;
 import com.nocountry.simulation.communitylab.application.services.comment.telegram.IngestTelegramService;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
+import com.nocountry.simulation.communitylab.domain.vo.MessageContent;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,7 +60,7 @@ class IngestTelegramServiceTest {
                 555L,
                 777L,
                 "cos_dev",
-                "  sample content  ",
+                "  Consegui mi primer empleo como dev Java  ",
                 Instant.parse("2026-09-24T10:00:00Z"));
 
         // Cuando se ingiere
@@ -67,7 +68,7 @@ class IngestTelegramServiceTest {
 
         // Entonces DTO normalizado (trim, ids nativos a String, batchId de lote abierto)
         assertThat(result).isPresent();
-        assertThat(result.get().content()).isEqualTo("sample content");
+        assertThat(result.get().content()).isEqualTo("Consegui mi primer empleo como dev Java");
         assertThat(result.get().truncated()).isFalse();
         assertThat(result.get().messageId()).isEqualTo("1001");
         assertThat(result.get().channelId()).isEqualTo("555");
@@ -100,6 +101,24 @@ class IngestTelegramServiceTest {
                 Instant.parse("2026-09-24T10:00:00Z"));
 
         // Cuando se ingiere entonces se descarta en silencio sin disparar 002
+        assertThat(useCase.ingest(command)).isEmpty();
+        verifyNoInteractions(events);
+        verify(buffer, never()).appendToBatch(any());
+    }
+
+    @Test
+    @DisplayName("Dado contenido bajo el minimo, cuando ingiere, entonces retorna empty sin disparar 002")
+    void discardsShortMessage() {
+        // Dado un comando con un caracter menos que MessageContent.MIN_LENGTH
+        IngestTelegramCommand command = new IngestTelegramCommand(
+                1005,
+                555L,
+                777L,
+                "cos_dev",
+                "a".repeat(MessageContent.MIN_LENGTH - 1),
+                Instant.parse("2026-09-24T10:00:00Z"));
+
+        // Cuando se ingiere entonces se rechaza en la entrada: sin evento, sin llamada al LLM
         assertThat(useCase.ingest(command)).isEmpty();
         verifyNoInteractions(events);
         verify(buffer, never()).appendToBatch(any());
@@ -139,7 +158,7 @@ class IngestTelegramServiceTest {
                 555L,
                 777L,
                 "cos_dev",
-                "hello",
+                "Consegui mi primer empleo como dev Java",
                 Instant.parse("2026-09-24T10:00:00Z"));
 
         // Cuando se mide latencia local sin LLM

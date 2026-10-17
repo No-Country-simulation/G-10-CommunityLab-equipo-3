@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.PostChange;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -43,7 +44,7 @@ class AssetPackageReviseTest {
                 "Conseguí empleo como dev Java", Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 75, null, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, false, 1);
+                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private static EnrichedComment fallback(String messageId) {
@@ -52,7 +53,7 @@ class AssetPackageReviseTest {
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 0, EnrichedComment.LLM_FALLBACK, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                null, null, null, List.of(), null, false, false, 1);
+                null, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     // Two real posts and one LLM failure trace, as a flushed batch looks like.
@@ -61,7 +62,7 @@ class AssetPackageReviseTest {
     }
 
     private static PostChange approve() {
-        return new PostChange(null, true, null, null, null, null, null, null);
+        return new PostChange(null, ApprovalStatus.APPROVED, null, null, null, null, null, null, null);
     }
 
     @Test
@@ -75,7 +76,7 @@ class AssetPackageReviseTest {
 
         // Entonces m-2 sube de versión y los demás registros son idénticos, en el mismo sitio
         assertThat(revised.enriched()).extracting(EnrichedComment::messageId).containsExactly("m-1", "m-2", "m-3");
-        assertThat(revised.enriched().get(1).approved()).isTrue();
+        assertThat(revised.enriched().get(1).approved()).isEqualTo(ApprovalStatus.APPROVED);
         assertThat(revised.enriched().get(1).versionMessage()).isEqualTo(2);
         assertThat(revised.enriched().get(0)).isEqualTo(original.enriched().get(0));
         assertThat(revised.enriched().get(2)).isEqualTo(original.enriched().get(2));
@@ -109,7 +110,7 @@ class AssetPackageReviseTest {
         original.revise("m-1", approve());
 
         // Entonces el original sigue como se leyó (un reintento parte de una copia limpia)
-        assertThat(original.enriched().get(0).approved()).isFalse();
+        assertThat(original.enriched().get(0).approved()).isEqualTo(ApprovalStatus.IN_REVIEW);
         assertThat(original.enriched().get(0).versionMessage()).isEqualTo(1);
     }
 
@@ -156,7 +157,7 @@ class AssetPackageReviseTest {
 
         // Cuando el texto supera los 280 de X / Entonces la revisión no se construye (→ 400)
         assertThatThrownBy(() -> original.revise("m-1",
-                        new PostChange(null, null, null, null, null, "a".repeat(300), null, null)))
+                        new PostChange(null, null, null, null, null, "a".repeat(300), null, null, null)))
                 .isInstanceOf(InvalidAssetException.class);
     }
 

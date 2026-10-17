@@ -85,7 +85,7 @@ class ErrorDispatchOnServerTest {
         when(revisePostUseCase.revise(any())).thenThrow(new IllegalStateException("SECRET-INTERNAL-DETAIL"));
 
         // Cuando se envía una revisión válida
-        HttpResponse<String> response = patch("application/json", "{\"expectedVersion\":1,\"approved\":true}");
+        HttpResponse<String> response = patch("application/json", "{\"expectedVersion\":1,\"approved\":\"APPROVED\"}");
 
         // Entonces el error del servidor no se disfraza de "ruta cerrada" ni expone el mensaje
         assertThat(response.statusCode()).isEqualTo(500);

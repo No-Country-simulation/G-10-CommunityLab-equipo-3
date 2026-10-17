@@ -19,6 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +51,7 @@ import com.nocountry.simulation.communitylab.application.exception.StorageFailur
 import com.nocountry.simulation.communitylab.application.exception.StorageNotConfiguredException;
 import com.nocountry.simulation.communitylab.application.port.in.RevisePostUseCase;
 import com.nocountry.simulation.communitylab.domain.entity.PostChange;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.exception.InvalidAssetException;
@@ -65,7 +69,8 @@ import org.telegram.telegrambots.longpolling.starter.TelegramBotInitializer;
  *
  * <p>Derivado de: spec 007 RF-02 (E1 validación; E2 {@code 200 {batchId, messageId, versionMessage, approved}},
  * {@code 404}), RF-03 ({@code 400} reglas de canal, {@code 422} {@code LLM_FALLBACK}), RF-04 (no-op = {@code 200}
- * misma versión), RF-06 ({@code 409}), RF-09 ({@code 502}/{@code 503 OCI_NOT_CONFIGURED}), RNF-01 ({@code 413}),
+ * misma versión), RF-06 ({@code 409}), enmienda 2026-10-16 (estado {@code approved}, {@code reject} no editable,
+ * {@code publishedAt} no futuro), RF-09 ({@code 502}/{@code 503 OCI_NOT_CONFIGURED}), RNF-01 ({@code 413}),
  * RNF-03, RNF-04 + plan 007 §1.1, §1.2 (web), §2.
  */
 @SpringBootTest
@@ -106,7 +111,8 @@ class PatchPostTest {
     // Every result the use case returns comes from a reviewed post, so revised is true.
     private void revisionReturns(int versionMessage, boolean approved, boolean changed) {
         when(revisePostUseCase.revise(any()))
-                .thenReturn(new RevisionResult("b-1", "m-1", versionMessage, approved, true, changed));
+                .thenReturn(new RevisionResult("b-1", "m-1", versionMessage,
+                        approved ? ApprovalStatus.APPROVED : ApprovalStatus.IN_REVIEW, true, changed));
     }
 
     private RevisePostCommand capturedCommand() {
@@ -126,13 +132,13 @@ class PatchPostTest {
 
         // Cuando se aprueba un post de la fuente de la ruta
         patchJson("/api/v1/" + pathSource + "/packages/b-1/messages/m-1",
-                "{\"expectedVersion\":1,\"approved\":true}")
+                "{\"expectedVersion\":1,\"approved\":\"APPROVED\"}")
                 // Entonces 200 con lo que el frontend necesita para su siguiente expectedVersion
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.batchId").value("b-1"))
                 .andExpect(jsonPath("$.messageId").value("m-1"))
                 .andExpect(jsonPath("$.versionMessage").value(2))
-                .andExpect(jsonPath("$.approved").value(true))
+                .andExpect(jsonPath("$.approved").value("APPROVED"))
                 .andExpect(jsonPath("$.revised").value(true));
 
         RevisePostCommand command = capturedCommand();
@@ -140,7 +146,7 @@ class PatchPostTest {
         assertThat(command.batchId()).isEqualTo("b-1");
         assertThat(command.messageId()).isEqualTo("m-1");
         assertThat(command.expectedVersion()).isEqualTo(1);
-        assertThat(command.change().approved()).isTrue();
+        assertThat(command.change().approved()).isEqualTo(ApprovalStatus.APPROVED);
     }
 
     @Test
@@ -179,10 +185,10 @@ class PatchPostTest {
         revisionReturns(2, true, false);
 
         // Cuando se vuelve a aprobar / Entonces 200 igual que un cambio: para el frontend el estado es el mismo
-        patchJson(DISCORD_URL, "{\"expectedVersion\":2,\"approved\":true}")
+        patchJson(DISCORD_URL, "{\"expectedVersion\":2,\"approved\":\"APPROVED\"}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.versionMessage").value(2))
-                .andExpect(jsonPath("$.approved").value(true))
+                .andExpect(jsonPath("$.approved").value("APPROVED"))
                 .andExpect(jsonPath("$.changed").doesNotExist());
     }
 
@@ -207,7 +213,7 @@ class PatchPostTest {
         when(revisePostUseCase.revise(any())).thenThrow(failure);
 
         // Cuando se envía una revisión válida / Entonces el frontend distingue la causa por el status
-        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":true}")
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":\"APPROVED\"}")
                 .andExpect(status().is(expectedStatus))
                 .andExpect(jsonPath("$.status").value(expectedStatus));
     }
@@ -232,7 +238,7 @@ class PatchPostTest {
         when(revisePostUseCase.revise(any())).thenThrow(new StorageNotConfiguredException("OCI_NOT_CONFIGURED"));
 
         // Cuando se envía / Entonces el frontend sabe que no es culpa del post (RF-09)
-        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":true}")
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":\"APPROVED\"}")
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(content().string(containsString("OCI_NOT_CONFIGURED")));
     }
@@ -245,7 +251,7 @@ class PatchPostTest {
                 .thenThrow(new StorageFailureException("SECRET-OCI-DETAIL opc-request-id=xyz"));
 
         // Cuando se envía / Entonces 502 con un texto fijo (RF-09)
-        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":true}")
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":\"APPROVED\"}")
                 .andExpect(status().isBadGateway())
                 .andExpect(content().string(not(containsString("SECRET-OCI-DETAIL"))));
     }
@@ -255,7 +261,7 @@ class PatchPostTest {
     @Test
     @DisplayName("Dado un body sin expectedVersion, cuando se envía, entonces 400 que nombra el campo y no se llama al caso de uso")
     void missingExpectedVersionIsRejected() throws Exception {
-        patchJson(DISCORD_URL, "{\"approved\":true}")
+        patchJson(DISCORD_URL, "{\"approved\":\"APPROVED\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors", hasItem(startsWith("expectedVersion:"))));
 
@@ -265,7 +271,7 @@ class PatchPostTest {
     @Test
     @DisplayName("Dado expectedVersion menor que 1, cuando se envía, entonces 400")
     void nonPositiveExpectedVersionIsRejected() throws Exception {
-        patchJson(DISCORD_URL, "{\"expectedVersion\":0,\"approved\":true}")
+        patchJson(DISCORD_URL, "{\"expectedVersion\":0,\"approved\":\"APPROVED\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors", hasItem(startsWith("expectedVersion:"))));
 
@@ -322,7 +328,7 @@ class PatchPostTest {
     @DisplayName("Dado un campo no editable en el body, cuando se envía, entonces 400 (no se ignora en silencio)")
     void nonEditableFieldIsRejected(String nonEditable) throws Exception {
         // Dado una aprobación válida que además intenta tocar un campo no editable
-        String body = "{\"expectedVersion\":1,\"approved\":true," + nonEditable + "}";
+        String body = "{\"expectedVersion\":1,\"approved\":\"APPROVED\"," + nonEditable + "}";
 
         // Cuando se envía / Entonces se rechaza entera
         patchJson(DISCORD_URL, body)
@@ -393,7 +399,7 @@ class PatchPostTest {
     @Test
     @DisplayName("Dado una fuente fuera de R8, cuando se envía el PATCH, entonces 403 antes de llegar al controller")
     void unknownSourceIsDenied() throws Exception {
-        patchJson("/api/v1/slack/packages/b-1/messages/m-1", "{\"expectedVersion\":1,\"approved\":true}")
+        patchJson("/api/v1/slack/packages/b-1/messages/m-1", "{\"expectedVersion\":1,\"approved\":\"APPROVED\"}")
                 .andExpect(status().isForbidden());
 
         verify(revisePostUseCase, never()).revise(any());
@@ -451,5 +457,77 @@ class PatchPostTest {
         List<String> hashtags = capturedCommand().change().hashtags();
         assertThatThrownBy(() -> hashtags.add("#otro"))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    // ---------- enmienda 2026-10-16: estado approved, reject y publishedAt ----------
+
+    @ParameterizedTest(name = "approved={0}")
+    @EnumSource(ApprovalStatus.class)
+    @DisplayName("Dado cualquier estado de aprobación, cuando se envía, entonces 200 y el caso de uso recibe ese estado")
+    void everyApprovalStateReachesTheUseCase(ApprovalStatus state) throws Exception {
+        // Dado el caso de uso guardando la revisión
+        revisionReturns(2, state == ApprovalStatus.APPROVED, true);
+
+        // Cuando se envía el estado por su nombre
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":\"" + state + "\"}")
+                .andExpect(status().isOk());
+
+        // Entonces llega tal cual al dominio
+        assertThat(capturedCommand().change().approved()).isEqualTo(state);
+    }
+
+    @ParameterizedTest(name = "approved={0}")
+    @ValueSource(strings = {"true", "false", "\"PENDING\""})
+    @DisplayName("Dado un approved booleano o un estado desconocido, cuando se envía, entonces 400 'malformed body'")
+    void booleanOrUnknownApprovalIsRejected(String approved) throws Exception {
+        // Dado el contrato anterior (boolean) o un valor fuera del enum
+        // Cuando se envía / Entonces el PATCH es estricto: solo los registros guardados aceptan el boolean viejo
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":" + approved + "}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("malformed body"));
+
+        verify(revisePostUseCase, never()).revise(any());
+    }
+
+    @Test
+    @DisplayName("Dado reject en el body, cuando se envía, entonces 400 (lo deriva el backend del estado)")
+    void rejectIsNotEditable() throws Exception {
+        // Dado un rechazo enviado como booleano además del estado
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":\"REJECTED\",\"reject\":true}")
+                // Entonces se rechaza entero, como cualquier campo no editable
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors", hasItem(startsWith("onlyEditableFields:"))));
+
+        verify(revisePostUseCase, never()).revise(any());
+    }
+
+    @Test
+    @DisplayName("Dado solo publishedAt en el pasado, cuando se envía, entonces cuenta como cambio y llega al caso de uso")
+    void publishedAtAloneIsAValidChange() throws Exception {
+        // Dado el caso de uso guardando la publicación
+        revisionReturns(3, true, true);
+
+        // Cuando el community manager registra cuándo publicó el post
+        patchJson(DISCORD_URL, "{\"expectedVersion\":2,\"publishedAt\":\"2026-10-16T15:00:00Z\"}")
+                .andExpect(status().isOk());
+
+        // Entonces la fecha llega como instante y approved no se envió (no cambia)
+        PostChange change = capturedCommand().change();
+        assertThat(change.publishedAt()).isEqualTo(Instant.parse("2026-10-16T15:00:00Z"));
+        assertThat(change.approved()).isNull();
+    }
+
+    @Test
+    @DisplayName("Dado un publishedAt futuro, cuando se envía, entonces 400 sin llamar al caso de uso")
+    void futurePublishedAtIsRejected() throws Exception {
+        // Dado una fecha de publicación que todavía no ocurrió
+        String tomorrow = Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS).toString();
+
+        // Cuando se envía / Entonces se rechaza: registra una publicación que ya ocurrió
+        patchJson(DISCORD_URL, "{\"expectedVersion\":1,\"approved\":\"APPROVED\",\"publishedAt\":\"" + tomorrow + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors", hasItem(startsWith("publishedAt:"))));
+
+        verify(revisePostUseCase, never()).revise(any());
     }
 }
