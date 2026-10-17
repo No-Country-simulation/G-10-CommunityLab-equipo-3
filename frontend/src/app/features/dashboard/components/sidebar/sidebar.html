@@ -166,7 +166,8 @@
             <span class="live-dot relative h-1.5 w-1.5 rounded-full" [class]="modeDot[mode]"></span>
             {{ modeLabel[mode] }}
           </span>
-          @if (mode !== 'demo') {
+          <!-- Connected needs no words beside LIVE; the other states say what is going on -->
+          @if (mode !== 'demo' && mode !== 'open') {
             <span class="truncate text-[0.68rem] font-medium text-stone-500 dark:text-stone-400">{{ 'sidebar.live.hint.' + mode | t }}</span>
           }
         </div>
