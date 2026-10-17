@@ -6,7 +6,7 @@
         <img src="image/logo/oso-head.png" alt="" width="40" height="40"
           class="h-10 w-10 shrink-0 rounded-full bg-amber-100 object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
         <div class="leading-tight">
-          <p class="text-sm font-semibold">Kora</p>
+          <p class="text-sm font-semibold">Ukuku AI</p>
           <p class="text-xs text-slate-500 dark:text-slate-400">{{ 'preview.linkedinMeta' | t }} · <i class="pi pi-globe text-[10px]"></i></p>
         </div>
         <i class="pi pi-linkedin ml-auto text-lg text-[#0a66c2]"></i>
@@ -27,7 +27,7 @@
       <img src="image/logo/oso-head.png" alt="" width="40" height="40"
         class="h-10 w-10 shrink-0 rounded-full bg-amber-100 object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
       <div class="min-w-0 flex-1">
-        <p class="text-sm"><b>Kora</b> <span class="text-slate-500">&#64;kora · {{ 'preview.now' | t }}</span></p>
+        <p class="text-sm"><b>Ukuku AI</b> <span class="text-slate-500">&#64;ukuku_ai · {{ 'preview.now' | t }}</span></p>
         <p class="mt-1 whitespace-pre-line text-sm leading-relaxed">{{ a.body }}</p>
         @if (a.hashtags.length) {
           <p class="mt-1 text-sm text-sky-500">{{ a.hashtags.join(' ') }}</p>
@@ -44,7 +44,7 @@
         <i class="pi pi-envelope"></i> {{ 'preview.newsletter' | t }}
       </div>
       <div class="p-4">
-        <h4 class="font-semibold">{{ a.title }}</h4>
+        <h4 class="font-semibold">{{ a | assetTitle }}</h4>
         <div class="mt-2 whitespace-pre-line text-sm leading-relaxed" [class.line-clamp-6]="compact()" [innerHTML]="a.body | richText"></div>
       </div>
     </div>
@@ -59,7 +59,7 @@
   }
   @default {
     <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-      <h4 class="font-semibold">{{ a.title }}</h4>
+      <h4 class="font-semibold">{{ a | assetTitle }}</h4>
       <div class="mt-2 whitespace-pre-line text-sm" [innerHTML]="a.body | richText"></div>
     </div>
   }

@@ -103,6 +103,15 @@
   80%, 100% { transform: scale(2.4); opacity: 0; }
 }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .animate-fade-up {
   animation: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
@@ -114,6 +123,37 @@
 .animate-gradient {
   background-size: 200% 200%;
   animation: gradient-pan 14s ease infinite;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-scroll 48s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation-duration: 90s;
+  }
 }
 
 .live-dot::after {
@@ -242,41 +282,6 @@ html:not(.dark) .p-tag {
   @apply ring-1 ring-inset ring-black/5;
 }
 
-/* "Cómo funciona" connector: the step colors with a highlight that travels along the flow */
-/* Only the highlight layer moves; the color layer stays fixed */
-@keyframes flow {
-  from { background-position: 0% 0, 0 0; }
-  to { background-position: -200% 0, 0 0; }
-}
-
-@keyframes flow-vertical {
-  from { background-position: 0 0%, 0 0; }
-  to { background-position: 0 -200%, 0 0; }
-}
-
-.flow-line {
-  background-image:
-    linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.85) 50%, transparent 100%),
-    linear-gradient(90deg, #b45309, #d97706, #ea580c, #c74634);
-  background-size: 50% 100%, 100% 100%;
-  background-repeat: repeat-x, no-repeat;
-  animation: flow 2.8s linear infinite;
-  opacity: 0.55;
-}
-
-.flow-line-vertical {
-  background-image:
-    linear-gradient(180deg, transparent 0%, rgb(255 255 255 / 0.85) 50%, transparent 100%),
-    linear-gradient(180deg, #b45309, #d97706, #ea580c, #c74634);
-  background-size: 100% 50%, 100% 100%;
-  background-repeat: repeat-y, no-repeat;
-  animation-name: flow-vertical;
-}
-
-.dark .flow-line {
-  opacity: 0.4;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .page-transition > :not(router-outlet),
   .animate-fade-up,
@@ -286,8 +291,7 @@ html:not(.dark) .p-tag {
   .animate-pop,
   .animate-pulse-ring,
   .shimmer::after,
-  .live-dot::after,
-  .flow-line {
+  .live-dot::after {
     animation: none;
   }
 
@@ -772,6 +776,110 @@ html:not(.dark) .p-toast-message {
 }
 
 /* ── Topbar language switch: recessed track, the active language is a raised amber chip ── */
+/* ── Topbar: link back to the public landing page (pill matching the language switch) ── */
+.home-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 0.85rem 0 0.3rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #44403c;
+  background: #fff;
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(28 25 23 / 0.08), 0 2px 6px -2px rgb(120 53 15 / 0.14);
+  transition: color 0.15s, box-shadow 0.2s, transform 0.15s;
+}
+
+.home-link:hover {
+  color: #b45309;
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(217 119 6 / 0.35), 0 6px 14px -6px rgb(217 119 6 / 0.45);
+}
+
+.home-link:active {
+  transform: translateY(1px);
+}
+
+.home-link:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.home-link-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  background: #fef3c7;
+  box-shadow: 0 0 0 1px rgb(245 158 11 / 0.35);
+}
+
+.home-link-icon {
+  display: none;
+  font-size: 0.95rem;
+}
+
+.home-link-arrow {
+  font-size: 0.7rem;
+  color: #a8a29e;
+  transition: transform 0.2s, color 0.15s;
+}
+
+.home-link:hover .home-link-arrow {
+  color: #d97706;
+  transform: translate(2px, -2px);
+}
+
+.dark .home-link {
+  color: #e7e5e4;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.dark .home-link:hover {
+  color: #fcd34d;
+  background: rgb(251 191 36 / 0.08);
+  box-shadow: 0 0 0 1px rgb(251 191 36 / 0.35);
+}
+
+.dark .home-link-arrow {
+  color: #78716c;
+}
+
+.dark .home-link:hover .home-link-arrow {
+  color: #fbbf24;
+}
+
+/* Phones: a round house button (the bear would repeat the logo on the left);
+   the tooltip and aria-label carry the meaning */
+@media (max-width: 767px) {
+  .home-link {
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+  }
+
+  .home-link-icon {
+    display: inline;
+  }
+
+  .home-link-avatar,
+  .home-link-label,
+  .home-link-arrow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-link,
+  .home-link-arrow {
+    transition: none;
+  }
+}
+
 .lang-switch {
   align-items: center;
   gap: 2px;
@@ -798,6 +906,16 @@ html:not(.dark) .p-toast-message {
   letter-spacing: 0.06em;
   color: #78716c;
   transition: color 150ms ease, background-color 150ms ease, box-shadow 200ms ease;
+}
+
+/* Flag inside the language switchers: whole-pixel size (24x18 = viewBox) so stripes stay sharp */
+.lang-flag {
+  display: block;
+  width: 24px;
+  height: 18px;
+  margin: 0 auto;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.15);
 }
 
 .lang-switch-option:hover {
@@ -842,7 +960,7 @@ html:not(.dark) .p-toast-message {
   background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
 }
 
-/* ── Resumen welcome card: warm gradient panel with the floating Kora bear ── */
+/* ── Resumen welcome card: warm gradient panel with the floating Ukuku bear ── */
 @keyframes bear-float {
   0%, 100% { transform: translateY(0) rotate(-2deg); }
   50% { transform: translateY(-5px) rotate(1deg); }
@@ -1189,6 +1307,11 @@ html:not(.dark) .p-toast-message {
     @apply mt-3 font-display text-3xl font-extrabold tracking-tight text-espresso dark:text-white sm:text-4xl;
   }
 
+  /* Paragraph under a section title */
+  .landing-lead {
+    @apply mt-4 text-base leading-relaxed text-stone-600 dark:text-stone-300 sm:text-lg;
+  }
+
   .landing-card {
     @apply rounded-[28px] border border-clay-border bg-white shadow-clay transition duration-300 dark:border-stone-800 dark:bg-espresso-card dark:shadow-none;
   }
@@ -1202,16 +1325,50 @@ html:not(.dark) .p-toast-message {
   }
 
   .landing-mascot {
-    @apply border border-clay-border shadow-clay dark:border-stone-800;
+    @apply border border-white/80 shadow-[0_24px_60px_-15px_rgba(28,25,23,0.12),0_10px_20px_-8px_rgba(217,119,6,0.16)] dark:border-stone-800;
     background:
+      radial-gradient(circle at 80% 20%, rgb(56 189 248 / 0.15), transparent 45%),
       radial-gradient(circle at 50% 38%, rgb(251 191 36 / 0.35), transparent 58%),
       linear-gradient(160deg, #fbf3e4 0%, #f1e6d3 100%);
   }
 
   .dark .landing-mascot {
     background:
+      radial-gradient(circle at 80% 20%, rgb(56 189 248 / 0.1), transparent 45%),
       radial-gradient(circle at 50% 38%, rgb(217 119 6 / 0.28), transparent 58%),
       linear-gradient(160deg, #292524 0%, #1c1917 100%);
+  }
+
+  .glass-fluted {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.12) 0px,
+        rgba(255, 255, 255, 0.12) 6px,
+        rgba(255, 255, 255, 0.35) 7px,
+        rgba(0, 0, 0, 0.03) 8px
+      ),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.35) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.9),
+      0 -4px 20px rgba(0, 0, 0, 0.03);
+  }
+
+  .dark .glass-fluted {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 0px,
+        rgba(255, 255, 255, 0.04) 6px,
+        rgba(255, 255, 255, 0.12) 7px,
+        rgba(0, 0, 0, 0.25) 8px
+      ),
+      linear-gradient(180deg, rgba(41, 37, 36, 0.8) 0%, rgba(28, 25, 23, 0.5) 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.1),
+      0 -4px 20px rgba(0, 0, 0, 0.2);
   }
 
   .landing-mascot-soft {
@@ -1242,8 +1399,9 @@ html:not(.dark) .p-toast-message {
 
   .landing-glow {
     background:
+      radial-gradient(700px 420px at 85% 15%, rgb(56 189 248 / 0.16), transparent 70%),
       radial-gradient(700px 360px at 18% 20%, rgb(251 191 36 / 0.22), transparent 70%),
-      radial-gradient(600px 340px at 85% 30%, rgb(217 119 6 / 0.14), transparent 70%);
+      radial-gradient(600px 340px at 85% 35%, rgb(217 119 6 / 0.14), transparent 70%);
   }
 
   .landing-cta {
@@ -1276,6 +1434,130 @@ html:not(.dark) .p-toast-message {
   .landing-chip,
   .landing-bubble,
   .landing-float {
+    animation: none;
+  }
+}
+
+/* ── Banner studio (the dialog is appended to <body>, so its styles are global) ── */
+.banner-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 1px 1px, rgb(120 113 108 / 0.18) 1px, transparent 0) 0 0 / 14px 14px,
+    #f5f5f4;
+}
+
+.dark .banner-stage {
+  background:
+    radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0) 0 0 / 14px 14px,
+    #0c0a09;
+}
+
+.banner-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
+  animation: banner-in 0.25s ease-out;
+}
+
+/* A square image as wide as the dialog would push the controls off screen */
+.banner-stage.is-square img {
+  width: auto;
+  max-width: 100%;
+  max-height: min(40vh, 380px);
+}
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+.banner-formats {
+  display: grid;
+  gap: 6px;
+}
+
+.banner-format {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  color: #57534e;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(28 25 23 / 0.1);
+  transition: box-shadow 0.15s, color 0.15s, background 0.15s;
+}
+
+.banner-format:hover {
+  box-shadow: 0 0 0 1px rgb(217 119 6 / 0.45);
+}
+
+.banner-format.is-active {
+  color: #92400e;
+  background: #fffbeb;
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+
+.banner-format:focus-visible,
+.banner-reset:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.banner-format-shape {
+  flex-shrink: 0;
+  width: 22px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.8;
+}
+
+.banner-format-shape.is-square {
+  width: 16px;
+  height: 16px;
+}
+
+.dark .banner-format {
+  color: #d6d3d1;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
+}
+
+.dark .banner-format.is-active {
+  color: #fcd34d;
+  background: rgb(251 191 36 / 0.1);
+  box-shadow: 0 0 0 2px #fbbf24;
+}
+
+.banner-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.banner-reset:hover {
+  text-decoration: underline;
+}
+
+.dark .banner-reset {
+  color: #fbbf24;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-stage img {
     animation: none;
   }
 }
