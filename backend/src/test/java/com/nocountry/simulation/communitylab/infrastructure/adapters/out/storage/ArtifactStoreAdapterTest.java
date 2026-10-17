@@ -13,6 +13,7 @@ import com.nocountry.simulation.communitylab.application.dtos.StoreResult;
 import com.nocountry.simulation.communitylab.application.exception.StorageNotConfiguredException;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -38,7 +39,7 @@ class ArtifactStoreAdapterTest {
                 "batch-1", "m-1", "channel-1", "author-1", "author-name", "content",
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of(), 80, null, EnrichedComment.PROMPT_VERSION, NOW, Source.DISCORD,
-                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, false, 1);
+                Channels.X, null, "Nuevo empleo en Java", List.of("#Java"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
         return AssetPackage.of("batch-1", Source.DISCORD, List.of(post), NOW);
     }
 

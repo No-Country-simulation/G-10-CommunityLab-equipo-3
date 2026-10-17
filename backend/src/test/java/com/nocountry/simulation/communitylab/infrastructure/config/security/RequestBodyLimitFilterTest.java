@@ -116,13 +116,13 @@ class RequestBodyLimitFilterTest {
                 return -1;
             }
         };
-        request.setContent("{\"expectedVersion\":1,\"approved\":true}".getBytes());
+        request.setContent("{\"expectedVersion\":1,\"approved\":\"APPROVED\"}".getBytes());
         RecordingChain chain = new RecordingChain();
 
         // Cuando se lee / Entonces el contador no altera el contenido
         filter.doFilter(request, new MockHttpServletResponse(), chain);
         assertThat(new String(chain.request.getInputStream().readAllBytes()))
-                .isEqualTo("{\"expectedVersion\":1,\"approved\":true}");
+                .isEqualTo("{\"expectedVersion\":1,\"approved\":\"APPROVED\"}");
     }
 
     @Test

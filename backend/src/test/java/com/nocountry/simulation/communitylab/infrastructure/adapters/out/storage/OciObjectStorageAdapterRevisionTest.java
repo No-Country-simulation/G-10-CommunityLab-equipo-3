@@ -30,6 +30,7 @@ import com.nocountry.simulation.communitylab.application.exception.StorageFailur
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.PostChange;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -134,7 +135,7 @@ class OciObjectStorageAdapterRevisionTest {
     }
 
     @Test
-    @DisplayName("Dado un paquete guardado antes de 007 (sin revised, approved ni versionMessage), cuando se carga, entonces sale false/false/1")
+    @DisplayName("Dado un paquete guardado antes de 007 (sin revised, approved ni versionMessage), cuando se carga, entonces sale false/IN_REVIEW/1")
     void loadReadsPackagesWrittenBeforeRevisions() {
         // Dado el JSON de un paquete sin los campos de revisión
         ObjectNode tree = (ObjectNode) JSON.readTree(json(discordPackage()));
@@ -149,7 +150,7 @@ class OciObjectStorageAdapterRevisionTest {
 
         // Entonces se puede revisar sin migración (RF-01)
         assertThat(post.revised()).isFalse();
-        assertThat(post.approved()).isFalse();
+        assertThat(post.approved()).isEqualTo(ApprovalStatus.IN_REVIEW);
         assertThat(post.versionMessage()).isEqualTo(1);
     }
 
@@ -260,7 +261,11 @@ class OciObjectStorageAdapterRevisionTest {
         byte[] body = request.getPutObjectBody().readAllBytes();
         assertThat(request.getContentLength()).isEqualTo((long) body.length);
         JsonNode record = JSON.readTree(body).get("enriched").get(0);
-        assertThat(record.get("approved").asBoolean()).isTrue();
+        assertThat(record.get("approved").asString()).isEqualTo("APPROVED");
+        // The amendment fields travel in the stored object even when unset (spec 007 RF-01, 2026-10-16)
+        assertThat(record.get("reject").asBoolean()).isFalse();
+        assertThat(record.has("publishedAt")).isTrue();
+        assertThat(record.get("publishedAt").isNull()).isTrue();
         assertThat(record.get("versionMessage").asInt()).isEqualTo(2);
         assertThat(record.get("authorName").asString()).isEqualTo(AUTHOR_NAME);
     }
@@ -369,7 +374,7 @@ class OciObjectStorageAdapterRevisionTest {
                 BATCH_ID, "m-1", "channel-1", "author-1", AUTHOR_NAME, messageAuthor,
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo"), 80, null, EnrichedComment.PROMPT_VERSION, NOW, Source.DISCORD,
-                Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null, false, false, 1);
+                Channels.FAQ, "Primer empleo dev", "Primer empleo como dev Java", List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private static AssetPackage packageOf(Source source, EnrichedComment record) {
@@ -381,7 +386,7 @@ class OciObjectStorageAdapterRevisionTest {
     }
 
     private static AssetPackage revisedPackage() {
-        return discordPackage().revise("m-1", new PostChange(null, true, null, null, null, null, null, null));
+        return discordPackage().revise("m-1", new PostChange(null, ApprovalStatus.APPROVED, null, null, null, null, null, null, null));
     }
 
     // Why pad messageAuthor: it is the only free-length field (post fields are capped per channel) and

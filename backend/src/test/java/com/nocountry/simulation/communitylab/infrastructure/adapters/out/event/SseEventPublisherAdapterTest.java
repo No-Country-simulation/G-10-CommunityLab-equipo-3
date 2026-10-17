@@ -28,6 +28,7 @@ import com.nocountry.simulation.communitylab.application.dtos.History;
 import com.nocountry.simulation.communitylab.application.dtos.MessageRevised;
 import com.nocountry.simulation.communitylab.application.dtos.PackageCompleted;
 import com.nocountry.simulation.communitylab.application.dtos.ResponseClient;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -270,7 +271,7 @@ class SseEventPublisherAdapterTest {
         assertThat(payload.propertyNames()).containsExactly("messageId", "versionMessage", "approved", "revised");
         assertThat(payload.get("messageId").asString()).isEqualTo("m-1");
         assertThat(payload.get("versionMessage").asInt()).isEqualTo(2);
-        assertThat(payload.get("approved").asBoolean()).isTrue();
+        assertThat(payload.get("approved").asString()).isEqualTo("APPROVED");
         assertThat(payload.get("revised").asBoolean()).isTrue();
     }
 
@@ -594,7 +595,7 @@ class SseEventPublisherAdapterTest {
     // ---------- fixtures ----------
 
     private static MessageRevised revised(String messageId, int versionMessage, Source source) {
-        return new MessageRevised(source, "b-1", messageId, versionMessage, true, true);
+        return new MessageRevised(source, "b-1", messageId, versionMessage, ApprovalStatus.APPROVED, true);
     }
 
     private MvcResult subscribe(String path, String lastEventId) throws Exception {
@@ -656,7 +657,7 @@ class SseEventPublisherAdapterTest {
                 "De la comunidad al primer empleo Java!",
                 List.of("#ONE", "#Java"),
                 "Comparte tu historia",
-                false, false,
-                1);
+                false, ApprovalStatus.IN_REVIEW,
+                1, false, null);
     }
 }
