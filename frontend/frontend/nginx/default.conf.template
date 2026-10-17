@@ -1,0 +1,35 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Same role as proxy.conf.json in `ng serve`: the app calls /api/v1/... on its own origin
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE (/api/v1/discord/messages, /api/v1/telegram/messages): stream events as they
+        # arrive and keep the connection open as long as the backend's emitter (~30 min)
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+    }
+
+    # Hashed bundles never change: cache them for a year
+    location ~* \.(?:js|css|woff2?|ttf|svg|png|jpe?g|webp|ico)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # SPA routing: unknown paths (e.g. /app/content) load index.html
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+}

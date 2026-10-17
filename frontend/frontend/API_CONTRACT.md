@@ -1,4 +1,4 @@
-# Contrato de API — Kora (reto CommunityLab)
+# Contrato de API — Ukuku AI (reto CommunityLab)
 
 Endpoints que el frontend Angular consume. Hoy se simulan en el navegador (`MockCommunityLabApi`);
 cuando el backend Spring Boot esté listo, basta con cambiar `useMocks: false` en
@@ -106,7 +106,7 @@ por canal, guarda el paquete en OCI Object Storage y devuelve todo.
       "tone": "Inspirador",
       "title": "Celebramos a Mariana López",
       "body": "🎉 ¡Celebramos a Mariana! …",
-      "hashtags": ["#Kora", "#LangChain", "#OCI"],
+      "hashtags": ["#UkukuAI", "#LangChain", "#OCI"],
       "status": "in_review",
       "createdAt": "2026-09-22T19:00:00Z"
     }
@@ -171,6 +171,20 @@ Devuelve el `GeneratedAsset` actualizado.
 Publicación con un clic. El backend marca `status: "published"`, completa `publishedAt` y, si
 hay integración, publica en el canal (por ejemplo con un webhook de n8n). Body vacío `{}`.
 Devuelve el `GeneratedAsset` actualizado.
+
+> **Implementación actual (backend spec 007, enmienda 2026-10-16).** Los puntos 3 y 4 se resuelven con
+> `PATCH /api/v1/{discord|telegram}/packages/{batchId}/messages/{messageId}`. El backend guarda en cada post
+> `approved: "IN_REVIEW" | "APPROVED" | "REJECTED"` y `publishedAt`; el frontend lo traduce así:
+>
+> | UI `status` | Backend |
+> |-------------|---------|
+> | `in_review` (y `draft` al restaurar) | `IN_REVIEW` |
+> | `approved` | `APPROVED`, `publishedAt: null` |
+> | `published` | `APPROVED` + `publishedAt` (lo envía el frontend al publicar) |
+> | `rejected` | `REJECTED` |
+>
+> Los paquetes guardados antes de la enmienda traen `approved` booleano: `true` → `APPROVED`;
+> `false` con `revised: true` → `REJECTED`; si no, `IN_REVIEW`. Un post publicado no puede salir de `APPROVED`.
 
 ## 5. `GET /storage/objects`
 

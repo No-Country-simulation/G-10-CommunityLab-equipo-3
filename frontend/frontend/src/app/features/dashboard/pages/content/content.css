@@ -1,0 +1,51 @@
+
+/* ── Publishing platform switch (editor) ── */
+.platform-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.platform-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 9999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(71 85 105);
+  background: #fff;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.platform-option:hover {
+  border-color: rgb(245 158 11 / 0.6);
+  color: rgb(28 25 23);
+}
+
+.platform-option.is-active {
+  border-color: rgb(217 119 6);
+  color: rgb(180 83 9);
+  background: rgb(255 251 235);
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.15);
+}
+
+.platform-option:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 1px;
+}
+
+:host-context(.dark) .platform-option {
+  border-color: rgb(51 65 85);
+  color: rgb(203 213 225);
+  background: rgb(15 23 42);
+}
+
+:host-context(.dark) .platform-option.is-active {
+  border-color: rgb(245 158 11);
+  color: rgb(252 211 77);
+  background: rgb(245 158 11 / 0.12);
+}
+
