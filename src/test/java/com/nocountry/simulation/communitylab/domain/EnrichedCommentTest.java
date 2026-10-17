@@ -10,11 +10,14 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -45,7 +48,7 @@ class EnrichedCommentTest {
                 "Conseguí empleo como dev Java", sentiment, Language.ES, messageType,
                 topics, relevance, flag, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                channelPost, titlePost, copy, hashtags, cta, false, false, 1);
+                channelPost, titlePost, copy, hashtags, cta, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private static EnrichedComment linkedin(String copy, List<String> hashtags, String cta) {
@@ -298,14 +301,14 @@ class EnrichedCommentTest {
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null, false, false, 1))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null))
                 .isInstanceOf(InvalidAssetException.class);
         assertThatThrownBy(() -> new EnrichedComment(
                         "batch-1", null, "listen-123", "author-1", "author-name",
                         "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                         List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                         SENT, Source.DISCORD,
-                        Channels.X, null, "hello", List.of("#ONE"), null, false, false, 1))
+                        Channels.X, null, "hello", List.of("#ONE"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null))
                 .isInstanceOf(InvalidAssetException.class);
     }
 
@@ -331,35 +334,52 @@ class EnrichedCommentTest {
     // ---------- spec 007 RF-01: review attributes ----------
 
     // Valid X post where only the review attributes vary.
-    private static EnrichedComment reviewed(Boolean approved, Integer versionMessage) {
+    private static EnrichedComment reviewed(ApprovalStatus approved, Integer versionMessage) {
         return reviewed(false, approved, versionMessage);
     }
 
-    private static EnrichedComment reviewed(Boolean revised, Boolean approved, Integer versionMessage) {
+    private static EnrichedComment reviewed(Boolean revised, ApprovalStatus approved, Integer versionMessage) {
+        return decided(revised, approved, null, null, versionMessage);
+    }
+
+    private static EnrichedComment decided(
+            Boolean revised, ApprovalStatus approved, Boolean reject, Instant publishedAt, Integer versionMessage) {
         return new EnrichedComment(
                 "batch-1", "msg-1", "listen-123", "author-1", "author-name",
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
                 Channels.X, null, "hello", List.of("#ONE"), null,
-                revised, approved, versionMessage);
+                revised, approved, versionMessage, reject, publishedAt);
     }
 
     @Test
-    @DisplayName("Given no approval state (record written before spec 007), when built, then it is not approved")
-    void nullApprovedDefaultsToFalse() {
-        // Given / When a record without approved
+    @DisplayName("Given no approval state (record written before spec 007), when built, then it is in review")
+    void nullApprovedDefaultsToInReview() {
+        // Given / When a record without approved and never reviewed
         var enriched = reviewed(null, 1);
 
-        // Then it reads as pending approval, never null
-        assertThat(enriched.approved()).isFalse();
+        // Then it reads as waiting for a decision, never null
+        assertThat(enriched.approved()).isEqualTo(ApprovalStatus.IN_REVIEW);
+        assertThat(enriched.reject()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a reviewed record without a state (old approved=false), when built, then it reads as rejected")
+    void reviewedRecordWithoutStateReadsRejected() {
+        // Given / When a record that was reviewed and left unapproved before the enum existed
+        var enriched = reviewed(true, null, 2);
+
+        // Then the old "reviewed and not fit" combination becomes an explicit rejection (spec 007 RF-01)
+        assertThat(enriched.approved()).isEqualTo(ApprovalStatus.REJECTED);
+        assertThat(enriched.reject()).isTrue();
     }
 
     @Test
     @DisplayName("Given no review mark (record written before the 2026-10-13 amendment), when built, then it is not reviewed")
     void nullRevisedDefaultsToFalse() {
         // Given / When a record without revised
-        var enriched = reviewed(null, false, 1);
+        var enriched = reviewed(null, ApprovalStatus.IN_REVIEW, 1);
 
         // Then it reads as pending review, never null
         assertThat(enriched.revised()).isFalse();
@@ -371,7 +391,7 @@ class EnrichedCommentTest {
     @DisplayName("Given a missing or non-positive versionMessage, when built, then it is the AI original (1)")
     void missingOrInvalidVersionDefaultsToOne(Integer versionMessage) {
         // Given / When a record without a usable version
-        var enriched = reviewed(false, versionMessage);
+        var enriched = reviewed(ApprovalStatus.IN_REVIEW, versionMessage);
 
         // Then it is treated as the untouched AI output
         assertThat(enriched.versionMessage()).isEqualTo(1);
@@ -381,12 +401,60 @@ class EnrichedCommentTest {
     @DisplayName("Given valid review attributes, when built, then they are kept as received")
     void keepsValidReviewAttributes() {
         // Given / When a reviewed and approved post already edited twice
-        var enriched = reviewed(true, true, 3);
+        var enriched = reviewed(true, ApprovalStatus.APPROVED, 3);
 
         // Then nothing is reset
         assertThat(enriched.revised()).isTrue();
-        assertThat(enriched.approved()).isTrue();
+        assertThat(enriched.approved()).isEqualTo(ApprovalStatus.APPROVED);
         assertThat(enriched.versionMessage()).isEqualTo(3);
+    }
+
+    // ---------- spec 007 RF-01 (amendment 2026-10-16): reject and publishedAt ----------
+
+    @ParameterizedTest(name = "approved={0}, reject sent={1}")
+    @CsvSource({"APPROVED, true", "IN_REVIEW, true", "REJECTED, false", "REJECTED,"})
+    @DisplayName("Given any received reject, when built, then reject only mirrors approved=REJECTED")
+    void rejectIsDerivedFromState(ApprovalStatus approved, Boolean sentReject) {
+        // Given / When a record whose reject disagrees with its state (or is missing)
+        var enriched = decided(true, approved, sentReject, null, 2);
+
+        // Then the stored object can never contradict itself
+        assertThat(enriched.reject()).isEqualTo(approved == ApprovalStatus.REJECTED);
+    }
+
+    @Test
+    @DisplayName("Given a record without reject nor publishedAt (written before the amendment), when built, then they are false and null")
+    void missingNewFieldsHaveDefaults() {
+        // Given / When an approved record from before the amendment
+        var enriched = decided(true, ApprovalStatus.APPROVED, null, null, 2);
+
+        // Then it is readable and still unpublished
+        assertThat(enriched.reject()).isFalse();
+        assertThat(enriched.publishedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("Given an approved post with publishedAt, when built, then the date is kept")
+    void approvedPostKeepsPublishedAt() {
+        // Given the date the community manager published the post
+        Instant published = Instant.parse("2026-10-16T15:00:00Z");
+
+        // When built as approved
+        var enriched = decided(true, ApprovalStatus.APPROVED, null, published, 2);
+
+        // Then it is stored as received
+        assertThat(enriched.publishedAt()).isEqualTo(published);
+    }
+
+    @ParameterizedTest(name = "approved={0}")
+    @EnumSource(value = ApprovalStatus.class, names = {"IN_REVIEW", "REJECTED"})
+    @DisplayName("Given a publishedAt on a post that is not approved, when built, then it is rejected")
+    void publishedAtRequiresApproved(ApprovalStatus approved) {
+        // Given / When a publication date on a post nobody approved
+        // Then the record can't exist: only an approved post is published
+        assertThatThrownBy(() -> decided(true, approved, null, Instant.parse("2026-10-16T15:00:00Z"), 2))
+                .isInstanceOf(InvalidAssetException.class)
+                .hasMessageContaining("publishedAt");
     }
 
     // ---------- spec 007 RF-03: one value for "empty" in titlePost / cta ----------
@@ -398,7 +466,7 @@ class EnrichedCommentTest {
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 10, null, EnrichedComment.PROMPT_VERSION,
                 SENT, Source.DISCORD,
-                Channels.X, titlePost, "hello", List.of("#ONE"), cta, false, false, 1);
+                Channels.X, titlePost, "hello", List.of("#ONE"), cta, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     @ParameterizedTest(name = "cta=[{0}]")

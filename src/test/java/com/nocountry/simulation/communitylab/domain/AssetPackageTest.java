@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.PackageStats;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -135,7 +136,7 @@ class AssetPackageTest {
                 List.of("empleo"), 80, null, null, NOW, source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null, false, false, 1);
+                List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private static EnrichedComment fallback(String messageId) {
@@ -143,6 +144,6 @@ class AssetPackageTest {
                 BATCH_ID, messageId, "channel-1", "author-1", "tester",
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, NOW, Source.DISCORD,
-                Channels.FAQ, null, null, List.of(), null, false, false, 1);
+                Channels.FAQ, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 }

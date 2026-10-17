@@ -26,7 +26,11 @@ public class PatchPost {
 
     @Operation(
             summary = "Revise a post",
-            description = "Approves and/or edits the editable fields of one post of a stored package. "
+            description = "Approves, rejects and/or edits the editable fields of one post of a stored package. "
+                    + "approved is the review state: IN_REVIEW, APPROVED or REJECTED (a boolean is rejected); "
+                    + "reject is derived from it and can't be sent. "
+                    + "publishedAt (ISO-8601, not in the future) records when the post was published and needs approved=APPROVED; "
+                    + "once set it can't be cleared. "
                     + "Every saved change bumps versionMessage, sets revised=true and Object Storage keeps the previous version. "
                     + "Send {expectedVersion, revised:true} to mark a post as reviewed without editing it; revised:false is rejected. "
                     + "Send the versionMessage you have as expectedVersion; absent fields keep their value, "

@@ -44,6 +44,7 @@ import com.nocountry.simulation.communitylab.application.port.out.PackageIndex;
 import com.nocountry.simulation.communitylab.application.port.out.PackagePublisher;
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -589,7 +590,7 @@ class PackageRunServiceTest {
                 "Mensaje que el LLM no pudo analizar",
                 null, null, null, null, 0, EnrichedComment.LLM_FALLBACK, null,
                 Instant.parse("2026-10-06T10:00:00Z"), source,
-                null, null, null, null, null, false, false, 1);
+                null, null, null, null, null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private static EnrichedComment post(String messageId, Source source) {
@@ -600,6 +601,6 @@ class PackageRunServiceTest {
                 List.of("empleo"), 80, null, null, Instant.parse("2026-10-06T10:00:00Z"), source,
                 Channels.FAQ, "Primer empleo dev",
                 "Consegui mi primer empleo como dev Java gracias a la comunidad",
-                List.of("#EmpleoTech"), null, false, false, 1);
+                List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 }

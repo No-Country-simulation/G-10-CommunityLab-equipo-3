@@ -34,6 +34,7 @@ import com.nocountry.simulation.communitylab.application.port.out.EventPublishPo
 import com.nocountry.simulation.communitylab.domain.entity.AssetPackage;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.PostChange;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -85,7 +86,8 @@ class RevisePostServiceTest {
                 List.of("empleo"), 75, null, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
                 // An approved post was reviewed, so revised follows approved in these fixtures.
-                Channels.X, null, copy, List.of("#Java"), null, approved, approved, versionMessage);
+                Channels.X, null, copy, List.of("#Java"), null, approved,
+                approved ? ApprovalStatus.APPROVED : ApprovalStatus.IN_REVIEW, versionMessage, null, null);
     }
 
     private static EnrichedComment fallback(String messageId) {
@@ -94,7 +96,7 @@ class RevisePostServiceTest {
                 "content", Sentiment.NEUTRAL, Language.ES, MessageType.OTRO,
                 List.of(), 0, EnrichedComment.LLM_FALLBACK, EnrichedComment.PROMPT_VERSION,
                 NOW, Source.DISCORD,
-                null, null, null, List.of(), null, false, false, 1);
+                null, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private static AssetPackage pkg(EnrichedComment... records) {
@@ -110,11 +112,11 @@ class RevisePostServiceTest {
     }
 
     private static PostChange approve() {
-        return new PostChange(null, true, null, null, null, null, null, null);
+        return new PostChange(null, ApprovalStatus.APPROVED, null, null, null, null, null, null, null);
     }
 
     private static PostChange editCopy(String copy) {
-        return new PostChange(null, null, null, null, null, copy, null, null);
+        return new PostChange(null, null, null, null, null, copy, null, null, null);
     }
 
     private static EnrichedComment record(AssetPackage pkg, String messageId) {
@@ -134,7 +136,7 @@ class RevisePostServiceTest {
         RevisionResult result = service.revise(command("m-1", 1, approve()));
 
         // Entonces el frontend recibe la versión nueva (→ 200)
-        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, true, true, true));
+        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, ApprovalStatus.APPROVED, true, true));
     }
 
     @Test
@@ -151,7 +153,7 @@ class RevisePostServiceTest {
         // Entonces 1 PutObject If-Match: etag-1 con m-1 revisado y m-2 intacto
         ArgumentCaptor<AssetPackage> written = ArgumentCaptor.forClass(AssetPackage.class);
         verify(store).replace(written.capture(), eq("etag-1"));
-        assertThat(record(written.getValue(), "m-1").approved()).isTrue();
+        assertThat(record(written.getValue(), "m-1").approved()).isEqualTo(ApprovalStatus.APPROVED);
         assertThat(record(written.getValue(), "m-1").versionMessage()).isEqualTo(2);
         assertThat(record(written.getValue(), "m-2")).isEqualTo(record(original, "m-2"));
     }
@@ -169,7 +171,7 @@ class RevisePostServiceTest {
         // Entonces primero se escribe y luego se avisa, por el stream de su fuente y solo con ids + versión
         InOrder order = inOrder(store, events);
         order.verify(store).replace(any(), eq("etag-1"));
-        order.verify(events).publishRevision(new MessageRevised(Source.DISCORD, BATCH_ID, "m-1", 2, true, true));
+        order.verify(events).publishRevision(new MessageRevised(Source.DISCORD, BATCH_ID, "m-1", 2, ApprovalStatus.APPROVED, true));
     }
 
     @Test
@@ -186,7 +188,7 @@ class RevisePostServiceTest {
         // Entonces nunca toca la carpeta de Discord y avisa por el stream de Telegram
         verify(store).load(Source.TELEGRAM, BATCH_ID);
         verify(store, never()).load(eq(Source.DISCORD), anyString());
-        verify(events).publishRevision(new MessageRevised(Source.TELEGRAM, BATCH_ID, "m-1", 2, true, true));
+        verify(events).publishRevision(new MessageRevised(Source.TELEGRAM, BATCH_ID, "m-1", 2, ApprovalStatus.APPROVED, true));
     }
 
     // ---------- no-op (RF-04) ----------
@@ -201,7 +203,7 @@ class RevisePostServiceTest {
         RevisionResult result = service.revise(command("m-1", 2, approve()));
 
         // Entonces 200 con la misma versión, 0 PutObject y 0 eventos
-        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, true, true, false));
+        assertThat(result).isEqualTo(new RevisionResult(BATCH_ID, "m-1", 2, ApprovalStatus.APPROVED, true, false));
         verify(store, never()).replace(any(), anyString());
         verify(events, never()).publishRevision(any());
     }
@@ -323,7 +325,7 @@ class RevisePostServiceTest {
         // Entonces la última versión del objeto contiene los dos cambios
         ArgumentCaptor<AssetPackage> written = ArgumentCaptor.forClass(AssetPackage.class);
         verify(store).replace(written.capture(), eq("etag-2"));
-        assertThat(record(written.getValue(), "m-1").approved()).isTrue();
+        assertThat(record(written.getValue(), "m-1").approved()).isEqualTo(ApprovalStatus.APPROVED);
         assertThat(record(written.getValue(), "m-2").outputContentProcessed()).isEqualTo("Texto editado por otra pestaña");
         assertThat(record(written.getValue(), "m-2").versionMessage()).isEqualTo(2);
     }

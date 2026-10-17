@@ -74,6 +74,19 @@ flowchart LR
   * `RevisePostRequest` + `Boolean revised`; cuenta como cambio en el `@AssertTrue` "al menos un cambio" (`{expectedVersion, revised:true}` es válido); `@AssertTrue` aparte "`revised` solo admite `true`" → `400`; el mensaje de campos editables añade `revised`. `toChange()` lo pasa a `PostChange`.
   * `RevisePostResponse` + `revised`; `ResponseClient` + `revised`, copiado en `EnrichmentListener`; payload SSE `message.revised` + `revised`. Swagger: request, respuesta `200` y ejemplos de `asset.created`/`message.revised`.
 
+### 1.4 Enmienda 2026-10-16 — estado `approved`, `reject` y `publishedAt`
+
+* `domain`:
+  * `enums/ApprovalStatus {IN_REVIEW, APPROVED, REJECTED}`.
+  * `EnrichedComment`: `approved` pasa a `ApprovalStatus`; componentes nuevos al final `Boolean reject` (wrapper: Jackson 3 falla con `null` en primitivos y los registros viejos no traen el campo) e `Instant publishedAt`. Compact constructor: `revised` se normaliza **antes** que `approved`; `approved == null` → `revised ? REJECTED : IN_REVIEW` (regla de compatibilidad de spec RF-01); `reject = approved == REJECTED` siempre (el valor recibido se ignora); `publishedAt != null` con `approved != APPROVED` → `InvalidAssetException` (`400`). `merge` pasa `reject = null` y `orKeep(change.publishedAt(), publishedAt)`.
+  * `PostChange`: `ApprovalStatus approved` + `Instant publishedAt` (`null` = no enviado).
+* `application`: `ConvertEnrichedCommentService` construye con `IN_REVIEW, reject=null, publishedAt=null`; `ResponseClient` + `reject`, `publishedAt` y `approved` como estado; `RevisionResult` y `MessageRevised` con `approved` como estado. `RevisePostService` no cambia (el tipo fluye).
+* `infrastructure`:
+  * `RevisePostRequest`: `ApprovalStatus approved` + `@PastOrPresent Instant publishedAt`; cuenta en "al menos un cambio"; mensaje de editables con `publishedAt`. `reject` cae en `unknownFields` → `400` sin código nuevo.
+  * `RevisePostResponse` y payload SSE `RevisionPayload` con `approved` como estado.
+  * `config/jackson/LegacyApprovalDeserializer` (`ValueDeserializer<ApprovalStatus>`: `true → APPROVED`, `false → null`, texto → `valueOf`) + `config/jackson/EnrichedCommentMixin` (`@JacksonMixin(EnrichedComment.class)`, `@JsonDeserialize` sobre `approved()`). Spring Boot lo registra en el `ObjectMapper` que ya usan `RedisBufferAdapter` y `OciObjectStorageAdapter`.
+  * Swagger: descripción del `PATCH` y ejemplos `asset.created`/`message.revised` (Discord y Telegram).
+
 ## 2. Contratos de Datos / Interfaces
 
 * Request `PATCH /api/v1/{discord|telegram}/packages/{batchId}/messages/{messageId}`, `Content-Type: application/json`:
@@ -84,6 +97,7 @@ flowchart LR
 * Respuestas E1: `202 {batchId, messageId}` · `400` validación (forma del body, campo no editable, enum inválido, sin cambios).
 * Respuestas E2: `200 {batchId, messageId, versionMessage, approved, revised}` · `400` + reglas de canal · `404` paquete o post inexistente · `409` `expectedVersion` desfasada o conflicto tras 2 reintentos · `413` paquete guardado o revisado `>=1MB` · `422` registro `LLM_FALLBACK` · `502` fallo OCI · `503` `OCI_NOT_CONFIGURED`. El frontend debe tratar cualquier `2xx` como éxito para no romperse al pasar de `202` a `200`.
 * Registro en Redis y en el objeto OCI: cada `EnrichedComment` añade `approved` y `versionMessage` (E1 ya los escribe con `false, 1`) y `revised` (enmienda 2026-10-13, nace `false`).
+* *Enmienda 2026-10-16:* `approved` se escribe como estado (`"IN_REVIEW"|"APPROVED"|"REJECTED"`) y el registro añade `reject` (derivado) y `publishedAt` (ISO-8601 o `null`). Un post nuevo: `{"revised": false, "approved": "IN_REVIEW", "versionMessage": 1, "reject": false, "publishedAt": null}`. Request `PATCH`: `{"expectedVersion": 2, "approved": "APPROVED", "publishedAt": "2026-10-16T15:00:00Z"}`; `approved:true` o `reject` → `400`. Respuesta `200` y `message.revised`: mismo shape, con `approved` como estado.
 * SSE `asset.created` (`ResponseClient`): añade `approved`, `revised` y `versionMessage`, copiados del `EnrichedComment` en `EnrichmentListener` (mismo nombre de campo que el paquete).
 * SSE (E2) en el stream de su `source`: `{type:"message.revised", batchId, payload:{messageId, versionMessage, approved, revised}}`, `id = {messageId}:v{versionMessage}`, sin contenido ni PII.
 * `ArtifactStore` (E2): `save` (006, intacto) + `load(Source, batchId) -> Optional<StoredPackage{pkg, etag}>` + `replace(AssetPackage, etag) -> ReplaceResult{REPLACED|CONFLICT|FAILED}`.
@@ -135,6 +149,13 @@ flowchart LR
   Alternativa descartada: cambiar `approved` por un enum `PENDING|APPROVED|REJECTED`; dejar que el cliente envíe `revised` libremente (incluido `false`); que marcar revisado sin cambios no suba `versionMessage`.
   Razón: `approved=false` no distinguía "sin revisar" de "revisado y no apto". Un campo nuevo no rompe el contrato de `approved` que ya consume el frontend. Si el cliente pudiera enviar `false`, un post editado volvería a "por revisar"; `revised` es un hecho que registra el backend, como `versionMessage`. Marcar revisado reescribe el objeto en OCI, y sin subir la versión habría dos versiones con el mismo `versionMessage` (misma razón que aprobar, decisión 2026-10-09).
 
+* Decisión (2026-10-16): `approved` pasa a enum `IN_REVIEW|APPROVED|REJECTED`; `reject` se guarda derivado del estado; `publishedAt` lo envía el frontend. *Sustituye en parte la decisión 2026-10-13*, que descartó el enum para no romper el contrato de `approved`.
+  Alternativa descartada: mantener `approved` booleano + `revised` (el rechazo seguía implícito en una combinación de dos campos); `reject` editable e independiente del estado (dos fuentes de verdad que pueden contradecirse); que el backend ponga `publishedAt` al aprobar (sería la fecha de aprobación, no la de publicación).
+  Razón: el dashboard necesita rechazar explícitamente; un solo campo con el estado evita combinaciones inválidas. El cambio de contrato se coordina con el frontend, que lee los paquetes por la PAR y tiene que entender el formato viejo hasta que cada paquete se revise.
+* Decisión (2026-10-16): traducir el `approved` booleano de los registros guardados con un mixin de Jackson en `infrastructure/config/jackson`, no con un módulo global ni anotaciones en el dominio.
+  Alternativa descartada: `@JsonCreator` en el enum (Jackson dentro de `domain`); deserializador registrado para todo el `ObjectMapper` (el body del `PATCH` aceptaría `approved:false` como "no enviado" y no haría nada, sin avisar); migrar los objetos de OCI y Redis.
+  Razón: el dominio sigue sin dependencias de framework; solo los registros guardados aceptan el formato viejo y el `PATCH` sigue estricto. `@JacksonMixin` es de `spring-boot-jackson` (ya en el classpath): sin dependencias nuevas. El `false` se entrega como `null` porque solo el registro completo (con `revised`) distingue `IN_REVIEW` de `REJECTED`.
+
 ## 4. Estrategia de pruebas
 
 * **E1**
@@ -158,6 +179,13 @@ flowchart LR
   * `RedisBufferAdapterTest` / `OciObjectStorageAdapterRevisionTest`: registro sin `revised` → `false`, no se salta.
   * `PatchPostTest`: `{expectedVersion, revised:true}` → `200`; `revised:false` → `400` sin llamar al use case; la respuesta incluye `revised`.
   * `SseEventPublisherAdapterTest` / `EnrichmentListenerTest`: `message.revised` y `asset.created` llevan `revised`. `SwaggerDocsTest`: `revised` en request, respuesta y ejemplos.
+
+* **Enmienda estado `approved` (2026-10-16)**
+  * `EnrichedCommentTest`: `approved null` → `IN_REVIEW` (o `REJECTED` con `revised=true`); `reject` siempre igual a `approved == REJECTED`, aunque se construya con otro valor; `publishedAt` sin `APPROVED` → `InvalidAssetException`. `ConvertEnrichedCommentServiceTest`: nace `IN_REVIEW, reject=false, publishedAt=null`.
+  * `EnrichedCommentReviseTest`: rechazar → `REJECTED, reject=true, versionMessage + 1`; aprobar + `publishedAt` → guardado; `publishedAt` sobre un post no aprobado → excepción; post con `publishedAt` → rechazar falla.
+  * `LegacyApprovalJsonTest` (`ObjectMapper` real de Spring Boot): `true → APPROVED`, `false + revised → REJECTED`, `false` → `IN_REVIEW`, sin campo → `IN_REVIEW`, texto → estado, texto desconocido → error; un objeto `ResponseClient` con `approved:true` sigue fallando (el mixin solo aplica a `EnrichedComment`).
+  * `RedisBufferAdapterTest` / `OciObjectStorageAdapterRevisionTest`: registro con `approved` booleano se lee traducido, no se salta.
+  * `PatchPostTest`: `approved:"REJECTED"` → `200`; `approved:true` → `400`; `reject` → `400`; `publishedAt` futuro → `400`; `publishedAt` pasa al caso de uso.
 
 ## 5. Verificación
 

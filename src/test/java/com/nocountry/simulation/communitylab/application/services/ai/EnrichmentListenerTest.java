@@ -33,6 +33,7 @@ import com.nocountry.simulation.communitylab.application.port.out.RequestToLLMPr
 import com.nocountry.simulation.communitylab.domain.entity.Comment;
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.entity.ResponseModel;
+import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
 import com.nocountry.simulation.communitylab.domain.enums.Channels;
 import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
@@ -148,7 +149,7 @@ class EnrichmentListenerTest {
                 .thenReturn(fallbackPost);
 
         // When processed then no exception escapes
-        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"))).doesNotThrowAnyException();
 
         // Then the converter received exactly the neutral fallback response
         var responseCaptor = ArgumentCaptor.forClass(ResponseModel.class);
@@ -187,7 +188,9 @@ class EnrichmentListenerTest {
                 .thenThrow(new InvalidAssetException("copy is required"));
 
         // When processed then no exception escapes and nothing is published or buffered
-        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"))).doesNotThrowAnyException();
+        // Why: proves the discard comes from the converter, not from an earlier content rejection
+        verify(converter).constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID));
         verify(publisher, never()).publish(any());
         verify(buffer, never()).appendToBatch(any());
         verifyNoInteractions(packageRun);
@@ -202,12 +205,12 @@ class EnrichmentListenerTest {
                 BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
-                Channels.FAQ, null, null, List.of(), null, false, false, 1);
+                Channels.FAQ, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
         when(converter.constructMessage(any(Comment.class), any(ResponseModel.class), eq(BATCH_ID)))
                 .thenReturn(fallbackPost);
 
         // When processed
-        listener.on(event("hola comunidad"));
+        listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"));
 
         // Then the flag-first check lets the auditable trace through
         var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
@@ -226,7 +229,7 @@ class EnrichmentListenerTest {
                 .thenReturn(fallbackPost);
 
         // When processed then no exception escapes (listener maps to LLM_FALLBACK)
-        assertThatCode(() -> listener.on(event("hola comunidad"))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.on(event("Consegui mi primer empleo como dev Java, gracias comunidad"))).doesNotThrowAnyException();
 
         // Then the flagged trace still goes out and into the buffer
         var clientCaptor = ArgumentCaptor.forClass(ResponseClient.class);
@@ -326,7 +329,7 @@ class EnrichmentListenerTest {
                 "Consegui mi primer empleo como dev Java, gracias comunidad",
                 Sentiment.POSITIVO, Language.ES, MessageType.LOGRO,
                 List.of("empleo", "java"), 85, null, null, Instant.now(), Source.DISCORD,
-                Channels.FAQ, "Primer empleo dev", copy, List.of("#EmpleoTech"), null, false, false, 1);
+                Channels.FAQ, "Primer empleo dev", copy, List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private EnrichedComment fallbackPost() {
@@ -334,7 +337,7 @@ class EnrichmentListenerTest {
                 BATCH_ID, MESSAGE_ID, "channel-1", "author-1", "tester",
                 null, Sentiment.NEUTRAL, null, MessageType.OTRO, List.of(), 0,
                 EnrichedComment.LLM_FALLBACK, null, Instant.now(), Source.DISCORD,
-                Channels.FAQ, null, null, List.of(), null, false, false, 1);
+                Channels.FAQ, null, null, List.of(), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     private EnrichedComment validTelegramPost() {
@@ -345,7 +348,7 @@ class EnrichmentListenerTest {
                 List.of("empleo", "java"), 85, null, null, Instant.now(), Source.TELEGRAM,
                 Channels.FAQ, "Primer empleo dev",
                 "Conseguiste tu primer empleo como dev gracias a la comunidad?",
-                List.of("#EmpleoTech"), null, false, false, 1);
+                List.of("#EmpleoTech"), null, false, ApprovalStatus.IN_REVIEW, 1, null, null);
     }
 
     // Mirror of the listener's EnrichedComment -> ResponseClient mapping; a record
@@ -358,7 +361,7 @@ class EnrichmentListenerTest {
                 source.flag(), source.sentTime(), source.source(),
                 source.channelPost(), source.titlePost(), source.outputContentProcessed(),
                 source.hashtags(), source.cta(),
-                source.revised(), source.approved(), source.versionMessage());
+                source.revised(), source.approved(), source.versionMessage(), source.reject(), source.publishedAt());
     }
 
     // ---------- unexpected failures leave a trace (revisión 2026-10-12) ----------
