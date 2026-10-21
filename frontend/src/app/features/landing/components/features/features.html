@@ -3,17 +3,20 @@
   <div class="pointer-events-none absolute -top-40 right-0 -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-amber-400/15 via-rose-400/10 to-transparent blur-3xl dark:from-amber-500/10"></div>
   <div class="pointer-events-none absolute -bottom-40 left-0 -z-10 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-blue-400/15 via-purple-400/10 to-transparent blur-3xl dark:from-blue-500/10"></div>
 
-  <!-- Section header: eyebrow + title + lead, as in every landing section -->
-  <div class="mx-auto max-w-6xl mb-12 sm:mb-16" appReveal>
+  <!-- Stripe-Style Section Header: Bold Title + Editorial Muted Subtitle -->
+  <div class="mx-auto max-w-7xl mb-12 sm:mb-16" appReveal>
     <div class="max-w-3xl">
-      <p class="landing-eyebrow">{{ 'landing.features.eyebrow' | t }}</p>
-      <h2 class="landing-h2">{{ 'landing.features.bento.headerTitle' | t }}</h2>
-      <p class="landing-lead">{{ 'landing.features.bento.headerLead' | t }}</p>
+      <h2 class="font-display text-3xl font-extrabold tracking-tight text-espresso dark:text-white sm:text-4xl lg:text-[2.65rem] leading-[1.18]">
+        {{ 'landing.features.bento.headerTitle' | t }}
+        <span class="font-normal text-stone-500 dark:text-stone-400 block sm:inline mt-1 sm:mt-0">
+          {{ 'landing.features.bento.headerLead' | t }}
+        </span>
+      </h2>
     </div>
   </div>
 
   <!-- Bento Grid Container (Inspirado en la arquitectura visual de Stripe) -->
-  <div class="mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-7">
+  <div class="mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-7">
 
     <!-- ========================================================================= -->
     <!-- FILA 1 · CARD 1 (7 COLUMNAS): Ingesta Multicanal en Vivo (Discord & Telegram) -->
@@ -22,74 +25,144 @@
       class="md:col-span-7 rounded-[32px] border border-stone-200/80 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 p-7 sm:p-9 relative overflow-hidden backdrop-blur-sm shadow-[0_4px_24px_-4px_rgba(28,25,23,0.06)] hover:shadow-[0_20px_40px_-8px_rgba(28,25,23,0.12)] transition-all duration-500 group flex flex-col justify-between"
       appReveal
     >
-      <!-- Radiant Amber/Rose background gradient -->
-      <div class="pointer-events-none absolute -right-20 -bottom-20 w-96 h-96 rounded-full bg-gradient-to-tr from-amber-400/20 via-orange-400/15 to-rose-400/20 blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700"></div>
+      <!-- Radiant Discord/Telegram ambient background gradient -->
+      <div class="pointer-events-none absolute -right-20 -bottom-20 w-96 h-96 rounded-full bg-gradient-to-tr from-[#5865f2]/15 via-[#229ed9]/15 to-amber-400/15 blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700"></div>
 
       <!-- Card Top Header -->
       <div class="relative z-10">
-        <div class="flex items-start justify-between gap-4">
-          <h3 class="font-display text-xl sm:text-2xl font-bold text-espresso dark:text-white leading-tight">
-            {{ 'landing.features.card1.title' | t }}
-          </h3>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 group-hover:bg-amber-500/15 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-            <i class="pi pi-arrow-up-right text-xs"></i>
-          </span>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 dark:border-emerald-500/25 bg-emerald-50/90 dark:bg-emerald-500/10 px-3 py-1">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+              Escucha activa · {{ ingestedCount() }} mensajes capturados
+            </span>
+          </div>
+
+          <button
+            type="button"
+            (click)="simulateIngest()"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200/90 dark:border-stone-700 bg-white/90 dark:bg-stone-800 px-3 py-1.5 text-[11px] font-bold text-espresso dark:text-stone-200 shadow-sm hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400 active:scale-95 transition-all cursor-pointer"
+          >
+            <i class="pi pi-sync text-[10px]"></i> Simular nuevo mensaje
+          </button>
         </div>
-        <p class="mt-2.5 text-sm leading-relaxed text-stone-600 dark:text-stone-400 max-w-xl">
+
+        <h3 class="font-display text-xl sm:text-2xl font-bold text-espresso dark:text-white leading-tight">
+          {{ 'landing.features.card1.title' | t }}
+        </h3>
+        <p class="mt-2.5 text-sm leading-relaxed text-stone-600 dark:text-stone-400 max-w-2xl">
           {{ 'landing.features.card1.desc' | t }}
         </p>
       </div>
 
-      <!-- Card Visual Mockup: Chat & Ingestion Pipeline -->
-      <div class="relative z-10 mt-8 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <!-- 1. Simulated Discord/Telegram Message Card -->
-        <div class="rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-4 shadow-sm backdrop-blur-md flex flex-col justify-between">
+      <!-- Interactive Dual-Channel Live Feed: Discord & Telegram -->
+      <div class="relative z-10 mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <!-- 1. Interactive Discord Live Card -->
+        <button
+          type="button"
+          (click)="selectChannel('discord')"
+          class="text-left rounded-2xl border p-4 transition-all duration-300 backdrop-blur-md flex flex-col justify-between cursor-pointer"
+          [class]="activeChannel() === 'discord'
+            ? 'border-[#5865f2] dark:border-[#7983f5] bg-white dark:bg-stone-800 shadow-[0_10px_25px_-5px_rgba(88,101,242,0.18)] -translate-y-0.5 ring-2 ring-[#5865f2]/20'
+            : 'border-stone-200/90 dark:border-stone-700/80 bg-white/85 dark:bg-stone-800/70 opacity-85 hover:opacity-100 hover:border-stone-300 dark:hover:border-stone-600'"
+        >
           <div>
-            <div class="flex items-center justify-between mb-2.5">
-              <span class="inline-flex items-center gap-1.5 rounded-md bg-[#5865f2]/10 px-2 py-0.5 text-[11px] font-bold text-[#5865f2] dark:text-[#7983f5]">
-                <i class="pi pi-discord text-[10px]"></i> #comunidad
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <span class="inline-flex items-center gap-1.5 rounded-lg bg-[#5865f2]/10 dark:bg-[#5865f2]/20 px-2.5 py-1 text-[11px] font-bold text-[#5865f2] dark:text-[#7983f5]">
+                <i class="pi pi-discord text-xs"></i> {{ currentDiscord().channel }}
               </span>
-              <span class="text-[10px] text-stone-400">{{ 'landing.ui.now' | t }}</span>
+              <span class="text-[10px] font-medium text-stone-400">{{ currentDiscord().time }}</span>
             </div>
-            <p class="text-xs font-medium text-espresso dark:text-stone-200 leading-snug">
-              «¡Muchachos, acabo de firmar mi primer contrato dev gracias al feedback del reto! 🚀»
+
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <span class="text-xs font-bold text-espresso dark:text-white">{{ currentDiscord().author }}</span>
+              <span class="rounded bg-stone-100 dark:bg-stone-700 px-1.5 py-0.5 text-[9px] font-semibold text-stone-500 dark:text-stone-300">
+                {{ currentDiscord().role }}
+              </span>
+            </div>
+
+            <p class="text-xs font-medium text-stone-700 dark:text-stone-200 leading-snug">
+              {{ currentDiscord().text }}
             </p>
           </div>
-          <div class="mt-3 flex items-center gap-2 pt-2 border-t border-stone-100 dark:border-stone-700/60">
-            <span class="text-[11px] font-semibold text-stone-600 dark:text-stone-300">🎉 28</span>
-            <span class="text-[11px] font-semibold text-stone-600 dark:text-stone-300">❤️ 19</span>
-            <span class="text-[11px] font-semibold text-stone-600 dark:text-stone-300">👏 14</span>
-          </div>
-        </div>
 
-        <!-- 2. Normalization & Redis Buffer Status -->
-        <div class="rounded-2xl border border-amber-200/60 dark:border-amber-500/20 bg-gradient-to-br from-amber-50/80 to-white/90 dark:from-stone-800/90 dark:to-stone-800/60 p-4 shadow-sm flex flex-col justify-between">
+          <div class="mt-3.5 pt-2.5 border-t border-stone-100 dark:border-stone-700/60 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              @for (reaction of currentDiscord().reactions; track reaction.emoji) {
+                <span class="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                  {{ reaction.emoji }} {{ reaction.count }}
+                </span>
+              }
+            </div>
+            <span class="rounded-md bg-[#5865f2]/10 px-2 py-0.5 text-[10px] font-bold text-[#5865f2] dark:text-[#7983f5]">
+              {{ currentDiscord().category }}
+            </span>
+          </div>
+        </button>
+
+        <!-- 2. Interactive Telegram Live Card -->
+        <button
+          type="button"
+          (click)="selectChannel('telegram')"
+          class="text-left rounded-2xl border p-4 transition-all duration-300 backdrop-blur-md flex flex-col justify-between cursor-pointer"
+          [class]="activeChannel() === 'telegram'
+            ? 'border-[#229ed9] dark:border-[#38bdf8] bg-white dark:bg-stone-800 shadow-[0_10px_25px_-5px_rgba(34,158,217,0.18)] -translate-y-0.5 ring-2 ring-[#229ed9]/20'
+            : 'border-stone-200/90 dark:border-stone-700/80 bg-white/85 dark:bg-stone-800/70 opacity-85 hover:opacity-100 hover:border-stone-300 dark:hover:border-stone-600'"
+        >
           <div>
-            <div class="flex items-center gap-2 mb-2">
-              <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <span class="inline-flex items-center gap-1.5 rounded-lg bg-[#229ed9]/10 dark:bg-[#229ed9]/20 px-2.5 py-1 text-[11px] font-bold text-[#229ed9] dark:text-[#38bdf8]">
+                <i class="pi pi-telegram text-xs"></i> {{ currentTelegram().channel }}
               </span>
-              <span class="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Buffer Redis</span>
+              <span class="text-[10px] font-medium text-stone-400">{{ currentTelegram().time }}</span>
             </div>
-            <div class="space-y-1.5">
-              <div class="flex justify-between text-[11px]">
-                <span class="text-stone-500 dark:text-stone-400">{{ 'landing.ui.status' | t }}</span>
-                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ 'landing.ui.normalized' | t }}</span>
-              </div>
-              <div class="flex justify-between text-[11px]">
-                <span class="text-stone-500 dark:text-stone-400">{{ 'landing.ui.category' | t }}</span>
-                <span class="font-bold text-espresso dark:text-stone-200">{{ 'landing.ui.categoryValue' | t }}</span>
-              </div>
-              <div class="flex justify-between text-[11px]">
-                <span class="text-stone-500 dark:text-stone-400">{{ 'landing.ui.batch' | t }}</span>
-                <span class="font-mono text-[10px] text-stone-600 dark:text-stone-300">batch_900kb_open</span>
-              </div>
+
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <span class="text-xs font-bold text-espresso dark:text-white">{{ currentTelegram().author }}</span>
+              <span class="rounded bg-stone-100 dark:bg-stone-700 px-1.5 py-0.5 text-[9px] font-semibold text-stone-500 dark:text-stone-300">
+                {{ currentTelegram().role }}
+              </span>
             </div>
+
+            <p class="text-xs font-medium text-stone-700 dark:text-stone-200 leading-snug">
+              {{ currentTelegram().text }}
+            </p>
           </div>
-          <div class="mt-3 text-[10px] font-semibold text-amber-700/80 dark:text-amber-400/80 flex items-center gap-1">
-            <i class="pi pi-bolt text-[9px]"></i> {{ 'landing.ui.instantIngest' | t }}
+
+          <div class="mt-3.5 pt-2.5 border-t border-stone-100 dark:border-stone-700/60 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              @for (reaction of currentTelegram().reactions; track reaction.emoji) {
+                <span class="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                  {{ reaction.emoji }} {{ reaction.count }}
+                </span>
+              }
+            </div>
+            <span class="rounded-md bg-[#229ed9]/10 px-2 py-0.5 text-[10px] font-bold text-[#229ed9] dark:text-[#38bdf8]">
+              {{ currentTelegram().category }}
+            </span>
           </div>
+        </button>
+      </div>
+
+      <!-- Bottom Unified Pipeline Routing Bar (Dynamic based on selected channel) -->
+      <div class="relative z-10 mt-3.5 rounded-xl border border-stone-200/80 dark:border-stone-700/70 bg-stone-50/90 dark:bg-stone-800/80 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+        <div class="flex items-center gap-2">
+          <span
+            class="inline-flex h-5 w-5 items-center justify-center rounded-md text-white"
+            [class]="activeChannel() === 'discord' ? 'bg-[#5865f2]' : 'bg-[#229ed9]'"
+          >
+            <i [class]="activeChannel() === 'discord' ? 'pi pi-discord text-[10px]' : 'pi pi-telegram text-[10px]'"></i>
+          </span>
+          <span class="font-semibold text-stone-600 dark:text-stone-300">
+            Seleccionado: <strong class="text-espresso dark:text-white">{{ selectedSample().author }} ({{ selectedSample().channel }})</strong>
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400">
+          <i class="pi pi-bolt text-[10px]"></i>
+          <span>Ruta IA: {{ selectedSample().route }}</span>
         </div>
       </div>
     </div>
@@ -106,61 +179,101 @@
 
       <!-- Card Top Header -->
       <div class="relative z-10">
-        <div class="flex items-start justify-between gap-4">
-          <h3 class="font-display text-xl sm:text-2xl font-bold text-espresso dark:text-white leading-tight">
-            {{ 'landing.features.card2.title' | t }}
-          </h3>
-          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 group-hover:bg-violet-500/15 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-            <i class="pi pi-arrow-up-right text-xs"></i>
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-violet-200/80 dark:border-violet-500/25 bg-violet-50/90 dark:bg-violet-500/10 px-3 py-1 text-[11px] font-bold text-violet-700 dark:text-violet-300">
+            <i class="pi pi-sparkles text-[10px]"></i> Clasificador inteligente
+          </span>
+          <span class="text-[10px] font-semibold text-stone-400 dark:text-stone-500">
+            Sincronizado en vivo
           </span>
         </div>
+
+        <h3 class="font-display text-xl sm:text-2xl font-bold text-espresso dark:text-white leading-tight">
+          {{ 'landing.features.card2.title' | t }}
+        </h3>
         <p class="mt-2.5 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           {{ 'landing.features.card2.desc' | t }}
         </p>
       </div>
 
-      <!-- Card Visual Mockup: AI Metric Card & Mini Bar Chart (Stripe style) -->
-      <div class="relative z-10 mt-7 rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-4 shadow-sm backdrop-blur-md">
+      <!-- Interactive LLM Classifier Panel -->
+      <div class="relative z-10 mt-6 rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-4 shadow-sm backdrop-blur-md">
+        <!-- 3 Interactive Scenario Tabs (Logro | Duda | Ruido) -->
+        <div class="grid grid-cols-3 gap-1.5 rounded-xl bg-stone-100/90 dark:bg-stone-900/80 p-1 mb-3.5">
+          @for (item of analysisCases; track item.id) {
+            <button
+              type="button"
+              (click)="selectAnalysis(item.id)"
+              class="flex items-center justify-center gap-1.5 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all cursor-pointer"
+              [class]="activeAnalysisId() === item.id
+                ? 'bg-white dark:bg-stone-800 text-violet-700 dark:text-violet-300 shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-700'
+                : 'text-stone-500 dark:text-stone-400 hover:text-espresso dark:hover:text-stone-200'"
+            >
+              <i [class]="item.icon + ' text-[10px]'"></i>
+              <span class="truncate">{{ item.label }}</span>
+            </button>
+          }
+        </div>
+
+        <!-- Score & Status Header -->
         <div class="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-700/60">
           <div class="flex items-center gap-2">
             <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-400">
-              <i class="pi pi-sparkles text-xs"></i>
+              <i class="pi pi-microchip-ai text-xs"></i>
             </span>
-            <span class="text-xs font-bold text-espresso dark:text-white">Motor Ukuku LLM</span>
+            <div>
+              <p class="text-xs font-bold text-espresso dark:text-white leading-none">Motor Ukuku LLM</p>
+              <p class="text-[10px] text-stone-400 mt-0.5">{{ currentAnalysis().sentiment }}</p>
+            </div>
           </div>
-          <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-            {{ 'landing.ui.relevance' | t }}
+
+          <span
+            class="rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors"
+            [class]="currentAnalysis().statusKind === 'publish'
+              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+              : (currentAnalysis().statusKind === 'faq'
+                  ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300'
+                  : 'bg-stone-100 text-stone-600 dark:bg-stone-700 dark:text-stone-300')"
+          >
+            {{ currentAnalysis().relevance }}% Relevancia
           </span>
         </div>
 
+        <!-- LLM Reasoning Explanation -->
+        <p class="mt-3 rounded-xl bg-stone-50/90 dark:bg-stone-900/60 border border-stone-200/60 dark:border-stone-700/50 p-2.5 text-[11px] text-stone-600 dark:text-stone-300 leading-snug italic">
+          {{ currentAnalysis().reason }}
+        </p>
+
         <!-- Detected Tags -->
-        <div class="mt-3 flex flex-wrap gap-1.5">
-          <span class="rounded-md bg-stone-100 dark:bg-stone-700 px-2 py-0.5 text-[10px] font-semibold text-stone-600 dark:text-stone-300">#PrimerEmpleo</span>
-          <span class="rounded-md bg-stone-100 dark:bg-stone-700 px-2 py-0.5 text-[10px] font-semibold text-stone-600 dark:text-stone-300">#DevCommunity</span>
-          <span class="rounded-md bg-stone-100 dark:bg-stone-700 px-2 py-0.5 text-[10px] font-semibold text-stone-600 dark:text-stone-300">#CasoDeÉxito</span>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
+          @for (tag of currentAnalysis().tags; track tag) {
+            <span class="rounded-md bg-violet-50/80 dark:bg-violet-500/10 border border-violet-200/50 dark:border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:text-violet-300">
+              {{ tag }}
+            </span>
+          }
         </div>
 
-        <!-- Mini Bar Chart (Simulando métricas de sentimiento) -->
-        <div class="mt-4 pt-2">
-          <div class="flex items-end justify-between h-14 gap-1.5 px-1">
-            <div class="w-full bg-violet-200 dark:bg-violet-900/40 rounded-t-sm h-[35%]"></div>
-            <div class="w-full bg-violet-300 dark:bg-violet-800/50 rounded-t-sm h-[55%]"></div>
-            <div class="w-full bg-violet-400 dark:bg-violet-700/60 rounded-t-sm h-[40%]"></div>
-            <div class="w-full bg-violet-500 dark:bg-violet-600/70 rounded-t-sm h-[75%]"></div>
-            <div class="w-full bg-violet-600 dark:bg-violet-500 rounded-t-sm h-[95%]"></div>
-            <div class="w-full bg-violet-500 dark:bg-violet-600/70 rounded-t-sm h-[80%]"></div>
-            <div class="w-full bg-violet-600 dark:bg-violet-500 rounded-t-sm h-[100%] shadow-[0_0_12px_rgba(139,92,246,0.5)]"></div>
+        <!-- Dynamic Relevance Progress & Action Decision -->
+        <div class="mt-3.5 pt-2.5 border-t border-stone-100 dark:border-stone-700/60">
+          <div class="flex items-center justify-between text-[10px] font-bold mb-1.5">
+            <span class="text-stone-500 dark:text-stone-400">Decisión IA:</span>
+            <span class="text-espresso dark:text-white">{{ currentAnalysis().statusLabel }} → {{ currentAnalysis().route }}</span>
           </div>
-          <div class="mt-1.5 flex justify-between text-[9px] font-bold text-stone-400">
-            <span>{{ 'landing.ui.sentiment' | t }}</span>
-            <span class="text-violet-600 dark:text-violet-400">{{ 'landing.ui.positive' | t }}</span>
+          <div class="h-2 w-full rounded-full bg-stone-100 dark:bg-stone-700 overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-500"
+              [class]="currentAnalysis().statusKind === 'discard'
+                ? 'bg-stone-400 dark:bg-stone-500'
+                : 'bg-gradient-to-r from-violet-500 via-purple-500 to-amber-500'"
+              [style.width.%]="currentAnalysis().relevance"
+            ></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- FILA 2 · CARD 3 (4 COLUMNAS): Publicación Directa en X (Twitter) & LinkedIn-->
+    <!-- FILA 2 · CARD 3 (4 COLUMNAS): Distribución Multicanal en X y LinkedIn     -->
     <!-- ========================================================================= -->
     <div
       class="md:col-span-4 rounded-[32px] border border-stone-200/80 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 p-7 relative overflow-hidden backdrop-blur-sm shadow-[0_4px_24px_-4px_rgba(28,25,23,0.06)] hover:shadow-[0_20px_40px_-8px_rgba(28,25,23,0.12)] transition-all duration-500 group flex flex-col justify-between"
@@ -171,47 +284,87 @@
 
       <!-- Header -->
       <div class="relative z-10">
-        <div class="flex items-start justify-between gap-3">
-          <h3 class="font-display text-lg sm:text-xl font-bold text-espresso dark:text-white leading-tight">
-            {{ 'landing.features.card3.title' | t }}
-          </h3>
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 group-hover:bg-blue-500/15 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            <i class="pi pi-arrow-up-right text-xs"></i>
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-sky-200/80 dark:border-sky-500/25 bg-sky-50/90 dark:bg-sky-500/10 px-2.5 py-0.5 text-[10px] font-bold text-sky-700 dark:text-sky-300">
+            <i class="pi pi-share-alt text-[9px]"></i> Tono adaptativo por red
           </span>
         </div>
+        <h3 class="font-display text-lg sm:text-xl font-bold text-espresso dark:text-white leading-tight">
+          {{ 'landing.features.card3.title' | t }}
+        </h3>
         <p class="mt-2 text-xs sm:text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           {{ 'landing.features.card3.desc' | t }}
         </p>
       </div>
 
-      <!-- Visual Mockup: X & LinkedIn Generated Post Snippet -->
+      <!-- Interactive Social Format Switcher (X vs LinkedIn) -->
       <div class="relative z-10 mt-6 rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-3.5 shadow-sm">
-        <div class="flex items-center gap-2 mb-2">
-          <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900">
-            <svg class="h-3 w-3 fill-current" viewBox="0 0 300 271">
+        <!-- Network Toggle Tabs -->
+        <div class="grid grid-cols-2 gap-1 rounded-xl bg-stone-100/90 dark:bg-stone-900/80 p-1 mb-3">
+          <button
+            type="button"
+            (click)="selectSocial('x')"
+            class="flex items-center justify-center gap-1.5 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all cursor-pointer"
+            [class]="activeSocial() === 'x'
+              ? 'bg-white dark:bg-stone-800 text-espresso dark:text-white shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-700'
+              : 'text-stone-500 dark:text-stone-400 hover:text-espresso dark:hover:text-stone-200'"
+          >
+            <svg class="h-2.5 w-2.5 fill-current" viewBox="0 0 300 271">
               <path d="m236 0h46l-101 115 118 156h-92.6l-72.5-94.8-83 94.8h-46l107-123-113-148h94.9l65.5 86.6zm-16.1 244h25.5l-165-218h-27.4z"/>
             </svg>
-          </div>
-          <div>
-            <p class="text-[11px] font-bold text-espresso dark:text-white leading-none">Post X / Twitter</p>
-            <p class="text-[9px] text-stone-400">{{ 'landing.ui.oauth' | t }}</p>
-          </div>
-          <span class="ml-auto text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded">
-            {{ 'landing.ui.ready' | t }}
-          </span>
+            <span>Hilo para X</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="selectSocial('linkedin')"
+            class="flex items-center justify-center gap-1.5 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all cursor-pointer"
+            [class]="activeSocial() === 'linkedin'
+              ? 'bg-white dark:bg-stone-800 text-[#0a66c2] dark:text-[#70b5f9] shadow-sm ring-1 ring-stone-200/80 dark:ring-stone-700'
+              : 'text-stone-500 dark:text-stone-400 hover:text-espresso dark:hover:text-stone-200'"
+          >
+            <i class="pi pi-linkedin text-[11px]"></i>
+            <span>Post LinkedIn</span>
+          </button>
         </div>
-        <p class="text-[11px] text-stone-700 dark:text-stone-300 italic leading-snug line-clamp-3">
-          «¡Orgullo de comunidad! Carlos acaba de firmar su primer contrato laboral tras semanas de práctica colectiva 🧵👇»
-        </p>
-        <div class="mt-2.5 flex items-center justify-between text-[10px] text-stone-400 pt-1.5 border-t border-stone-100 dark:border-stone-700/60 font-semibold">
-          <span>+ LinkedIn sync</span>
-          <span class="text-blue-600 dark:text-blue-400">{{ 'landing.ui.oneClick' | t }}</span>
+
+        <!-- Network Preview Body -->
+        @if (activeSocial() === 'x') {
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-bold text-espresso dark:text-white">Formato ágil · Hilo 1/3</span>
+            <span class="text-[9px] font-mono text-stone-400">214 / 280 chars</span>
+          </div>
+          <p class="text-[11px] text-stone-700 dark:text-stone-300 leading-snug">
+            «¡Orgullo de comunidad! Mariana acaba de firmar su primer contrato como Dev IA tras semanas de práctica colectiva 🚀🧵👇»
+          </p>
+        } @else {
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[10px] font-bold text-[#0a66c2] dark:text-[#70b5f9]">Storytelling profesional · B2B</span>
+            <span class="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">+Alcance orgánico</span>
+          </div>
+          <p class="text-[11px] text-stone-700 dark:text-stone-300 leading-snug">
+            «El aprendizaje en comunidad acelera carreras. Hoy celebramos el nuevo rol de Mariana como Desarrolladora IA Junior...»
+          </p>
+        }
+
+        <div class="mt-3 pt-2 border-t border-stone-100 dark:border-stone-700/60 flex items-center justify-between text-[10px]">
+          <span class="font-medium text-stone-400">#CasoDeÉxito #Comunidad</span>
+          <button
+            type="button"
+            (click)="triggerPublish()"
+            class="rounded-lg px-2.5 py-1 font-bold transition-all cursor-pointer"
+            [class]="socialPublished()
+              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+              : 'bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-100'"
+          >
+            {{ socialPublished() ? '¡Publicado! ✓' : 'Publicar en 1 clic →' }}
+          </button>
         </div>
       </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- FILA 2 · CARD 4 (4 COLUMNAS): Auto-generación de FAQs & Knowledge Base    -->
+    <!-- FILA 2 · CARD 4 (4 COLUMNAS): Base de Conocimiento y FAQs Vivas           -->
     <!-- ========================================================================= -->
     <div
       class="md:col-span-4 rounded-[32px] border border-stone-200/80 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 p-7 relative overflow-hidden backdrop-blur-sm shadow-[0_4px_24px_-4px_rgba(28,25,23,0.06)] hover:shadow-[0_20px_40px_-8px_rgba(28,25,23,0.12)] transition-all duration-500 group flex flex-col justify-between"
@@ -222,88 +375,124 @@
 
       <!-- Header -->
       <div class="relative z-10">
-        <div class="flex items-start justify-between gap-3">
-          <h3 class="font-display text-lg sm:text-xl font-bold text-espresso dark:text-white leading-tight">
-            {{ 'landing.features.card4.title' | t }}
-          </h3>
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 group-hover:bg-emerald-500/15 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-            <i class="pi pi-arrow-up-right text-xs"></i>
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 dark:border-emerald-500/25 bg-emerald-50/90 dark:bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+            <i class="pi pi-book text-[9px]"></i> Respuestas reutilizables
           </span>
         </div>
+        <h3 class="font-display text-lg sm:text-xl font-bold text-espresso dark:text-white leading-tight">
+          {{ 'landing.features.card4.title' | t }}
+        </h3>
         <p class="mt-2 text-xs sm:text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           {{ 'landing.features.card4.desc' | t }}
         </p>
       </div>
 
-      <!-- Visual Mockup: Q&A Structured Card -->
+      <!-- Interactive Q&A Structured Card -->
       <div class="relative z-10 mt-6 rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-3.5 shadow-sm">
-        <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center justify-between gap-2 mb-2.5">
           <span class="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-            {{ 'landing.ui.recurring' | t }}
+            {{ currentFaq().badge }}
           </span>
-          <i class="pi pi-question-circle text-xs text-emerald-600 dark:text-emerald-400"></i>
+          <div class="flex items-center gap-1">
+            @for (faq of faqItems; track faq.question; let idx = $index) {
+              <button
+                type="button"
+                (click)="nextFaq(idx)"
+                class="h-5 w-5 rounded-md text-[10px] font-bold transition-colors cursor-pointer"
+                [class]="activeFaqIdx() === idx
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-stone-100 dark:bg-stone-700 text-stone-500 dark:text-stone-300 hover:bg-stone-200'"
+              >
+                {{ idx + 1 }}
+              </button>
+            }
+          </div>
         </div>
+
         <p class="text-[11px] font-bold text-espresso dark:text-white leading-snug">
-          Q: «¿Cómo conecto mi bot de Discord con el pipeline?»
+          Q: «{{ currentFaq().question }}»
         </p>
-        <p class="mt-1 text-[10px] text-stone-500 dark:text-stone-400 line-clamp-2">
-          A: «Ukuku AI usa un listener reactivo con token JDA que auto-enruta a Redis...»
+        <p class="mt-1.5 text-[11px] text-stone-600 dark:text-stone-300 leading-snug">
+          A: {{ currentFaq().answer }}
         </p>
-        <div class="mt-2.5 pt-1.5 border-t border-stone-100 dark:border-stone-700/60 flex items-center justify-between text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-          <span>{{ 'landing.ui.knowledgeBase' | t }}</span>
-          <span>{{ 'landing.ui.synced' | t }}</span>
+
+        <div class="mt-3 pt-2 border-t border-stone-100 dark:border-stone-700/60 flex items-center justify-between text-[10px]">
+          <span class="font-medium text-stone-400">{{ currentFaq().source }}</span>
+          <button
+            type="button"
+            (click)="copyFaq()"
+            class="font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            {{ faqCopied() ? '¡Copiada! ✓' : 'Copiar para guía →' }}
+          </button>
         </div>
       </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- FILA 2 · CARD 5 (4 COLUMNAS): Almacenamiento Seguro en OCI Always Free     -->
+    <!-- FILA 2 · CARD 5 (4 COLUMNAS): Historial Trazable y Memoria Comunitaria    -->
     <!-- ========================================================================= -->
     <div
       class="md:col-span-4 rounded-[32px] border border-stone-200/80 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 p-7 relative overflow-hidden backdrop-blur-sm shadow-[0_4px_24px_-4px_rgba(28,25,23,0.06)] hover:shadow-[0_20px_40px_-8px_rgba(28,25,23,0.12)] transition-all duration-500 group flex flex-col justify-between"
       appReveal="200"
     >
-      <!-- Radiant Oracle Red/Rose background gradient -->
-      <div class="pointer-events-none absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-gradient-to-tr from-[#c74634]/20 via-orange-500/15 to-rose-500/20 blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700"></div>
+      <!-- Radiant Amber/Orange background gradient -->
+      <div class="pointer-events-none absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-gradient-to-tr from-amber-500/20 via-orange-500/15 to-rose-500/15 blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700"></div>
 
       <!-- Header -->
       <div class="relative z-10">
-        <div class="flex items-start justify-between gap-3">
-          <h3 class="font-display text-lg sm:text-xl font-bold text-espresso dark:text-white leading-tight">
-            {{ 'landing.features.card5.title' | t }}
-          </h3>
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 group-hover:bg-[#c74634]/15 group-hover:text-[#c74634] transition-colors">
-            <i class="pi pi-arrow-up-right text-xs"></i>
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 dark:border-amber-500/25 bg-amber-50/90 dark:bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+            <i class="pi pi-history text-[9px]"></i> Trazabilidad de extremo a extremo
           </span>
         </div>
+        <h3 class="font-display text-lg sm:text-xl font-bold text-espresso dark:text-white leading-tight">
+          {{ 'landing.features.card5.title' | t }}
+        </h3>
         <p class="mt-2 text-xs sm:text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           {{ 'landing.features.card5.desc' | t }}
         </p>
       </div>
 
-      <!-- Visual Mockup: OCI Cloud Storage Bucket Card -->
+      <!-- Interactive History & Audit Log Explorer -->
       <div class="relative z-10 mt-6 rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-white/95 dark:bg-stone-800/95 p-3.5 shadow-sm">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-1.5 text-[#c74634]">
-            <i class="pi pi-cloud text-xs"></i>
-            <span class="text-[11px] font-bold">Oracle Cloud (OCI)</span>
-          </div>
-          <span class="rounded bg-[#c74634]/10 px-1.5 py-0.5 text-[9px] font-bold text-[#c74634]">
-            $0 / Always Free
-          </span>
+        <!-- Mini Timeline Selector -->
+        <div class="space-y-1.5 mb-2.5">
+          @for (item of historyItems; track item.id; let idx = $index) {
+            <button
+              type="button"
+              (click)="selectHistory(idx)"
+              class="w-full text-left flex items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 transition-all cursor-pointer"
+              [class]="activeHistoryIdx() === idx
+                ? 'bg-amber-50/90 dark:bg-amber-500/15 border border-amber-300/70 dark:border-amber-500/30'
+                : 'hover:bg-stone-100/80 dark:hover:bg-stone-700/50 border border-transparent'"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <span
+                  class="h-2 w-2 rounded-full shrink-0"
+                  [class]="activeHistoryIdx() === idx ? 'bg-amber-500' : 'bg-stone-300 dark:bg-stone-600'"
+                ></span>
+                <span class="truncate text-[11px] font-bold text-espresso dark:text-white">{{ item.title }}</span>
+              </div>
+              <span class="text-[9px] font-medium text-stone-400 shrink-0">{{ item.date }}</span>
+            </button>
+          }
         </div>
-        <div class="space-y-1 text-[10px]">
-          <div class="flex justify-between text-stone-500 dark:text-stone-400">
-            <span>Bucket:</span>
-            <span class="font-mono text-espresso dark:text-white">communitylab-oci</span>
+
+        <!-- Selected Record Lineage Detail -->
+        <div class="rounded-xl bg-stone-50/90 dark:bg-stone-900/70 border border-stone-200/60 dark:border-stone-700/60 p-2.5 text-[10px] space-y-1">
+          <div class="flex justify-between">
+            <span class="text-stone-400">Origen:</span>
+            <span class="font-semibold text-espresso dark:text-stone-200">{{ currentHistory().origin }}</span>
           </div>
-          <div class="flex justify-between text-stone-500 dark:text-stone-400">
-            <span>{{ 'landing.ui.closedBatch' | t }}</span>
-            <span class="font-semibold text-emerald-600 dark:text-emerald-400">892 KB &lt; 1MB ✓</span>
+          <div class="flex justify-between">
+            <span class="text-stone-400">Activos creados:</span>
+            <span class="font-semibold text-amber-700 dark:text-amber-300">{{ currentHistory().outputs }}</span>
           </div>
-          <div class="flex justify-between text-stone-500 dark:text-stone-400">
-            <span>{{ 'landing.ui.persistence' | t }}</span>
-            <span class="font-semibold text-espresso dark:text-white">{{ 'landing.ui.immutable' | t }}</span>
+          <div class="flex justify-between">
+            <span class="text-stone-400">Estado:</span>
+            <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ currentHistory().status }} ✓</span>
           </div>
         </div>
       </div>
@@ -323,7 +512,7 @@
       <div class="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div class="max-w-2xl">
           <div class="inline-flex items-center gap-1.5 rounded-full border border-blue-200/70 bg-blue-50/80 px-3 py-1 text-[11px] font-bold text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300 mb-3">
-            <i class="pi pi-sliders-h text-[10px]"></i> {{ 'landing.ui.consoleBadge' | t }}
+            <i class="pi pi-sliders-h text-[10px]"></i> Control total para Community Managers
           </div>
           <h3 class="font-display text-2xl sm:text-3xl font-bold text-espresso dark:text-white leading-tight">
             {{ 'landing.features.card6.title' | t }}
@@ -340,85 +529,171 @@
         </a>
       </div>
 
-      <!-- Large Interactive Browser Dashboard Window Mockup (Stripe style) -->
+      <!-- Large Interactive Curation Workbench Mockup (Split-View: Inbox + Live Editor/Preview) -->
       <div class="relative z-10 rounded-2xl border border-stone-200/90 dark:border-stone-700/80 bg-stone-50/95 dark:bg-stone-800/90 p-4 sm:p-5 shadow-inner backdrop-blur-md">
         <!-- Browser Top Bar -->
-        <div class="flex items-center justify-between pb-3.5 mb-3.5 border-b border-stone-200/70 dark:border-stone-700/60">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3.5 mb-4 border-b border-stone-200/70 dark:border-stone-700/60">
           <div class="flex items-center gap-2">
             <span class="h-3 w-3 rounded-full bg-rose-400"></span>
             <span class="h-3 w-3 rounded-full bg-amber-400"></span>
             <span class="h-3 w-3 rounded-full bg-emerald-400"></span>
           </div>
           <div class="rounded-lg bg-white/80 dark:bg-stone-900/80 px-4 py-1 text-[11px] font-mono text-stone-500 dark:text-stone-400 border border-stone-200/60 dark:border-stone-700/60 hidden sm:block">
-            app.ukuku.ai/dashboard/content
+            app.ukuku.ai/app/content · Bandeja de curaduría
           </div>
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Live Engine
+          <div class="flex items-center gap-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> 3 borradores listos
           </div>
         </div>
 
-        <!-- Simulated Dashboard Table / Stream Rows -->
-        <div class="space-y-2.5">
-          <!-- Row 1 -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/90 dark:bg-stone-900/90 p-3.5 border border-stone-200/50 dark:border-stone-700/50 shadow-sm">
-            <div class="flex items-center gap-3">
-              <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5865f2]/10 text-[#5865f2] shrink-0">
-                <i class="pi pi-discord text-sm"></i>
-              </span>
-              <div>
-                <p class="text-xs font-bold text-espresso dark:text-white">Discord · #general</p>
-                <p class="text-[11px] text-stone-500 dark:text-stone-400">«Conseguí mi primer contrato dev gracias a la comunidad...»</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2.5 ml-11 sm:ml-0">
-              <span class="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-                {{ 'landing.ui.postLinkedinX' | t }}
-              </span>
-              <span class="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                {{ 'landing.ui.approved' | t }}
-              </span>
-            </div>
+        <!-- Split View Grid: Left Inbox (5 cols) + Right Live Inspector & Tone Editor (7 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- LEFT COLUMN: Generated Assets Queue -->
+          <div class="lg:col-span-5 flex flex-col justify-between space-y-2.5">
+            @for (item of consoleItems; track item.id; let idx = $index) {
+              <button
+                type="button"
+                (click)="selectConsoleItem(idx)"
+                class="w-full text-left rounded-xl p-3.5 border transition-all duration-200 cursor-pointer flex items-start gap-3"
+                [class]="consoleIdx() === idx
+                  ? 'bg-white dark:bg-stone-900 border-amber-500/70 dark:border-amber-400/60 shadow-md ring-2 ring-amber-500/15'
+                  : 'bg-white/75 dark:bg-stone-900/60 border-stone-200/60 dark:border-stone-700/50 hover:bg-white dark:hover:bg-stone-900'"
+              >
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" [class]="item.typeTint">
+                  <i [class]="item.typeIcon + ' text-sm'"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="truncate text-xs font-bold text-espresso dark:text-white">{{ item.title }}</p>
+                    <span
+                      class="shrink-0 rounded-md px-2 py-0.5 text-[9px] font-bold"
+                      [class]="consoleStatuses()[idx] === 'published'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                        : (consoleStatuses()[idx] === 'approved'
+                            ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300')"
+                    >
+                      {{ consoleStatuses()[idx] === 'published' ? 'Publicado ✓' : (consoleStatuses()[idx] === 'approved' ? 'Aprobado ✓' : 'Por revisar') }}
+                    </span>
+                  </div>
+                  <p class="mt-1 flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+                    <i [class]="item.sourceIcon + ' text-[10px] ' + item.sourceColor"></i>
+                    <span>{{ item.sourceLabel }}</span>
+                    <span>·</span>
+                    <span class="font-semibold text-stone-600 dark:text-stone-300">{{ item.typeLabel }}</span>
+                  </p>
+                </div>
+              </button>
+            }
           </div>
 
-          <!-- Row 2 -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/90 dark:bg-stone-900/90 p-3.5 border border-stone-200/50 dark:border-stone-700/50 shadow-sm">
-            <div class="flex items-center gap-3">
-              <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#229ed9]/10 text-[#229ed9] shrink-0">
-                <i class="pi pi-telegram text-sm"></i>
-              </span>
-              <div>
-                <p class="text-xs font-bold text-espresso dark:text-white">Telegram · @community_lab</p>
-                <p class="text-[11px] text-stone-500 dark:text-stone-400">«¿Qué puertos requiere el Object Storage de OCI para persistir?»</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2.5 ml-11 sm:ml-0">
-              <span class="rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
-                {{ 'landing.ui.faqEntry' | t }}
-              </span>
-              <span class="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
-                {{ 'landing.ui.pendingReview' | t }}
-              </span>
-            </div>
-          </div>
+          <!-- RIGHT COLUMN: Active Draft Inspector, Tone Switcher, Banner Preview & 1-Click Actions -->
+          <div class="lg:col-span-7 rounded-xl border border-stone-200/80 dark:border-stone-700/70 bg-white dark:bg-stone-900 p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <!-- Inspector Header + Tone Selector -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-stone-100 dark:border-stone-800">
+                <div class="flex items-center gap-2">
+                  <span class="rounded-lg px-2.5 py-1 text-[10px] font-bold" [class]="currentConsoleItem().typeTint">
+                    <i [class]="currentConsoleItem().typeIcon + ' mr-1 text-[10px]'"></i>{{ currentConsoleItem().typeLabel }}
+                  </span>
+                  <span class="text-[11px] font-semibold text-stone-400">
+                    Relevancia {{ currentConsoleItem().relevance }}
+                  </span>
+                </div>
 
-          <!-- Row 3 -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-white/90 dark:bg-stone-900/90 p-3.5 border border-stone-200/50 dark:border-stone-700/50 shadow-sm">
-            <div class="flex items-center gap-3">
-              <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 shrink-0">
-                <i class="pi pi-cloud text-sm"></i>
-              </span>
-              <div>
-                <p class="text-xs font-bold text-espresso dark:text-white">OCI Buffer Flush</p>
-                <p class="text-[11px] text-stone-500 dark:text-stone-400">{{ 'landing.ui.flush' | t }}</p>
+                <!-- Interactive AI Tone Selector -->
+                <div class="flex items-center gap-1 rounded-lg bg-stone-100 dark:bg-stone-800 p-0.5">
+                  <span class="px-2 text-[9px] font-bold uppercase tracking-wider text-stone-400 hidden sm:inline">Tono IA:</span>
+                  <button
+                    type="button"
+                    (click)="setConsoleTone('inspirador')"
+                    class="rounded-md px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer"
+                    [class]="consoleTone() === 'inspirador' ? 'bg-white dark:bg-stone-700 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-stone-500 dark:text-stone-400'"
+                  >
+                    Inspirador
+                  </button>
+                  <button
+                    type="button"
+                    (click)="setConsoleTone('conciso')"
+                    class="rounded-md px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer"
+                    [class]="consoleTone() === 'conciso' ? 'bg-white dark:bg-stone-700 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-stone-500 dark:text-stone-400'"
+                  >
+                    Conciso
+                  </button>
+                  <button
+                    type="button"
+                    (click)="setConsoleTone('didactico')"
+                    class="rounded-md px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer"
+                    [class]="consoleTone() === 'didactico' ? 'bg-white dark:bg-stone-700 text-amber-600 dark:text-amber-300 shadow-sm' : 'text-stone-500 dark:text-stone-400'"
+                  >
+                    Didáctico
+                  </button>
+                </div>
+              </div>
+
+              <!-- Draft Content or Generated Social Banner Preview -->
+              @if (!consoleShowBanner()) {
+                <div class="mt-3.5">
+                  <p class="text-xs sm:text-sm text-espresso dark:text-stone-100 leading-relaxed font-medium">
+                    {{ currentConsoleBody() }}
+                  </p>
+                  <p class="mt-2 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                    {{ currentConsoleItem().hashtags }}
+                  </p>
+                </div>
+              } @else {
+                <div class="mt-3.5 rounded-xl bg-gradient-to-r from-espresso via-stone-800 to-amber-900 p-4 text-white shadow-md">
+                  <div class="flex items-center justify-between text-[10px] text-amber-300 font-bold mb-1.5">
+                    <span>BANNER GENERADO · 1200 × 627 PX</span>
+                    <span>Listo para PNG ✓</span>
+                  </div>
+                  <p class="font-display text-sm sm:text-base font-bold leading-snug">
+                    {{ currentConsoleItem().originExcerpt }}
+                  </p>
+                  <p class="mt-2 text-[10px] text-stone-300">
+                    — {{ currentConsoleItem().author }} en {{ currentConsoleItem().sourceLabel }} · Ukuku AI
+                  </p>
+                </div>
+              }
+
+              <!-- Traceable Origin Box -->
+              <div class="mt-3.5 rounded-xl bg-stone-50 dark:bg-stone-800/70 border border-stone-200/60 dark:border-stone-700/60 p-2.5 flex items-start gap-2.5">
+                <i [class]="currentConsoleItem().sourceIcon + ' mt-0.5 text-xs ' + currentConsoleItem().sourceColor"></i>
+                <div class="text-[11px] min-w-0">
+                  <span class="font-bold text-espresso dark:text-white">Mensaje original de {{ currentConsoleItem().author }}: </span>
+                  <span class="italic text-stone-600 dark:text-stone-300">{{ currentConsoleItem().originExcerpt }}</span>
+                </div>
               </div>
             </div>
-            <div class="flex items-center gap-2.5 ml-11 sm:ml-0">
-              <span class="rounded-md bg-stone-100 px-2 py-0.5 text-[10px] font-bold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-                {{ 'landing.ui.stored' | t }}
-              </span>
-              <span class="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                {{ 'landing.ui.zeroCost' | t }}
-              </span>
+
+            <!-- Interactive 1-Click Curation Actions -->
+            <div class="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  (click)="updateConsoleStatus('published')"
+                  class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-[11px] font-bold shadow-sm transition-all cursor-pointer"
+                >
+                  <i class="pi pi-send text-[10px]"></i>
+                  {{ currentConsoleStatus() === 'published' ? 'Publicado en redes ✓' : 'Publicar ahora' }}
+                </button>
+                <button
+                  type="button"
+                  (click)="updateConsoleStatus('approved')"
+                  class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-50 px-3 py-1.5 text-[11px] font-bold text-espresso dark:text-stone-200 transition-all cursor-pointer"
+                >
+                  <i class="pi pi-check text-[10px]"></i> Aprobar
+                </button>
+              </div>
+
+              <button
+                type="button"
+                (click)="toggleConsoleBanner()"
+                class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/80 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition-all cursor-pointer"
+              >
+                <i class="pi pi-image text-[10px]"></i>
+                {{ consoleShowBanner() ? 'Ver texto del post' : 'Generar banner 1200×627' }}
+              </button>
             </div>
           </div>
         </div>

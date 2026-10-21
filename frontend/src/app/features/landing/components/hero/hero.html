@@ -1,90 +1,94 @@
-<section id="inicio" class="relative px-4 pb-16 pt-32 sm:px-6 sm:pt-40 lg:pb-24">
+<section id="inicio" class="relative px-4 pb-16 pt-28 sm:px-6 sm:pt-32 lg:pb-24">
   <div class="landing-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-[680px]" aria-hidden="true"></div>
-  <div class="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
-    <!-- LEFT COLUMN: Editorial Typography, Floating 3D Badge, Keyword Pills & Social Proof -->
-    <div appReveal>
-      <h1 class="font-display text-4xl font-extrabold leading-[1.12] tracking-tight text-espresso dark:text-white sm:text-5xl lg:text-[3.5rem]">
-        <span class="font-serif italic font-normal text-stone-700 dark:text-stone-300">
-          {{ 'landing.hero.title1' | t }}
-        </span>
-        <span class="inline-flex items-center align-middle mx-1.5 px-3.5 py-0.5 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white text-2xl sm:text-3xl lg:text-4xl font-extrabold shadow-[0_10px_25px_rgba(37,99,235,0.45)] ring-2 ring-white/80 dark:ring-stone-800 transform -rotate-2 hover:rotate-0 transition-transform">
-          {{ 'landing.hero.highlight' | t }}
-        </span>
-        <span class="block mt-1 text-espresso dark:text-white">
-          {{ 'landing.hero.title2' | t }}
-        </span>
-      </h1>
 
-      <!-- Gradient accent underline -->
-      <div class="mt-4 h-[3px] w-48 rounded-full bg-gradient-to-r from-blue-600 via-amber-500 to-transparent"></div>
+  <div class="mx-auto max-w-7xl">
+    <!-- Soft ambient organic glow backdrop -->
+    <div class="relative w-full" appReveal>
+      <div class="pointer-events-none absolute -inset-6 -z-10 rounded-[44px] bg-gradient-to-tr from-amber-400/20 via-sky-400/20 to-indigo-500/25 blur-3xl dark:from-amber-500/15 dark:via-sky-500/15 dark:to-indigo-500/15"></div>
 
-      <p class="mt-6 max-w-xl text-base leading-relaxed text-stone-600 dark:text-stone-300 sm:text-lg">
-        {{ 'landing.hero.lead' | t }}
-      </p>
-
-      <!-- Action buttons -->
-      <div class="mt-8 flex flex-wrap items-center gap-3">
-        <a routerLink="/app" class="landing-btn landing-btn-primary landing-btn-lg">
-          {{ 'landing.hero.cta' | t }} <i class="pi pi-arrow-right text-sm"></i>
-        </a>
-        <a
-          href="#como-funciona"
-          (click)="navigate.emit({ id: 'como-funciona', event: $event })"
-          class="landing-btn landing-btn-ghost landing-btn-lg"
-        >
-          <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-            <i class="pi pi-arrow-down text-[10px]"></i>
-          </span>
-          {{ 'landing.hero.secondary' | t }}
-        </a>
-      </div>
-
-      <!-- Social Proof / Rating row (inspired by reference design) -->
-      <div class="mt-9 flex items-center gap-4 pt-1">
-        <div class="flex -space-x-2.5 overflow-hidden">
-          <img class="inline-block h-9 w-9 rounded-full ring-2 ring-white dark:ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Community member" />
-          <img class="inline-block h-9 w-9 rounded-full ring-2 ring-white dark:ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" alt="Community member" />
-          <img class="inline-block h-9 w-9 rounded-full ring-2 ring-white dark:ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" alt="Community member" />
-          <img class="inline-block h-9 w-9 rounded-full ring-2 ring-white dark:ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" alt="Community member" />
-        </div>
-        <div>
-          <div class="flex items-center gap-1 text-amber-400">
-            <i class="pi pi-star-fill text-xs"></i>
-            <i class="pi pi-star-fill text-xs"></i>
-            <i class="pi pi-star-fill text-xs"></i>
-            <i class="pi pi-star-fill text-xs"></i>
-            <i class="pi pi-star-fill text-xs"></i>
-          </div>
-          <p class="mt-0.5 text-xs font-semibold text-stone-600 dark:text-stone-300">
-            {{ 'landing.hero.social.text' | t }}
-          </p>
-        </div>
-      </div>
-
-      <p class="mt-6 text-xs font-medium text-stone-400 dark:text-stone-500">
-        <i class="pi pi-sparkles mr-1.5 text-amber-500"></i>{{ 'brand.tagline' | t }}
-      </p>
-    </div>
-
-    <!-- RIGHT COLUMN: Ukuku AI Video (Formato vertical 9:16 nativo) -->
-    <div class="relative flex items-center justify-center lg:justify-end" appReveal="120">
-      <!-- Soft ambient organic glow backdrop (sin marcos rígidos) -->
-      <div class="pointer-events-none absolute -inset-8 -z-10 rounded-full bg-gradient-to-tr from-amber-400/20 via-sky-400/20 to-indigo-500/25 blur-3xl dark:from-amber-500/15 dark:via-sky-500/15 dark:to-indigo-500/15"></div>
-
-      <!-- Video Container: Aspecto vertical 9:16 proporcional a toda la altura del bloque de texto -->
-      <div class="relative w-full max-w-[380px] sm:max-w-[410px] lg:max-w-[430px] aspect-[9/16] overflow-hidden rounded-[36px] shadow-[0_25px_50px_-12px_rgba(28,25,23,0.22)] dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.55)] ring-1 ring-stone-900/5 dark:ring-white/10 group">
+      <!-- Full-width video container with Hero text overlaid on top -->
+      <div class="relative w-full min-h-[540px] lg:aspect-video overflow-hidden rounded-[28px] sm:rounded-[36px] shadow-[0_25px_60px_-15px_rgba(28,25,23,0.3)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.65)] ring-1 ring-stone-900/10 dark:ring-white/10 bg-stone-950 flex items-center group">
+        <!-- Background Video -->
         <video
           #heroVideo
           autoplay
           muted
-          loop
           playsinline
           preload="auto"
-          poster="image/bear/oso-hero-poster.webp"
-          class="h-full w-full object-cover object-center scale-[1.01] transition-transform duration-700 group-hover:scale-105"
+          class="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.02]"
         >
-          <source src="https://res.cloudinary.com/oaxv8qfl/video/upload/v1791811454/gemini_generated_video_d9e10668.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/oaxv8qfl/video/upload/v1792617508/gemini_generated_video_73254d61.mp4" type="video/mp4" />
         </video>
+
+        <!-- Cinematic gradient overlay for crisp text legibility -->
+        <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-stone-950/85 via-stone-950/65 to-stone-950/30 sm:via-stone-950/55"></div>
+
+        <!-- OVERLAID CONTENT ON TOP OF THE VIDEO -->
+        <div class="relative z-10 w-full px-6 py-12 sm:px-12 sm:py-16 lg:px-16">
+          <div class="max-w-2xl">
+            <h1 class="font-display text-3xl font-extrabold leading-[1.12] tracking-tight text-white sm:text-5xl lg:text-[3.5rem] drop-shadow-sm">
+              <span class="font-serif italic font-normal text-stone-200">
+                {{ 'landing.hero.title1' | t }}
+              </span>
+              <span class="inline-flex items-center align-middle mx-1.5 px-3.5 py-0.5 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white text-2xl sm:text-3xl lg:text-4xl font-extrabold shadow-[0_10px_25px_rgba(37,99,235,0.5)] ring-2 ring-white/80 transform -rotate-2 hover:rotate-0 transition-transform">
+                {{ 'landing.hero.highlight' | t }}
+              </span>
+              <span class="block mt-1 text-white">
+                {{ 'landing.hero.title2' | t }}
+              </span>
+            </h1>
+
+            <!-- Gradient accent underline -->
+            <div class="mt-4 h-[3px] w-48 rounded-full bg-gradient-to-r from-blue-500 via-amber-400 to-transparent"></div>
+
+            <p class="mt-6 max-w-xl text-base leading-relaxed text-stone-200/95 sm:text-lg drop-shadow-sm">
+              {{ 'landing.hero.lead' | t }}
+            </p>
+
+            <!-- Action buttons -->
+            <div class="mt-8 flex flex-wrap items-center gap-3">
+              <a routerLink="/app" class="landing-btn landing-btn-primary landing-btn-lg">
+                {{ 'landing.hero.cta' | t }} <i class="pi pi-arrow-right text-sm"></i>
+              </a>
+              <a
+                href="#como-funciona"
+                (click)="navigate.emit({ id: 'como-funciona', event: $event })"
+                class="inline-flex items-center gap-2.5 rounded-full border border-white/25 bg-white/10 backdrop-blur-md px-5 py-3 text-sm font-bold text-white hover:bg-white/20 transition-all"
+              >
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/20 text-amber-300">
+                  <i class="pi pi-arrow-down text-[10px]"></i>
+                </span>
+                {{ 'landing.hero.secondary' | t }}
+              </a>
+            </div>
+
+            <!-- Social Proof / Rating row -->
+            <div class="mt-9 flex flex-wrap items-center gap-4 pt-1">
+              <div class="flex -space-x-2.5 overflow-hidden">
+                <img class="inline-block h-9 w-9 rounded-full ring-2 ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Community member" />
+                <img class="inline-block h-9 w-9 rounded-full ring-2 ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" alt="Community member" />
+                <img class="inline-block h-9 w-9 rounded-full ring-2 ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" alt="Community member" />
+                <img class="inline-block h-9 w-9 rounded-full ring-2 ring-stone-900 object-cover" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" alt="Community member" />
+              </div>
+              <div>
+                <div class="flex items-center gap-1 text-amber-400">
+                  <i class="pi pi-star-fill text-xs"></i>
+                  <i class="pi pi-star-fill text-xs"></i>
+                  <i class="pi pi-star-fill text-xs"></i>
+                  <i class="pi pi-star-fill text-xs"></i>
+                  <i class="pi pi-star-fill text-xs"></i>
+                </div>
+                <p class="mt-0.5 text-xs font-semibold text-stone-200">
+                  {{ 'landing.hero.social.text' | t }}
+                </p>
+              </div>
+            </div>
+
+            <p class="mt-5 text-xs font-medium text-stone-300/80">
+              <i class="pi pi-sparkles mr-1.5 text-amber-400"></i>{{ 'brand.tagline' | t }}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
