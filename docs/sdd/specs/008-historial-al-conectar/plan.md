@@ -66,7 +66,7 @@ flowchart LR
   Alternativa descartada: `GET /api/v1/{source}/history` (choca con constitución v1.6/v1.7, sin `GETs packages`; dos llamadas que el frontend tendría que coordinar sin perder eventos entre ambas).
   Razón: una sola conexión garantiza que el historial y el vivo llegan en orden por el mismo canal, sin enmienda constitucional.
 * Decisión: índice en Redis como HASH por fuente (`HSET` por `batchId`, limpieza de vencidas al leer).
-  Alternativa descartada: `ZSET` por `expiresAt` + HASH de datos (dos estructuras que mantener sincronizadas); `HEXPIRE` por campo (Redis 7.4+, disponible en `redis:8.10`, pero añade una API que el código aún no usa, para limpiar como mucho ~72 entradas); listar el bucket en OCI (IAM sin `OBJECT_INSPECT` y PAR nueva por lectura).
+  Alternativa descartada: `ZSET` por `expiresAt` + HASH de datos (dos estructuras que mantener sincronizadas); `HEXPIRE` por campo (Redis 7.4+, disponible en `redis:8.10`, pero añade una API que el código aún no usa, para limpiar como mucho ~168 entradas con `PAR_TTL_DAYS=7`, ~72 cuando eran 3 días); listar el bucket en OCI (IAM sin `OBJECT_INSPECT` y PAR nueva por lectura).
   Razón: una sola estructura, upsert natural en re-flush (RF-03) y tamaño acotado. Persiste con el AOF que ya protege el buffer.
 * Decisión: orden de lectura lote abierto → pendientes → índice; orden de envío índice → pendientes → lote abierto.
   Alternativa descartada: leer en el orden de envío.
