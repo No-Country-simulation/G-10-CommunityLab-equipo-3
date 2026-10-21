@@ -42,7 +42,7 @@ discord:
 buffer:
   flush:
     cron: ${BUFFER_FLUSH_CRON:0 0 * * * *}
-    min-messages: ${BUFFER_FLUSH_MIN_MESSAGES:5}
+    min-messages: ${BUFFER_FLUSH_MIN_MESSAGES:2}
     scheduler:
       enabled: ${BUFFER_FLUSH_SCHEDULER_ENABLED:true}
 
@@ -52,7 +52,7 @@ oci:
   region: ${OCI_REGION}
   namespace: ${OCI_NAMESPACE}
   prefix: ${OCI_PREFIX}
-  par-ttl-days: ${PAR_TTL_DAYS:3}
+  par-ttl-days: ${PAR_TTL_DAYS:7}
   auth-mode: ${OCI_AUTH_MODE:none}
   config-profile: ${OCI_CONFIG_PROFILE}
   compartment-id: ${OCI_COMPARTMENT_ID}
