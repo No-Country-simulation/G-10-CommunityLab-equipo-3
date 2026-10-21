@@ -13,7 +13,8 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Binding tests for the OCI storage properties (Spring binder only, no OCI SDK, no network).
  * Derivado de: spec 006 RF-02 (enmienda 2026-10-08: OCI_AUTH_MODE none|session-token|instance-principal,
- * default none) + RNF-02 (solo env no-secreta) + plan 006 §3 (enum para fail-fast ante valor invalido).
+ * default none) + RNF-02 (solo env no-secreta) + RNF-03 (enmienda 2026-10-20: PAR_TTL_DAYS default 7)
+ * + plan 006 §3 (enum para fail-fast ante valor invalido; decision 2026-10-20 TTL 7d).
  */
 @DisplayName("OciProperties")
 class OciPropertiesTest {
@@ -88,6 +89,22 @@ class OciPropertiesTest {
                     // Entonces el portatil/CI queda sin OCI (RF-02: degradar, no tumbar)
                     assertThat(context).hasNotFailed();
                     assertThat(context.getBean(OciProperties.class).authMode()).isEqualTo(OciAuthMode.NONE);
+                });
+    }
+
+    @Test
+    @DisplayName("Dado application.yaml sin PAR_TTL_DAYS en el env, cuando se enlaza, entonces la PAR dura 7 dias")
+    void defaultsParTtlToSevenDaysFromApplicationYaml() {
+        // Why assume: the default can only be observed when the variable is absent from this process.
+        assumeTrue(System.getenv("PAR_TTL_DAYS") == null, "PAR_TTL_DAYS set in this environment");
+
+        // Dado el application.yaml real del proyecto y ningun PAR_TTL_DAYS
+        runner.withInitializer(new ConfigDataApplicationContextInitializer())
+                // Cuando arranca el contexto
+                .run(context -> {
+                    // Entonces el frontend conserva cada paquete una semana (MVP), no los 3 dias anteriores
+                    assertThat(context).hasNotFailed();
+                    assertThat(context.getBean(OciProperties.class).parTtlDays()).isEqualTo(7);
                 });
     }
 
