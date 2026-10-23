@@ -70,7 +70,7 @@ export class InteractionsCharts {
   protected readonly sourceIcon = SOURCE_ICON;
   protected readonly ranges: Range[] = ['daily', 'weekly', 'monthly'];
 
-  protected readonly range = signal<Range>('weekly');
+  protected readonly range = signal<Range>('daily');
   /** Column under the pointer or keyboard focus (tooltip) */
   protected readonly active = signal<number | null>(null);
   /** Column clicked: the network card shows that period */
