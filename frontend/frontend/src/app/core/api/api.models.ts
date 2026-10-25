@@ -32,8 +32,6 @@ export interface InteractionAnalysis {
   route: ContentRoute;
   /** Short LLM explanation of the decision */
   reason: string;
-  /** Mascot expression picked by the LLM (one of the labels in core/mascot.ts, e.g. "celebrando") */
-  expression?: string;
 }
 
 export interface AnalyzedInteraction extends Interaction {
@@ -53,8 +51,6 @@ export interface AssetOrigin {
   sentiment: Sentiment;
   relevance: number;
   route: ContentRoute;
-  /** Mascot expression picked by the LLM for the source message */
-  expression?: string;
 }
 
 export interface GeneratedAsset {
@@ -71,12 +67,6 @@ export interface GeneratedAsset {
   status: AssetStatus;
   createdAt: string;
   publishedAt?: string;
-  /** Live posts: call to action, shown at the end of `body` and kept apart for the backend (required on LinkedIn) */
-  cta?: string;
-  /** Live posts: version stored in OCI, sent back as `expectedVersion` when revising */
-  versionMessage?: number;
-  /** Live posts: batchId of the OCI package that stores it; revisions are only possible once it is set */
-  packageId?: string;
 }
 
 export interface StorageReceipt {
@@ -101,7 +91,7 @@ export interface BatchSummary {
   mainTopics: string[];
 }
 
-/** A processed batch, as stored in OCI (GET /api/v1/storage/objects/{name}). */
+/** Response of POST /api/v1/interactions/process — the heart of the MVP. */
 export interface ProcessResult {
   batchId: string;
   processedAt: string;
@@ -110,6 +100,12 @@ export interface ProcessResult {
   interactions: AnalyzedInteraction[];
   assets: GeneratedAsset[];
   storage: StorageReceipt;
+}
+
+export interface ProcessRequest {
+  interactions: Interaction[];
+  /** Asset types the orchestrator should produce when the route allows it. */
+  formats?: AssetType[];
 }
 
 /** An object listed from the OCI bucket (one per processed batch). */
@@ -123,42 +119,9 @@ export interface StoredObject {
   url: string;
 }
 
-/** Bucket usage measured by the backend (GET /api/v1/storage/stats). */
-export interface StorageStats {
-  storage: {
-    tier: string;
-    usedBytes: number;
-    limitBytes: number;
-    objectCount: number;
-    measuredAt: string;
-  };
-  /** Requests to the bucket since the start of the billing period */
-  requests: {
-    periodStart: string;
-    limit: number;
-    total: number;
-    get: number;
-    put: number;
-    list: number;
-    head: number;
-    delete: number;
-    clientErrors: number;
-  };
-  generatedAt: string;
-  /** true → the backend could not reach OCI and is serving its last measurement */
-  stale: boolean;
-}
-
 export interface AssetPatch {
   title?: string;
-  /** Text as shown in the UI: the post plus, as last paragraph, its call to action */
   body?: string;
   hashtags?: string[];
   status?: AssetStatus;
-  /** Move the post to another platform (backend `channelPost`) */
-  type?: AssetType;
-  /** Call to action; "" removes it (required on LinkedIn, forbidden on FAQ) */
-  cta?: string;
-  /** Tone shown for the new platform (UI only) */
-  tone?: string;
 }

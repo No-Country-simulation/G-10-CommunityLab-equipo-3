@@ -4,11 +4,11 @@ import {
   AssetPatch,
   AssetStatus,
   GeneratedAsset,
+  ProcessRequest,
   ProcessResult,
-  StorageStats,
   StoredObject,
 } from './api.models';
-import { CommunityLabApi, StoredObjectView } from './community-lab.api';
+import { CommunityLabApi } from './community-lab.api';
 import { process } from './mock-engine';
 import { SEED_BATCHES } from './sample-interactions';
 
@@ -30,7 +30,7 @@ export class MockCommunityLabApi extends CommunityLabApi {
     // Older batches already went through curation, so give them realistic statuses
     const seededStatus: AssetStatus[] = ['published', 'published', 'approved', 'in_review', 'draft'];
     SEED_BATCHES.forEach((b, bi) => {
-      const result = process(b.interactions, b.processedAt);
+      const result = process(b.interactions, undefined, b.processedAt);
       result.assets.forEach((a, ai) => {
         a.status = seededStatus[(ai + bi) % seededStatus.length];
         if (a.status === 'published') a.publishedAt = b.processedAt;
@@ -39,11 +39,21 @@ export class MockCommunityLabApi extends CommunityLabApi {
     });
   }
 
+  processInteractions(req: ProcessRequest): Observable<ProcessResult> {
+    if (!req.interactions?.length) {
+      return throwError(() => new Error('La solicitud no contiene interacciones.'));
+    }
+    const result = process(req.interactions, req.formats);
+    this.save(result);
+    // Latency similar to a real LLM round-trip, so the pipeline UI can be shown
+    return of(clone(result)).pipe(delay(2600));
+  }
+
   listAssets(): Observable<GeneratedAsset[]> {
     return of(clone(this.assets)).pipe(delay(250));
   }
 
-  updateAsset({ id }: GeneratedAsset, patch: AssetPatch): Observable<GeneratedAsset> {
+  updateAsset(id: string, patch: AssetPatch): Observable<GeneratedAsset> {
     const asset = this.assets.find((a) => a.id === id);
     if (!asset) return throwError(() => new Error(`Asset ${id} no encontrado`));
     Object.assign(asset, patch);
@@ -51,10 +61,10 @@ export class MockCommunityLabApi extends CommunityLabApi {
     return of(clone(asset)).pipe(delay(300));
   }
 
-  publishAsset(target: GeneratedAsset): Observable<GeneratedAsset> {
-    const asset = this.assets.find((a) => a.id === target.id);
+  publishAsset(id: string): Observable<GeneratedAsset> {
+    const asset = this.assets.find((a) => a.id === id);
     if (asset) asset.publishedAt = new Date().toISOString();
-    return this.updateAsset(target, { status: 'published' }).pipe(delay(500));
+    return this.updateAsset(id, { status: 'published' }).pipe(delay(500));
   }
 
   listStoredObjects(): Observable<StoredObject[]> {
@@ -72,36 +82,9 @@ export class MockCommunityLabApi extends CommunityLabApi {
     return of(objects).pipe(delay(300));
   }
 
-  getStoredObject(objectName: string): Observable<StoredObjectView> {
+  getStoredObject(objectName: string): Observable<ProcessResult> {
     const found = [...this.batches.values()].find((r) => r.storage.objectName === objectName);
-    return found
-      ? of({ objectName, content: clone(found) }).pipe(delay(200))
-      : throwError(() => new Error('Objeto no encontrado'));
-  }
-
-  /** Same shape as the backend: size and count from the stored batches, plausible request counters. */
-  getStorageStats(): Observable<StorageStats> {
-    const batches = [...this.batches.values()];
-    const now = new Date();
-    const n = batches.length;
-    const requests = { get: n * 4, put: n * 2, list: n * 3, head: n, delete: 0, clientErrors: 1 };
-    return of({
-      storage: {
-        tier: 'STANDARD',
-        usedBytes: batches.reduce((acc, r) => acc + r.storage.sizeBytes, 0),
-        limitBytes: 10 * 1024 ** 3,
-        objectCount: n,
-        measuredAt: now.toISOString(),
-      },
-      requests: {
-        periodStart: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
-        limit: 50_000,
-        total: requests.get + requests.put + requests.list + requests.head + requests.delete,
-        ...requests,
-      },
-      generatedAt: now.toISOString(),
-      stale: false,
-    }).pipe(delay(250));
+    return found ? of(clone(found)).pipe(delay(200)) : throwError(() => new Error('Objeto no encontrado'));
   }
 
   private save(result: ProcessResult) {

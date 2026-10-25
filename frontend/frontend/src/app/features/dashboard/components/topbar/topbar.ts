@@ -1,15 +1,19 @@
 import { Component, ElementRef, computed, effect, inject, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MenuItem } from 'primeng/api';
+import { AvatarModule } from 'primeng/avatar';
+import { MenuModule } from 'primeng/menu';
 import { TooltipModule } from 'primeng/tooltip';
+import { API_CONFIG } from '../../../../core/api/community-lab.api';
+import { MOCK_STORAGE_KEY } from '../../../../core/api/mock-community-lab.api';
 import { I18n, LANGS, Lang } from '../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { CurrentPage } from '../../../../core/current-page';
 import { ThemeService } from '../../../../core/theme.service';
-import { Breadcrumb } from '../breadcrumb/breadcrumb';
 
 @Component({
   selector: 'app-topbar',
-  imports: [TooltipModule, TranslatePipe, RouterLink, Breadcrumb],
+  imports: [AvatarModule, MenuModule, TooltipModule, TranslatePipe, RouterLink],
   templateUrl: './topbar.html',
   host: {
     // No box of its own: the sticky shell must be a child of the tall page column to stay pinned
@@ -21,6 +25,7 @@ import { Breadcrumb } from '../breadcrumb/breadcrumb';
 export class Topbar {
   private readonly current = inject(CurrentPage);
   protected readonly theme = inject(ThemeService);
+  private readonly api = inject(API_CONFIG);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly i18n = inject(I18n);
   protected readonly langs = LANGS;
@@ -32,7 +37,7 @@ export class Topbar {
   constructor() {
     // Browser tab title follows both the page and the language
     effect(() => {
-      document.title = `${this.i18n.t(this.current.page().titleKey)} · Ukuku AI`;
+      document.title = `${this.i18n.t(this.current.page().titleKey)} · Kora`;
     });
   }
 
@@ -50,4 +55,21 @@ export class Topbar {
       this.langMenuOpen.set(false);
     }
   }
+
+  protected readonly userMenu = computed<MenuItem[]>(() => this.api.useMocks
+    ? [
+        {
+          label: this.i18n.t('topbar.resetDemo'),
+          icon: 'pi pi-replay',
+          command: () => {
+            try {
+              localStorage.removeItem(MOCK_STORAGE_KEY);
+            } catch {
+              // nothing persisted
+            }
+            location.reload();
+          },
+        },
+      ]
+    : [{ label: this.i18n.t('topbar.signOut'), icon: 'pi pi-sign-out' }]);
 }

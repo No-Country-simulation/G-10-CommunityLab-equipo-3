@@ -4,16 +4,15 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { GeneratedAsset } from '../../../../core/api/api.models';
 import { I18n } from '../../../../core/i18n/i18n.service';
-import { AssetTitlePipe, LocalizedDatePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
+import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { ASSET_TYPE_ICON, ASSET_TYPE_TINT } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { StatCard, StatItem } from '../../../../shared/stat-card/stat-card';
 import { Bear } from '../../../../shared/bear/bear';
-import { InteractionsCharts } from './interactions-charts';
 
 @Component({
   selector: 'app-summary',
-  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, AssetTitlePipe, Bear, InteractionsCharts],
+  imports: [ButtonModule, RouterLink, StatCard, TranslatePipe, LocalizedDatePipe, Bear],
   templateUrl: './summary.html',
   styleUrl: './summary.css',
 })
@@ -24,6 +23,42 @@ export class Summary {
 
   protected readonly typeIcon = ASSET_TYPE_ICON;
   protected readonly typeTint = ASSET_TYPE_TINT;
+
+  /** The four steps the challenge asks for, each linked to where it happens in the app (title/text are i18n keys). */
+  protected readonly steps = [
+    {
+      title: 'step.ingest',
+      text: 'summary.step.ingest',
+      icon: 'pi pi-inbox',
+      link: '/app/ingest',
+      color: '#d97706',
+      colorTo: '#b45309',
+    },
+    {
+      title: 'step.analysis',
+      text: 'summary.step.analysis',
+      icon: 'pi pi-sparkles',
+      link: '/app/ingest',
+      color: '#8b5cf6',
+      colorTo: '#6d28d9',
+    },
+    {
+      title: 'step.orchestration',
+      text: 'summary.step.orchestration',
+      icon: 'pi pi-sitemap',
+      link: '/app/content',
+      color: '#10b981',
+      colorTo: '#047857',
+    },
+    {
+      title: 'step.storage',
+      text: 'summary.step.storage',
+      icon: 'pi pi-cloud-upload',
+      link: '/app/storage',
+      color: '#e0654f',
+      colorTo: '#c74634',
+    },
+  ];
 
   /** Greeting of the welcome card, by local time of day (i18n key). */
   protected readonly greetingKey = (() => {
@@ -37,7 +72,7 @@ export class Summary {
     const objects = this.store.objects();
     const t = (key: string) => this.i18n.t(key);
     return [
-      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/storage' },
+      { label: t('summary.stat.analyzed'), value: objects.reduce((acc, o) => acc + o.interactions, 0), icon: 'pi pi-comments', link: '/app/ingest' },
       { label: t('summary.stat.generated'), value: this.store.assets().length, icon: 'pi pi-file-edit', link: '/app/content' },
       { label: t('summary.stat.pending'), value: this.store.pendingReview(), icon: 'pi pi-eye', link: '/app/content' },
       { label: t('summary.stat.packages'), value: objects.length, icon: 'pi pi-cloud', link: '/app/storage' },
@@ -66,7 +101,7 @@ export class Summary {
         return next;
       });
     }, 280);
-    this.toast.add({ severity: 'success', summary: this.i18n.t('summary.toast.approved'), detail: assetTitle(a, this.i18n), life: 2500 });
+    this.toast.add({ severity: 'success', summary: this.i18n.t('summary.toast.approved'), detail: a.title, life: 2500 });
   }
 
   fileName(objectName: string) {

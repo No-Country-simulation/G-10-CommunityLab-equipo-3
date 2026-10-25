@@ -5,7 +5,7 @@ import { filter, map, startWith } from 'rxjs';
 import { PAGE_ICON } from './page-icons';
 
 export interface PageInfo {
-  /** Route path, e.g. '/app/content' */
+  /** Route path, e.g. '/app/ingest' */
   path: string;
   /** i18n key of the page title (route data `titleKey`) */
   titleKey: string;

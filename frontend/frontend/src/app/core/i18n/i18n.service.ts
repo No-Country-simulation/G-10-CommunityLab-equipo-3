@@ -11,14 +11,12 @@ export interface LangOption {
   code: Lang;
   label: string;
   short: string;
-  /** Flag shown in the language switchers (public/image/flags/) */
-  flag: string;
 }
 
 export const LANGS: readonly LangOption[] = [
-  { code: 'es', label: 'Español', short: 'ES', flag: 'image/flags/es.svg' },
-  { code: 'en', label: 'English', short: 'EN', flag: 'image/flags/us.svg' },
-  { code: 'pt', label: 'Português', short: 'PT', flag: 'image/flags/br.svg' },
+  { code: 'es', label: 'Español', short: 'ES' },
+  { code: 'en', label: 'English', short: 'EN' },
+  { code: 'pt', label: 'Português', short: 'PT' },
 ];
 
 /** Locale ids for Angular's date formatting */
@@ -52,30 +50,10 @@ export class I18n {
     }
   }
 
-  /** Like `t`, but null when no dictionary has the key (for values that may or may not be translatable). */
-  find(key: string): string | null {
-    return this.dictionaries[this._lang()][key as MessageKey] ?? this.dictionaries.es[key as MessageKey] ?? null;
-  }
-
-  /**
-   * Translates a key, filling `{name}` placeholders (numbers formatted for the language).
-   * With a numeric `n`, `key.one` / `key.other` are preferred when they exist. Unknown keys fall back to the key itself.
-   */
+  /** Translates a key, filling `{name}` placeholders. Unknown keys fall back to the key itself. */
   t(key: MessageKey | string, params?: Record<string, string | number | null>): string {
-    const n = params?.['n'];
-    const plural = typeof n === 'number' ? this.find(`${key}.${n === 1 ? 'one' : 'other'}`) : null;
-    const text = plural ?? this.find(key) ?? key;
-    if (!params) return text;
-    const numbers = new Intl.NumberFormat(this.locale());
-    return text.replace(/\{(\w+)\}/g, (_, name) => {
-      const value = params[name];
-      return typeof value === 'number' ? numbers.format(value) : String(value ?? '');
-    });
-  }
-
-  /** A number in the UI language: 50.000 (es/pt) · 50,000 (en) */
-  number(value: number, maximumFractionDigits = 0): string {
-    return new Intl.NumberFormat(this.locale(), { maximumFractionDigits }).format(value);
+    const text = this.dictionaries[this._lang()][key as MessageKey] ?? this.dictionaries.es[key as MessageKey] ?? key;
+    return params ? text.replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? '')) : text;
   }
 }
 
