@@ -1,7 +1,7 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input, linkedSignal } from '@angular/core';
 
 /**
- * Poses of Kora, the spectacled bear, in public/image/bear/:
+ * Poses of Ukuku, the spectacled bear, in public/image/bear/:
  *   laptop     → oso-laptop      working on a laptop          (landing hero)
  *   mensajes   → oso-mensajes    reading messages on a tablet (landing "Cómo funciona")
  *   curaduria  → oso-curaduria   thumbs up at a desk          (landing "Plataforma")
@@ -9,8 +9,12 @@ import { Component, computed, input, signal } from '@angular/core';
  * Each pose is looked up as an optimized .webp first, then a .png.
  * Full-resolution PNG originals live in frontend/design/bear/ (not published); export a .webp from them.
  * While neither exists, the sitting bear is shown with a per-pose variation instead.
+ * Poses without art are listed in PENDING_ART so the browser never requests (and 404s on) missing files;
+ * remove a pose from it once its .webp is added to public/image/bear/.
  */
 export type BearPose = 'laptop' | 'mensajes' | 'curaduria' | 'saludo';
+
+const PENDING_ART: ReadonlySet<BearPose> = new Set(['saludo']);
 
 const FALLBACK = 'image/logo/oso-full.png';
 
@@ -45,7 +49,8 @@ export class Bear {
   /** Above-the-fold images load right away */
   readonly eager = input(false);
 
-  protected readonly stage = signal<Stage>(0);
+  // Resets whenever the pose changes; poses without art start at the fallback
+  protected readonly stage = linkedSignal<Stage>(() => (PENDING_ART.has(this.pose()) ? 2 : 0));
   protected readonly src = computed(() => {
     const base = `image/bear/oso-${this.pose()}`;
     return [`${base}.webp`, `${base}.png`, this.fallback()][this.stage()];

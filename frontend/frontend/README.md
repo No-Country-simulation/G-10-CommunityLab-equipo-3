@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="public/image/logo/oso-full.png" alt="Kora" width="140" />
+  <img src="public/image/logo/oso-full.png" alt="Ukuku AI" width="140" />
 </p>
 
-<h1 align="center">Kora · Frontend</h1>
+<h1 align="center">Ukuku AI · Frontend</h1>
 
 <p align="center">
-  <b>Tu comunidad habla. Kora publica.</b><br />
+  <b>Tu comunidad habla. Ukuku AI publica.</b><br />
   Panel web del motor de IA que convierte las conversaciones de Discord y Telegram en contenido listo para publicar.
 </p>
 
@@ -29,11 +29,12 @@
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Scripts](#scripts)
 - [Despliegue](#despliegue)
+- [Docker](#docker)
 - [Flujo de ramas](#flujo-de-ramas)
 
 ## Qué hace
 
-Kora sigue el flujo del reto en cuatro pasos:
+Ukuku AI sigue el flujo del reto en cuatro pasos:
 
 ```text
 Mensaje de la comunidad  →  Análisis con LLM  →  Orquestación  →  OCI Object Storage
@@ -181,6 +182,33 @@ La app está preparada para **Netlify**:
 El archivo [`_redirects`](_redirects) hace que todas las rutas (`/ingest`, `/content`…) sirvan `index.html`, necesario para una SPA.
 
 > El script `copy-redirects` usa el comando `copy` de Windows. En Linux o macOS, cámbialo por `cp _redirects dist/frontend/browser/_redirects`.
+
+## Docker
+
+La imagen compila la app y la sirve con **nginx**, que además reenvía `/api` al backend (igual que `proxy.conf.json` con `ng serve`), con los streams SSE de Discord y Telegram sin buffer.
+
+```bash
+docker compose up -d --build
+```
+
+Abre http://localhost:4200. Por defecto el backend se espera en el host, en `http://localhost:8080` (dentro del contenedor, `host.docker.internal:8080`). Para usar otro backend:
+
+```bash
+BACKEND_URL=https://api.example.com docker compose up -d --build
+```
+
+Sin Compose:
+
+```bash
+docker build -t communitylab-frontend .
+docker run -d -p 4200:80 -e BACKEND_URL=http://host.docker.internal:8080 communitylab-frontend
+```
+
+| Archivo | Para qué |
+|---|---|
+| [`Dockerfile`](Dockerfile) | Build con Node 22 y runtime con nginx (imagen de ~65 MB) |
+| [`nginx/default.conf.template`](nginx/default.conf.template) | Rutas de la SPA, caché de estáticos y proxy `/api` → `BACKEND_URL` |
+| [`compose.yaml`](compose.yaml) | Levanta el contenedor en el puerto 4200 |
 
 ## Flujo de ramas
 

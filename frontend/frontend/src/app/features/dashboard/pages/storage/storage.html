@@ -14,26 +14,99 @@
     </div>
     <div>
       <p class="font-semibold text-slate-900 dark:text-white">{{ bucket.name }}</p>
-      <p class="text-xs text-slate-500 dark:text-slate-400">{{ bucket.region }} · Always Free · $0.00</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400">{{ bucket.region }} · {{ store.storageStats()?.storage?.tier ?? 'STANDARD' }} · Always Free · $0.00</p>
     </div>
   </div>
-  <div class="sm:ml-auto sm:w-64">
-    <div class="flex justify-between text-xs">
-      <span class="text-slate-500 dark:text-slate-400">{{ 'storage.usage' | t: { n: totals().objects, kb: (totals().bytes / 1024 | number: '1.1-1') } }}</span>
-      <span class="text-slate-400">{{ 'storage.of' | t }}</span>
+  <div class="sm:ml-auto sm:w-72">
+    <div class="flex justify-between gap-3 text-xs">
+      <span class="text-slate-500 dark:text-slate-400">{{ 'storage.usage' | t: { n: totals().objects, size: formatBytes(totals().bytes) } }}</span>
+      <span class="shrink-0 text-slate-400">{{ 'storage.of' | t: { limit: formatBytes(totals().limit) } }}</span>
     </div>
     <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-      <div class="animate-grow-x h-full rounded-full bg-emerald-500" [style.width.%]="totals().usagePct < 1 ? 1 : totals().usagePct"></div>
+      <div class="animate-grow-x h-full rounded-full" [class]="barColor(totals().usagePct)" [style.width.%]="totals().usagePct < 1 ? 1 : totals().usagePct"></div>
     </div>
+    <p class="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+      @if (store.storageStats(); as stats) {
+        <span>{{ 'storage.measuredAt' | t: { time: (stats.storage.measuredAt | ldate: 'dateTime') } }}</span>
+        @if (stats.stale) {
+          <span class="rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+            [pTooltip]="'storage.staleHint' | t" tooltipPosition="top">{{ 'storage.stale' | t }}</span>
+        }
+      } @else if (store.storageStatsFailed()) {
+        <span>{{ 'storage.statsUnavailable' | t }}</span>
+      }
+    </p>
   </div>
 </section>
+
+<!-- Bucket requests in the current period -->
+@if (requests(); as r) {
+  <section class="card mt-6 overflow-hidden">
+    <div class="card-header flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="card-title">{{ 'storage.requests' | t }}</h2>
+      <span class="text-xs text-slate-400">{{ 'storage.requestsSince' | t: { date: (r.periodStart | ldate: 'mediumDate' : 'UTC') } }}</span>
+    </div>
+    <div class="p-5">
+      <div class="flex justify-between gap-3 text-xs">
+        <span class="text-slate-500 dark:text-slate-400">{{ 'storage.requestsUsage' | t: { total: r.total, limit: r.limit } }}</span>
+        <span class="shrink-0 tabular-nums text-slate-400">{{ percent(r.usagePct) }}</span>
+      </div>
+      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div class="animate-grow-x h-full rounded-full" [class]="barColor(r.usagePct)" [style.width.%]="r.usagePct < 1 ? 1 : r.usagePct"></div>
+      </div>
+      <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        @for (k of r.kinds; track k.key) {
+          <div class="rounded-xl border border-slate-100 p-3 dark:border-slate-800">
+            <p class="flex items-center gap-1.5 font-mono text-[11px] font-semibold" [class]="k.key === 'clientErrors' && k.count > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'">
+              <i class="text-[11px]" [class]="k.icon"></i>{{ k.method }}
+            </p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums text-slate-900 dark:text-white">{{ k.count | lnum }}</p>
+            <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ 'storage.req.' + k.key | t }}</p>
+            @if (k.key !== 'clientErrors') {
+              <div class="mt-2 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div class="h-full rounded-full bg-[#c74634]/70" [style.width.%]="k.share"></div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+}
 
 <!-- Object list -->
 <section class="card mt-6 overflow-hidden">
   <div class="card-header">
     <h2 class="card-title">{{ 'storage.objects' | t }}</h2>
   </div>
-  <div class="overflow-x-auto">
+  <!-- Phones: one row per object instead of a table that scrolls sideways -->
+  <ul class="divide-y divide-slate-100 dark:divide-slate-800 sm:hidden">
+    @for (o of store.objects(); track o.objectName) {
+      <li>
+        <button type="button" class="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-slate-50 dark:active:bg-slate-800/40"
+          (click)="open(o)" [attr.aria-label]="'storage.viewAria' | t">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#c74634] dark:bg-orange-500/10 dark:text-orange-300">
+            <i class="pi text-sm" [class]="loadingObject() === o.objectName ? 'pi-spin pi-spinner' : 'pi-file'"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="flex items-center gap-2 truncate font-mono text-xs font-medium text-slate-800 dark:text-slate-100">
+              <span class="truncate">{{ fileName(o.objectName) }}</span>
+              @if (isNew(o)) {
+                <span class="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">{{ 'storage.new' | t }}</span>
+              }
+            </p>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ 'summary.latest.meta' | t: { m: o.interactions, c: o.assets, date: formatBytes(o.sizeBytes) } }}</p>
+            <p class="text-[11px] text-slate-400">{{ o.storedAt | ldate: 'dateTime' }}</p>
+          </div>
+          <i class="pi pi-chevron-right text-[10px] text-slate-300"></i>
+        </button>
+      </li>
+    } @empty {
+      <li class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">{{ (store.historyLoading() ? 'common.loadingHistory' : 'common.bucketEmpty') | t }}</li>
+    }
+  </ul>
+
+  <div class="hidden overflow-x-auto sm:block">
     <table class="w-full min-w-[44rem] text-sm">
       <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
         <tr>
@@ -66,20 +139,20 @@
             </td>
             <td class="px-5 py-3 text-right tabular-nums">{{ o.interactions }}</td>
             <td class="px-5 py-3 text-right tabular-nums">{{ o.assets }}</td>
-            <td class="px-5 py-3 text-right tabular-nums">{{ o.sizeBytes / 1024 | number: '1.1-1' }} KB</td>
-            <td class="px-5 py-3 text-slate-500 dark:text-slate-400">{{ o.storedAt | ldate: 'medium' }}</td>
+            <td class="px-5 py-3 text-right tabular-nums">{{ formatBytes(o.sizeBytes) }}</td>
+            <td class="px-5 py-3 text-slate-500 dark:text-slate-400">{{ o.storedAt | ldate: 'dateTime' }}</td>
             <td class="px-5 py-3" (click)="$event.stopPropagation()">
               <div class="flex justify-end gap-1">
                 <p-button icon="pi pi-eye" [text]="true" [rounded]="true" size="small" [pTooltip]="'storage.view' | t" tooltipPosition="top"
                   [loading]="loadingObject() === o.objectName" (onClick)="open(o)" [ariaLabel]="'storage.viewAria' | t" />
-                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" [pTooltip]="'ingest.oci.copyUrl' | t"
+                <p-button icon="pi pi-copy" [text]="true" [rounded]="true" size="small" severity="secondary" [pTooltip]="'storage.copyUrl' | t"
                   tooltipPosition="top" (onClick)="copy(o.url)" [ariaLabel]="'storage.copyUrlAria' | t" />
               </div>
             </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">{{ 'common.bucketEmpty' | t }}</td>
+            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500 dark:text-slate-400">{{ (store.historyLoading() ? 'common.loadingHistory' : 'common.bucketEmpty') | t }}</td>
           </tr>
         }
       </tbody>
@@ -87,7 +160,7 @@
   </div>
 </section>
 
-<p-dialog [header]="viewing()?.storage?.objectName ?? ''" [modal]="true" [visible]="!!viewing()" (visibleChange)="!$event && viewing.set(null)"
+<p-dialog [header]="viewing()?.objectName ?? ''" [modal]="true" [visible]="!!viewing()" (visibleChange)="!$event && viewing.set(null)"
   [style]="{ width: 'min(900px, 95vw)' }" [dismissableMask]="true">
   <pre class="max-h-[60vh] overflow-auto rounded-lg bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">{{ viewingJson() }}</pre>
   <ng-template #footer>

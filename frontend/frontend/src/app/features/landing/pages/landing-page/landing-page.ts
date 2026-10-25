@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, DestroyRef, ElementRef, effect, inject, signal } from '@angular/core';
 import { I18n, LANGS, Lang } from '../../../../core/i18n/i18n.service';
 import { ThemeService } from '../../../../core/theme.service';
+import { BrandSlider } from '../../components/brand-slider/brand-slider';
 import { LandingCtaBanner } from '../../components/cta-banner/cta-banner';
 import { LandingExample } from '../../components/example/example';
 import { LandingFeatures } from '../../components/features/features';
@@ -13,7 +14,7 @@ interface Section { id: string; key: string; }
 
 @Component({
   selector: 'app-landing',
-  imports: [LandingLayout, LandingHero, LandingFeatures, LandingHowItWorks, LandingExample, LandingPlatform, LandingCtaBanner],
+  imports: [LandingLayout, LandingHero, BrandSlider, LandingFeatures, LandingHowItWorks, LandingExample, LandingPlatform, LandingCtaBanner],
   templateUrl: './landing-page.html',
   host: { '(window:scroll)': 'onScroll()', '(document:keydown.escape)': 'menuOpen.set(false)' },
 })
@@ -32,8 +33,8 @@ export class LandingPage implements AfterViewInit {
     { id: 'plataforma', key: 'landing.nav.platform' },
   ];
   protected readonly features = [
-    { icon: 'pi pi-inbox', title: 'landing.features.ingest.title', text: 'landing.features.ingest.text', link: '/app/ingest', color: '#d97706' },
-    { icon: 'pi pi-sparkles', title: 'landing.features.analysis.title', text: 'landing.features.analysis.text', link: '/app/ingest', color: '#8b5cf6' },
+    { icon: 'pi pi-inbox', title: 'landing.features.ingest.title', text: 'landing.features.ingest.text', link: '/app/content', color: '#d97706' },
+    { icon: 'pi pi-sparkles', title: 'landing.features.analysis.title', text: 'landing.features.analysis.text', link: '/app/content', color: '#8b5cf6' },
     { icon: 'pi pi-sitemap', title: 'landing.features.content.title', text: 'landing.features.content.text', link: '/app/content', color: '#10b981' },
     { icon: 'pi pi-cloud-upload', title: 'landing.features.storage.title', text: 'landing.features.storage.text', link: '/app/storage', color: '#c74634' },
   ];
@@ -52,7 +53,7 @@ export class LandingPage implements AfterViewInit {
     { icon: 'pi pi-cloud', key: 'landing.example.oci', tint: 'bg-orange-50 text-[#c74634] dark:bg-orange-500/10 dark:text-orange-300' },
   ];
 
-  constructor() { effect(() => { document.title = `Kora AI · ${this.i18n.t('brand.tagline')}`; }); }
+  constructor() { effect(() => { document.title = `Ukuku AI · ${this.i18n.t('brand.tagline')}`; }); }
 
   ngAfterViewInit() {
     if (typeof IntersectionObserver === 'undefined') return;

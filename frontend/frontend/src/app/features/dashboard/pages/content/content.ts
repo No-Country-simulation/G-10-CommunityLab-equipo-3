@@ -7,13 +7,28 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TagModule } from 'primeng/tag';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
-import { AssetStatus, GeneratedAsset } from '../../../../core/api/api.models';
-import { buildBannerSvg, downloadBannerPng, svgDataUrl } from '../../../../core/banner';
+import { AssetPatch, AssetStatus, AssetType, GeneratedAsset } from '../../../../core/api/api.models';
+import { TONE } from '../../../../core/api/live-feed';
+import { CHANNEL_RULES, PUBLISHING_PLATFORMS, checkPost } from '../../../../core/channel-rules';
+import {
+  BANNER_FORMATS,
+  BANNER_HEADLINE_MAX,
+  BannerFormat,
+  bannerFileName,
+  buildBannerSvg,
+  canHaveBanner,
+  defaultBannerHeadline,
+  downloadBlob,
+  loadBannerLogo,
+  renderBannerPng,
+  svgDataUrl,
+} from '../../../../core/banner';
 import { confetti, originOf } from '../../../../core/confetti';
 import { I18n } from '../../../../core/i18n/i18n.service';
-import { LocalizedDatePipe, TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { AssetTitlePipe, LocalizedDatePipe, TonePipe, TranslatePipe, assetTitle } from '../../../../core/i18n/translate.pipe';
 import {
   ASSET_STATUS_DOT,
   ASSET_STATUS_SEVERITY,
@@ -26,6 +41,8 @@ import {
 } from '../../../../core/ui-maps';
 import { WorkspaceStore } from '../../../../core/workspace.store';
 import { AssetPreview } from '../../../../shared/asset-preview/asset-preview';
+import { Mascot } from '../../../../shared/mascot/mascot';
+import { SENTIMENT_EXPRESSION } from '../../../../core/mascot';
 
 type Filter = 'pending' | 'approved' | 'published' | 'rejected' | 'all';
 
@@ -45,12 +62,16 @@ const FILTER_STATUSES: Record<Filter, AssetStatus[] | null> = {
     SelectButtonModule,
     TagModule,
     TextareaModule,
+    ToggleSwitchModule,
     TooltipModule,
     FormsModule,
     PercentPipe,
     AssetPreview,
+    Mascot,
     TranslatePipe,
     LocalizedDatePipe,
+    AssetTitlePipe,
+    TonePipe,
   ],
   templateUrl: './content.html',
   styleUrl: './content.css',
@@ -67,6 +88,7 @@ export class Content {
   protected readonly statusDot = ASSET_STATUS_DOT;
   protected readonly routeTint = ROUTE_TINT;
   protected readonly sentimentTint = SENTIMENT_TINT;
+  protected readonly sentimentExpression = SENTIMENT_EXPRESSION;
   protected readonly sourceIcon = SOURCE_ICON;
   protected readonly sourceTint = SOURCE_TINT;
 
@@ -88,10 +110,41 @@ export class Content {
     { label: this.i18n.t('content.view.edit'), value: 'edit' },
   ]);
   protected readonly view = signal<'preview' | 'edit'>('preview');
-  protected draft = { title: '', body: '', hashtags: '' };
+  /** Editor state: `body` is the post text WITHOUT its call to action, which has its own field */
+  protected draft = emptyDraft();
 
+  protected readonly platforms = PUBLISHING_PLATFORMS;
+  protected readonly channelRules = CHANNEL_RULES;
+
+  // ── Banner studio: format, editable headline and author privacy, previewed live ──
   protected readonly bannerOpen = signal(false);
-  protected readonly bannerSvg = signal('');
+  protected readonly bannerAsset = signal<GeneratedAsset | null>(null);
+  protected readonly bannerFormat = signal<BannerFormat>('landscape');
+  protected readonly bannerHeadline = signal('');
+  protected readonly bannerShowAuthor = signal(true);
+  protected readonly bannerBusy = signal<'copy' | 'download' | null>(null);
+  private readonly bannerLogo = signal<string | undefined>(undefined);
+  protected readonly bannerHeadlineMax = BANNER_HEADLINE_MAX;
+  protected readonly bannerFormats = computed(() =>
+    (Object.keys(BANNER_FORMATS) as BannerFormat[]).map((f) => ({
+      value: f,
+      label: this.i18n.t(`banner.format.${f}`),
+      size: `${BANNER_FORMATS[f].width} × ${BANNER_FORMATS[f].height}`,
+    })),
+  );
+  /** Image clipboard is missing in some browsers (Firefox without flags): the button is hidden there */
+  protected readonly canCopyImage = typeof ClipboardItem !== 'undefined' && !!navigator.clipboard?.write;
+  protected readonly bannerSvg = computed(() => {
+    const a = this.bannerAsset();
+    return a
+      ? buildBannerSvg(a, this.i18n, {
+          format: this.bannerFormat(),
+          headline: this.bannerHeadline(),
+          showAuthor: this.bannerShowAuthor(),
+          logo: this.bannerLogo(),
+        })
+      : '';
+  });
   // Our own SVG with escaped text; Angular would otherwise block data:image/svg+xml
   protected readonly bannerUrl = computed(() =>
     this.bannerSvg() ? this.sanitizer.bypassSecurityTrustUrl(svgDataUrl(this.bannerSvg())) : null,
@@ -113,7 +166,7 @@ export class Content {
     return this.store.assets().filter(
       (a) =>
         (!statuses || statuses.includes(a.status)) &&
-        (!q || `${a.title} ${a.body} ${a.origin.author} ${a.origin.channel}`.toLowerCase().includes(q)),
+        (!q || `${assetTitle(a, this.i18n)} ${a.body} ${a.origin.author} ${a.origin.channel}`.toLowerCase().includes(q)),
     );
   });
 
@@ -128,50 +181,97 @@ export class Content {
     // Reset the editor whenever another asset is selected
     effect(() => {
       const a = this.selected();
-      this.draft = a ? { title: a.title, body: a.body, hashtags: a.hashtags.join(' ') } : { title: '', body: '', hashtags: '' };
+      this.draft = a ? toDraft(a) : emptyDraft();
     });
   }
 
   protected select(a: GeneratedAsset) {
     this.selectedId.set(a.id);
     this.view.set('preview');
+    // Below lg the editor sits under the list: bring it into view
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      requestAnimationFrame(() => document.getElementById('content-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  }
+
+  /** One-line snippet for the list: the post without markdown marks (**bold**, *italic*, `code`, # headings; underscores stay: snake_case) */
+  protected snippet(body: string) {
+    return body
+      .replace(/^#+\s*/gm, '')
+      .replace(/(\*\*|\*|`)(\S(?:.*?\S)?)\1/g, '$2')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   protected dirty(a: GeneratedAsset) {
-    return this.draft.title !== a.title || this.draft.body !== a.body || this.draft.hashtags !== a.hashtags.join(' ');
+    const saved = toDraft(a);
+    return (Object.keys(saved) as (keyof Draft)[]).some((k) => this.draft[k] !== saved[k]);
+  }
+
+  /** Requirements of the platform chosen in the editor, checked live against the draft */
+  protected rules() {
+    return checkPost({
+      type: this.draft.type,
+      title: this.draft.title,
+      content: this.draft.body,
+      cta: this.draft.cta,
+      hashtags: parseHashtags(this.draft.hashtags),
+    });
+  }
+
+  /** The draft breaks a rule of its platform: the backend would refuse it, so it cannot be saved */
+  protected blocked() {
+    return this.rules().some((r) => !r.ok);
+  }
+
+  /** Switching platform: FAQ cannot carry a call to action, so it is cleared */
+  protected setPlatform(type: AssetType) {
+    this.draft.type = type;
+    if (CHANNEL_RULES[type]?.cta === 'forbidden') this.draft.cta = '';
   }
 
   protected save(a: GeneratedAsset) {
-    this.store.update(a.id, {
+    const content = this.draft.body.trim();
+    const cta = this.draft.cta.trim();
+    const patch: AssetPatch = {
       title: this.draft.title.trim(),
-      body: this.draft.body.trim(),
-      hashtags: this.draft.hashtags
-        .split(/[\s,]+/)
-        .filter(Boolean)
-        .map((h) => (h.startsWith('#') ? h : `#${h}`)),
-    });
+      // The UI keeps the call to action as the body's last paragraph
+      body: cta ? `${content}\n\n${cta}` : content,
+      cta,
+      hashtags: parseHashtags(this.draft.hashtags),
+    };
+    if (this.draft.type !== a.type) Object.assign(patch, { type: this.draft.type, tone: TONE[this.draft.type] });
     this.view.set('preview');
-    this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.saved'), life: 2000 });
+    this.store
+      .update(a.id, patch)
+      // "pending" and "failed" already have their own message from the store
+      .then((outcome) => outcome === 'saved' && this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.saved'), life: 2000 }));
   }
 
   protected setStatus(a: GeneratedAsset, status: AssetStatus) {
-    this.store.update(a.id, { status });
-    this.toast.add({
-      severity: 'info',
-      summary: this.i18n.t('content.toast.marked', { status: this.i18n.t(`status.${status}`).toLowerCase() }),
-      life: 2000,
-    });
+    this.store.update(a.id, { status }).then(
+      (outcome) =>
+        outcome === 'saved' &&
+        this.toast.add({
+          severity: 'info',
+          summary: this.i18n.t('content.toast.marked', { status: this.i18n.t(`status.${status}`).toLowerCase() }),
+          life: 2000,
+        }),
+    );
   }
 
   protected publish(a: GeneratedAsset, event?: Event) {
-    this.store.publish(a.id);
     confetti(originOf(event));
-    this.toast.add({
-      severity: 'success',
-      summary: this.i18n.t('content.toast.published'),
-      detail: this.i18n.t('content.toast.publishedDetail', { type: this.i18n.t(`assetType.${a.type}`), author: a.origin.author }),
-      life: 3000,
-    });
+    this.store.publish(a.id).then(
+      (outcome) =>
+        outcome === 'saved' &&
+        this.toast.add({
+          severity: 'success',
+          summary: this.i18n.t('content.toast.published'),
+          detail: this.i18n.t('content.toast.publishedDetail', { type: this.i18n.t(`assetType.${a.type}`), author: a.origin.author }),
+          life: 3000,
+        }),
+    );
   }
 
   protected publishAllApproved(event?: Event) {
@@ -181,20 +281,128 @@ export class Content {
     this.toast.add({ severity: 'success', summary: this.i18n.t('content.toast.publishedMany', { n: approved.length }), life: 3000 });
   }
 
-  protected copy(a: GeneratedAsset) {
+  /** Post whose text was just copied: its button shows "Copied" for a moment */
+  protected readonly copiedId = signal<string | null>(null);
+  private copiedTimer?: ReturnType<typeof setTimeout>;
+
+  protected async copy(a: GeneratedAsset) {
     const text = a.body + (a.hashtags.length ? `\n\n${a.hashtags.join(' ')}` : '');
-    navigator.clipboard?.writeText(text).then(() =>
-      this.toast.add({ severity: 'info', summary: this.i18n.t('toast.copied.text'), life: 2000 }),
-    );
+    if (!(await writeClipboard(text))) {
+      this.toast.add({ severity: 'warn', summary: this.i18n.t('common.copyFailed'), life: 3000 });
+      return;
+    }
+    this.copiedId.set(a.id);
+    clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => this.copiedId.set(null), 2000);
   }
+
+  protected readonly canHaveBanner = canHaveBanner;
 
   protected openBanner(a: GeneratedAsset) {
-    this.bannerSvg.set(buildBannerSvg(a));
+    if (!canHaveBanner(a)) return;
+    this.bannerAsset.set(a);
+    this.bannerHeadline.set(defaultBannerHeadline(a, this.i18n));
     this.bannerOpen.set(true);
+    // The preview shows at once; the logo joins it as soon as it is loaded (cached afterwards)
+    loadBannerLogo().then((logo) => this.bannerLogo.set(logo));
   }
 
-  protected downloadBanner() {
-    const a = this.selected();
-    if (a) downloadBannerPng(this.bannerSvg(), `banner-${a.id}.png`);
+  protected resetBannerHeadline() {
+    const a = this.bannerAsset();
+    if (a) this.bannerHeadline.set(defaultBannerHeadline(a, this.i18n));
   }
+
+  protected bannerHeadlineIsDefault() {
+    const a = this.bannerAsset();
+    return !a || this.bannerHeadline() === defaultBannerHeadline(a, this.i18n);
+  }
+
+  protected bannerSize() {
+    const { width, height } = BANNER_FORMATS[this.bannerFormat()];
+    return { width, height };
+  }
+
+  protected async downloadBanner() {
+    const a = this.bannerAsset();
+    if (!a || this.bannerBusy()) return;
+    this.bannerBusy.set('download');
+    try {
+      const format = this.bannerFormat();
+      const blob = await renderBannerPng(this.bannerSvg(), format);
+      downloadBlob(blob, bannerFileName(a, this.bannerHeadline() || defaultBannerHeadline(a, this.i18n), format));
+      this.toast.add({ severity: 'success', summary: this.i18n.t('banner.toast.downloaded'), life: 2000 });
+    } catch {
+      this.toast.add({ severity: 'error', summary: this.i18n.t('banner.toast.failed'), life: 3000 });
+    } finally {
+      this.bannerBusy.set(null);
+    }
+  }
+
+  /** Copies the PNG itself, ready to paste into LinkedIn, X or a chat */
+  protected async copyBanner() {
+    if (!this.bannerAsset() || this.bannerBusy()) return;
+    this.bannerBusy.set('copy');
+    try {
+      // The promise form keeps the user gesture alive while the PNG is rendered (Safari requires it)
+      const png = renderBannerPng(this.bannerSvg(), this.bannerFormat());
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      this.toast.add({ severity: 'success', summary: this.i18n.t('banner.toast.copied'), life: 2000 });
+    } catch {
+      this.toast.add({ severity: 'error', summary: this.i18n.t('banner.toast.copyFailed'), life: 3000 });
+    } finally {
+      this.bannerBusy.set(null);
+    }
+  }
+}
+
+/**
+ * Copies text to the clipboard. The Clipboard API needs a secure, focused page and can be blocked by the
+ * browser; the hidden-textarea fallback covers those cases. False when neither worked.
+ */
+async function writeClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(area);
+    area.select();
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      area.remove();
+    }
+  }
+}
+
+interface Draft {
+  type: AssetType;
+  title: string;
+  body: string;
+  cta: string;
+  hashtags: string;
+}
+
+function emptyDraft(): Draft {
+  return { type: 'linkedin_post', title: '', body: '', cta: '', hashtags: '' };
+}
+
+/** Editor fields from a post: the call to action is split off the body's last paragraph */
+function toDraft(a: GeneratedAsset): Draft {
+  const cta = a.cta ?? '';
+  const suffix = cta ? `\n\n${cta}` : '';
+  const body = suffix && a.body.endsWith(suffix) ? a.body.slice(0, -suffix.length) : a.body;
+  return { type: a.type, title: a.title, body, cta, hashtags: a.hashtags.join(' ') };
+}
+
+function parseHashtags(text: string): string[] {
+  return text
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((h) => (h.startsWith('#') ? h : `#${h}`));
 }
