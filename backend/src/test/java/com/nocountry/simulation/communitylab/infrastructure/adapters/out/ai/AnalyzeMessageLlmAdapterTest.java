@@ -77,7 +77,7 @@ class AnalyzeMessageLlmAdapterTest {
                         .build())
                 .build();
         when(rateLimitCfg.rateLimitAi()).thenReturn(bucket);
-        service = new AnalyzeMessageLlmAdapter(builder, new SystemPrompt(), new LlmOutputSanitizer(), rateLimitCfg);
+        service = new AnalyzeMessageLlmAdapter(builder, new SystemPrompt(), new LlmOutputSanitizer(), rateLimitCfg, 3);
     }
 
     private AnalyzeMessageLlmAdapter serviceWithBucket(Bucket bucket) {
@@ -93,7 +93,7 @@ class AnalyzeMessageLlmAdapterTest {
         when(freshSpec.call()).thenReturn(callSpec);
         RateLimitAiConfig cfg = mock(RateLimitAiConfig.class);
         when(cfg.rateLimitAi()).thenReturn(bucket);
-        return new AnalyzeMessageLlmAdapter(builder, new SystemPrompt(), new LlmOutputSanitizer(), cfg);
+        return new AnalyzeMessageLlmAdapter(builder, new SystemPrompt(), new LlmOutputSanitizer(), cfg, 3);
     }
 
     @Test

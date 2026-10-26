@@ -1,5 +1,6 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.out.storage;
 
+import com.nocountry.simulation.communitylab.infrastructure.adapters.out.cache.RedisPackageCache;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +33,9 @@ class ArtifactStoreSelectionTest {
     // Why the placeholder auto-config: it is what resolves ${...} inside @ConditionalOnExpression in the real app.
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(PropertyPlaceholderAutoConfiguration.class))
+            // Why Boot's conversion service: SpringApplication registers it, and it is what turns "30s" into a Duration
+            .withInitializer(context -> context.getBeanFactory()
+                    .setConversionService(ApplicationConversionService.getSharedInstance()))
             .withUserConfiguration(Collaborators.class, ArtifactStoreAdapter.class, OciObjectStorageAdapter.class);
 
     @Test
@@ -77,6 +82,12 @@ class ArtifactStoreSelectionTest {
         @Bean
         ObjectStorage objectStorage() {
             return mock(ObjectStorage.class);
+        }
+
+        // Why a mock cache: the real one needs Redis; only the wiring of the adapters is under test here.
+        @Bean
+        RedisPackageCache redisPackageCache() {
+            return mock(RedisPackageCache.class);
         }
 
         @Bean

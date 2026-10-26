@@ -33,6 +33,7 @@ import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
+import com.nocountry.simulation.communitylab.infrastructure.adapters.out.cache.RedisPackageCache;
 import com.nocountry.simulation.communitylab.infrastructure.config.oci.OciAuthMode;
 import com.nocountry.simulation.communitylab.infrastructure.config.oci.OciProperties;
 import com.oracle.bmc.model.BmcException;
@@ -52,7 +53,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Derivado de: spec 006 RF-01 (1 lote = 1 objeto paquetes/{source}/paquete-{batchId}.json, application/json)
  * + RF-03 (1 PAR read por objeto, sin listing) + RF-05 + enmienda 2026-10-10 (412 = sin re-PUT y PAR nueva)
  * + RF-07 (fallo OCI deja el lote pendiente) + RNF-01 (Content-Type; enmienda 2026-10-12: paquete {@code >= 1MB}
- * se sube igual con alarma ERROR, nunca se retiene en Redis) + RNF-03 (TTL {@code PAR_TTL_DAYS})
+ * se sube igual con alarma ERROR, nunca se retiene en Redis) + RNF-03 (TTL {@code PAR_TTL_DAYS}, 7 días por la enmienda 2026-10-20)
  * + RNF-06 (logs solo batchId/source/parId, sin contenido, autor ni URL PAR) + plan 006 §3 (PUT ok + PAR
  * fallida = failed, el reintento lo cura).
  */
@@ -62,7 +63,7 @@ class OciObjectStorageAdapterTest {
 
     private static final String BATCH_ID = "batch-1";
     private static final String OBJECT_KEY = "paquetes/discord/paquete-batch-1.json";
-    private static final int PAR_TTL_DAYS = 3;
+    private static final int PAR_TTL_DAYS = 7;
     private static final Instant NOW = Instant.parse("2026-10-08T10:00:00Z");
     // Distinctive values so a leak into the logs cannot be a coincidence.
     private static final String AUTHOR_NAME = "Autora-Privada";
@@ -81,6 +82,10 @@ class OciObjectStorageAdapterTest {
     @Mock
     private ObjectStorage objectStorage;
 
+    // Default mock = always a cache miss, so these cases keep exercising the OCI calls themselves.
+    @Mock
+    private RedisPackageCache packageCache;
+
     private OciObjectStorageAdapter adapter;
 
     @BeforeEach
@@ -88,7 +93,7 @@ class OciObjectStorageAdapterTest {
         OciProperties properties = new OciProperties(OciAuthMode.SESSION_TOKEN, "dev",
                 "MessagesUsers", "sa-saopaulo-1", "test-namespace", "paquetes/", PAR_TTL_DAYS,
                 "ocid1.compartment.oc1..test");
-        adapter = new OciObjectStorageAdapter(objectStorage, properties, JSON);
+        adapter = new OciObjectStorageAdapter(objectStorage, properties, JSON, packageCache);
     }
 
     // ---------- PUT ----------
@@ -192,7 +197,7 @@ class OciObjectStorageAdapterTest {
     }
 
     @Test
-    @DisplayName("Dado PAR_TTL_DAYS=3, cuando se crea la PAR, entonces pide caducidad a 3 días desde ahora")
+    @DisplayName("Dado PAR_TTL_DAYS=7, cuando se crea la PAR, entonces pide caducidad a 7 días desde ahora")
     void parRequestsConfiguredTtl() {
         // Dado OCI aceptando PUT y PAR
         putSucceeds();

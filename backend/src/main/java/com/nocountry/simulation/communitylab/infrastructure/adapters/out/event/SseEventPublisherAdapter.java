@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import org.springframework.scheduling.annotation.Scheduled;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +35,7 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
 
     private final Map<Source, List<SseEmitter>> emittersBySource = new ConcurrentHashMap<>();
     private final Map<Source, Deque<StoredEvent>> replayBySource = new ConcurrentHashMap<>();
+    private final ReentrantLock heartbeatLock = new ReentrantLock();
 
     // Called by the SSE controllers (one GET per source); history is loaded only when the replay cannot continue.
     public SseEmitter subscribe(Source source, String lastEventId, Supplier<History> history) {
@@ -70,14 +72,24 @@ public class SseEventPublisherAdapter implements EventPublishPost, PackagePublis
     // Why: 30 s stays well under Cloudflare's 100 s idle cut, even if one beat is late or lost.
     @Scheduled(fixedRate = HEARTBEAT_SECONDS, timeUnit = TimeUnit.SECONDS)
     public void heartbeat() {
-        for (List<SseEmitter> subscribers : emittersBySource.values()) {
-            for(SseEmitter emitter : subscribers) {
-                try {
-                    emitter.send(SseEmitter.event().comment("heartbeat"));
-                } catch (IOException | IllegalStateException e) {
-                   subscribers.remove(emitter);
+        // Why skip instead of wait (spec 010): on virtual threads every fixedRate run starts on a new thread without
+        // waiting for the last one, so a client that stopped reading would pile up heartbeats blocked on its socket.
+        if (!heartbeatLock.tryLock()) {
+            log.debug("sse heartbeat skipped: previous beat still running");
+            return;
+        }
+        try {
+            for (List<SseEmitter> subscribers : emittersBySource.values()) {
+                for(SseEmitter emitter : subscribers) {
+                    try {
+                        emitter.send(SseEmitter.event().comment("heartbeat"));
+                    } catch (IOException | IllegalStateException e) {
+                       subscribers.remove(emitter);
+                    }
                 }
             }
+        } finally {
+            heartbeatLock.unlock();
         }
     }
 

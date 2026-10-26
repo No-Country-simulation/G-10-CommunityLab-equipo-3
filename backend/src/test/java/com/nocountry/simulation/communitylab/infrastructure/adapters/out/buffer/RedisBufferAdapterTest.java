@@ -2,6 +2,7 @@ package com.nocountry.simulation.communitylab.infrastructure.adapters.out.buffer
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,6 +34,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import com.nocountry.simulation.communitylab.domain.entity.EnrichedComment;
 import com.nocountry.simulation.communitylab.domain.enums.ApprovalStatus;
@@ -53,7 +55,8 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p>Derivado de: spec 004 RF buffer (SADD dedup, RPUSH, INCRBY bytes) + spec 006
  * RF-01 (cierre por tamaño) + regla nueva lote por fuente + plan 006 §3 (sellado
- * MULTI/RENAME sin Lua, pendientes reintentables) + spec 008 RF-01/RF-06/RF-07 + plan 008 §1.1
+ * MULTI/RENAME, pendientes reintentables) + spec 010 RF-02/RF-03/RF-04 (append atómico en Lua,
+ * descarte en MULTI, varios sellados en un pipeline) + spec 008 RF-01/RF-06/RF-07 + plan 008 §1.1
  * ({@code readOpen}: lote abierto de su fuente, en orden de llegada, degradado a vacío).
  */
 @DisplayName("RedisBufferAdapter")
@@ -117,69 +120,81 @@ class RedisBufferAdapterTest {
         assertThat(adapter.getCurrentBatchId(Source.DISCORD)).isNotBlank();
     }
 
-    // ---------- append ----------
+    // ---------- append (spec 010 RF-02: one atomic Lua script) ----------
 
     @Test
-    @DisplayName("Dado un post DISCORD nuevo, cuando se bufferiza, entonces va a las keys DISCORD y devuelve el total de bytes")
+    @DisplayName("Dado el script de append, cuando se inspecciona, entonces deduplica con SADD y solo si es nuevo hace RPUSH e INCRBY")
+    void appendScriptDedupsThenPushesThenCounts() {
+        // Dado el script que el adaptador envía a Redis
+        String lua = appendScript().getScriptAsString();
+
+        // Entonces el orden del contrato de 004 se mantiene dentro de un único paso atómico
+        assertThat(lua).containsSubsequence("SADD', KEYS[1], ARGV[1]) == 1", "RPUSH', KEYS[2], ARGV[2]",
+                "INCRBY', KEYS[3], ARGV[3]", "return 0");
+        assertThat(appendScript().getResultType()).isEqualTo(Long.class);
+    }
+
+    @Test
+    @DisplayName("Dado un post DISCORD nuevo, cuando se bufferiza, entonces un solo script recibe las keys DISCORD y el tamaño real y devuelve el total")
+    @SuppressWarnings("unchecked")
     void appendWritesSourceKeysAndReturnsTotalBytes() throws Exception {
-        // Dado un post nuevo (SADD = 1) y un contador que queda en 5000
+        // Dado un post nuevo y un script que deja el contador en 5000
         EnrichedComment post = post("m-1", Source.DISCORD);
-        long jsonBytes = objectMapper.writeValueAsString(post).getBytes(StandardCharsets.UTF_8).length;
-        when(setOps.add("buffer:DISCORD:current:ids", "m-1")).thenReturn(1L);
-        when(valueOps.increment("buffer:DISCORD:current:bytes", jsonBytes)).thenReturn(5_000L);
+        String json = objectMapper.writeValueAsString(post);
+        long jsonBytes = json.getBytes(StandardCharsets.UTF_8).length;
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any(), any(), any())).thenReturn(5_000L);
 
         // Cuando se bufferiza
         long total = adapter.appendToBatch(post);
 
-        // Entonces dedup -> RPUSH -> INCRBY con el tamaño real del json, y el total del lote vuelve
-        InOrder order = inOrder(setOps, listOps, valueOps);
-        order.verify(setOps).add("buffer:DISCORD:current:ids", "m-1");
-        order.verify(listOps).rightPush(eq("buffer:DISCORD:current:list"), anyString());
-        order.verify(valueOps).increment("buffer:DISCORD:current:bytes", jsonBytes);
+        // Entonces un solo viaje: keys ids/list/bytes de DISCORD, args messageId/json/tamaño en bytes UTF-8
+        verify(redisTemplate).execute(any(RedisScript.class),
+                eq(List.of("buffer:DISCORD:current:ids", "buffer:DISCORD:current:list", "buffer:DISCORD:current:bytes")),
+                eq("m-1"), eq(json), eq(String.valueOf(jsonBytes)));
+        verifyNoInteractions(setOps, listOps, valueOps);
         assertThat(total).isEqualTo(5_000L);
     }
 
     @Test
-    @DisplayName("Dado un post TELEGRAM, cuando se bufferiza, entonces nunca toca las keys de DISCORD")
+    @DisplayName("Dado un post TELEGRAM, cuando se bufferiza, entonces el script solo recibe keys de TELEGRAM")
+    @SuppressWarnings("unchecked")
     void appendTelegramIsolatedFromDiscord() {
         // Dado un post TELEGRAM nuevo
-        when(setOps.add("buffer:TELEGRAM:current:ids", "m-1")).thenReturn(1L);
-        when(valueOps.increment(eq("buffer:TELEGRAM:current:bytes"), anyLong())).thenReturn(10L);
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any(), any(), any())).thenReturn(10L);
 
         // Cuando se bufferiza
         adapter.appendToBatch(post("m-1", Source.TELEGRAM));
 
         // Entonces solo keys TELEGRAM
-        verify(listOps).rightPush(eq("buffer:TELEGRAM:current:list"), anyString());
-        verify(setOps, never()).add(eq("buffer:DISCORD:current:ids"), any(String[].class));
-        verify(listOps, never()).rightPush(eq("buffer:DISCORD:current:list"), anyString());
+        ArgumentCaptor<List<String>> keys = ArgumentCaptor.forClass(List.class);
+        verify(redisTemplate).execute(any(RedisScript.class), keys.capture(), any(), any(), any());
+        assertThat(keys.getValue()).allMatch(key -> key.startsWith("buffer:TELEGRAM:"));
     }
 
     @Test
-    @DisplayName("Dado un messageId repetido en el lote, cuando se bufferiza, entonces no se duplica y devuelve 0")
+    @DisplayName("Dado un messageId repetido en el lote, cuando se bufferiza, entonces el script devuelve 0 y el adaptador también")
+    @SuppressWarnings("unchecked")
     void appendDedupReturnsZero() {
-        // Dado SADD = 0 (ya estaba en el lote)
-        when(setOps.add("buffer:DISCORD:current:ids", "m-1")).thenReturn(0L);
+        // Dado SADD = 0 dentro del script (ya estaba en el lote)
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any(), any(), any())).thenReturn(0L);
 
         // Cuando se bufferiza / Entonces 0 = "nada nuevo, nada que evaluar"
         assertThat(adapter.appendToBatch(post("m-1", Source.DISCORD))).isZero();
-        verify(listOps, never()).rightPush(anyString(), anyString());
-        verify(valueOps, never()).increment(anyString(), anyLong());
     }
 
     @Test
     @DisplayName("Dado un post nulo, cuando se bufferiza, entonces devuelve 0 sin tocar Redis")
     void appendNullReturnsZero() {
         assertThat(adapter.appendToBatch(null)).isZero();
-        verifyNoInteractions(setOps, listOps, valueOps);
+        verifyNoInteractions(redisTemplate, setOps, listOps, valueOps);
     }
 
     @Test
-    @DisplayName("Dado Redis lento (timeout en el RPUSH), cuando se bufferiza, entonces devuelve 0 sin lanzar")
+    @DisplayName("Dado Redis lento (timeout en el script), cuando se bufferiza, entonces devuelve 0 sin lanzar")
+    @SuppressWarnings("unchecked")
     void appendRedisTimeoutReturnsZero() {
-        // Dado el SADD hecho y el RPUSH superando REDIS_TIMEOUT (no es RedisConnectionFailureException)
-        when(setOps.add(anyString(), any(String[].class))).thenReturn(1L);
-        when(listOps.rightPush(anyString(), anyString()))
+        // Dado el script superando REDIS_TIMEOUT (no es RedisConnectionFailureException)
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any(), any(), any()))
                 .thenThrow(new org.springframework.dao.QueryTimeoutException("timeout"));
 
         // Cuando se bufferiza / Entonces el adaptador lo trata como fallo de Redis en vez de propagarlo
@@ -188,10 +203,21 @@ class RedisBufferAdapterTest {
 
     @Test
     @DisplayName("Dado Redis caído, cuando se bufferiza, entonces devuelve 0 sin lanzar")
+    @SuppressWarnings("unchecked")
     void appendRedisDownReturnsZero() {
-        when(setOps.add(anyString(), any(String[].class))).thenThrow(new RedisConnectionFailureException("down"));
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any(), any(), any()))
+                .thenThrow(new RedisConnectionFailureException("down"));
 
         assertThat(adapter.appendToBatch(post("m-1", Source.DISCORD))).isZero();
+    }
+
+    @SuppressWarnings("unchecked")
+    private RedisScript<Long> appendScript() {
+        when(redisTemplate.execute(any(RedisScript.class), anyList(), any(), any(), any())).thenReturn(1L);
+        adapter.appendToBatch(post("m-script", Source.DISCORD));
+        ArgumentCaptor<RedisScript<Long>> script = ArgumentCaptor.forClass(RedisScript.class);
+        verify(redisTemplate, org.mockito.Mockito.atLeastOnce()).execute(script.capture(), anyList(), any(), any(), any());
+        return script.getValue();
     }
 
     // ---------- count ----------
@@ -338,12 +364,100 @@ class RedisBufferAdapterTest {
     }
 
     @Test
-    @DisplayName("Dado un lote subido, cuando se descarta, entonces se borra su lista y sale de pendientes")
+    @DisplayName("Dado un lote subido, cuando se descarta, entonces en un MULTI se borra su lista y sale de pendientes")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void discardSealedDeletesListAndPendingMark() {
+        // Cuando se descarta
         adapter.discardSealed(Source.TELEGRAM, "b-1");
 
-        verify(redisTemplate).delete("buffer:TELEGRAM:sealed:b-1");
-        verify(setOps).remove("buffer:TELEGRAM:pending", "b-1");
+        // Entonces la transacción, ejecutada sobre una conexión simulada, hace las dos cosas juntas (spec 010 RF-03)
+        ArgumentCaptor<SessionCallback> callback = ArgumentCaptor.forClass(SessionCallback.class);
+        verify(redisTemplate).execute(callback.capture());
+        RedisOperations<String, String> ops = mock(RedisOperations.class);
+        SetOperations<String, String> txSet = mock(SetOperations.class);
+        when(ops.opsForSet()).thenReturn(txSet);
+        callback.getValue().execute(ops);
+
+        InOrder order = inOrder(ops, txSet);
+        order.verify(ops).multi();
+        order.verify(ops).delete("buffer:TELEGRAM:sealed:b-1");
+        order.verify(txSet).remove("buffer:TELEGRAM:pending", "b-1");
+        order.verify(ops).exec();
+        verify(redisTemplate, never()).delete(anyString());
+    }
+
+    @Test
+    @DisplayName("Dado Redis caído, cuando se descarta un lote, entonces no lanza")
+    @SuppressWarnings("unchecked")
+    void discardSealedRedisDownDoesNotThrow() {
+        when(redisTemplate.execute(any(SessionCallback.class))).thenThrow(new RedisConnectionFailureException("down"));
+
+        org.assertj.core.api.Assertions.assertThatCode(() -> adapter.discardSealed(Source.TELEGRAM, "b-1"))
+                .doesNotThrowAnyException();
+    }
+
+    // ---------- several sealed batches (spec 010 RF-04) ----------
+
+    @Test
+    @DisplayName("Dado dos lotes sellados, cuando se leen juntos, entonces es un único pipeline con un LRANGE por lote y vuelven en orden")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void readSealedAllUsesOnePipeline() throws Exception {
+        // Dado dos lotes sellados de TELEGRAM con un mensaje cada uno
+        EnrichedComment first = post("m-1", Source.TELEGRAM);
+        EnrichedComment second = post("m-2", Source.TELEGRAM);
+        when(redisTemplate.executePipelined(any(SessionCallback.class))).thenReturn(List.of(
+                List.of(objectMapper.writeValueAsString(first)),
+                List.of(objectMapper.writeValueAsString(second))));
+
+        // Cuando se leen juntos
+        List<EnrichedComment> records = adapter.readSealedAll(Source.TELEGRAM, List.of("s-1", "s-2"));
+
+        // Entonces los mensajes de ambos, en el orden de los lotes
+        assertThat(records).containsExactly(first, second);
+
+        // Y el pipeline pide exactamente la lista sellada de cada lote
+        ArgumentCaptor<SessionCallback> callback = ArgumentCaptor.forClass(SessionCallback.class);
+        verify(redisTemplate).executePipelined(callback.capture());
+        RedisOperations<String, String> ops = mock(RedisOperations.class);
+        ListOperations<String, String> pipeList = mock(ListOperations.class);
+        when(ops.opsForList()).thenReturn(pipeList);
+        callback.getValue().execute(ops);
+        InOrder order = inOrder(pipeList);
+        order.verify(pipeList).range("buffer:TELEGRAM:sealed:s-1", 0, -1);
+        order.verify(pipeList).range("buffer:TELEGRAM:sealed:s-2", 0, -1);
+        verify(listOps, never()).range(anyString(), anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("Dado ningún lote pendiente, cuando se leen juntos, entonces devuelve vacío sin tocar Redis")
+    void readSealedAllWithoutBatchesSkipsRedis() {
+        assertThat(adapter.readSealedAll(Source.DISCORD, Set.of())).isEmpty();
+        verifyNoInteractions(redisTemplate);
+    }
+
+    @Test
+    @DisplayName("Dado un registro corrupto en un lote, cuando se leen juntos, entonces se salta solo ese y sin loguear su contenido")
+    @SuppressWarnings("unchecked")
+    void readSealedAllSkipsCorruptRecord(CapturedOutput output) throws Exception {
+        // Dado un lote con un registro ilegible y uno válido
+        EnrichedComment valid = post("m-2", Source.DISCORD);
+        when(redisTemplate.executePipelined(any(SessionCallback.class))).thenReturn(List.of(
+                List.of("{corrupt-SECRET", objectMapper.writeValueAsString(valid))));
+
+        // Cuando se leen / Entonces el válido vuelve y el log solo lleva ids
+        assertThat(adapter.readSealedAll(Source.DISCORD, List.of("s-1"))).containsExactly(valid);
+        assertThat(output).contains("sealed record skipped: batchId=s-1 source=DISCORD");
+        assertThat(output).doesNotContain("SECRET");
+    }
+
+    @Test
+    @DisplayName("Dado Redis caído o lento, cuando se leen varios lotes, entonces devuelve vacío sin lanzar")
+    @SuppressWarnings("unchecked")
+    void readSealedAllRedisDownReturnsEmpty() {
+        when(redisTemplate.executePipelined(any(SessionCallback.class)))
+                .thenThrow(new org.springframework.dao.QueryTimeoutException("timeout"));
+
+        assertThat(adapter.readSealedAll(Source.DISCORD, List.of("s-1"))).isEmpty();
     }
 
     // ---------- open batch (spec 008) ----------

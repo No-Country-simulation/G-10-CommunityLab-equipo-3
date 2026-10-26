@@ -60,7 +60,7 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
  * <p>Derivado de: spec 006 RF-01 (flush por tamaño, vacío no se sube; fallo OCI sin
  * evento) + RF-05 (idempotencia, nunca perder el lote; enmienda 2026-10-10: 412 con
  * PAR nueva) + RF-06 (aviso {@code package.completed} por {@code source}) + regla
- * nueva lote por fuente con flush horario si {@code count >= min-messages} + plan
+ * nueva lote por fuente con flush horario si {@code count >= min-messages} (default 2, constitución v1.12) + plan
  * 006 §3 (lock por fuente) + RNF-01 / constitución R6 (umbral {@code <= 921600} para
  * no romper el tope de 1MB; decisión 2026-10-12: fuera de rango no arranca) + spec 008 RF-03
  * (todo paquete anunciado, re-flush incluido, se registra en el índice) + RF-07 (un fallo del índice no
@@ -71,7 +71,7 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
 class PackageRunServiceTest {
 
     private static final long MAX_BYTES = 1_000L;
-    private static final long MIN_MESSAGES = 5L;
+    private static final long MIN_MESSAGES = 2L;
     private static final String PAR_URL = "https://par.example/p/token/o/paquete.json";
     private static final Instant EXPIRES_AT = Instant.parse("2026-10-07T10:00:00Z");
     private static final StoreResult STORED = StoreResult.stored(PAR_URL, EXPIRES_AT);
@@ -145,7 +145,7 @@ class PackageRunServiceTest {
     // ---------- hourly trigger ----------
 
     @Test
-    @DisplayName("Dado un lote con 4 mensajes, cuando corre el tick horario, entonces no se sella")
+    @DisplayName("Dado un lote con 1 mensaje, cuando corre el tick horario, entonces no se sella")
     void hourlyTickBelowMinMessagesDoesNotSeal() {
         // Dado ambos lotes con menos del mínimo
         when(buffer.countMessages(Source.DISCORD)).thenReturn(MIN_MESSAGES - 1);
@@ -160,7 +160,7 @@ class PackageRunServiceTest {
     }
 
     @Test
-    @DisplayName("Dado un lote con 5 mensajes, cuando corre el tick horario, entonces se sella y sube aunque no llegue a 900KB")
+    @DisplayName("Dado un lote con 2 mensajes, cuando corre el tick horario, entonces se sella y sube aunque no llegue a 900KB")
     void hourlyTickAtMinMessagesSealsAndUploads() {
         // Dado DISCORD con exactamente el mínimo y TELEGRAM vacío
         when(buffer.countMessages(Source.DISCORD)).thenReturn(MIN_MESSAGES);

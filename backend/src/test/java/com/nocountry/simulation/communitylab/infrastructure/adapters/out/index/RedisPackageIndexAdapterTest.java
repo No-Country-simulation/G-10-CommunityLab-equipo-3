@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -138,6 +139,39 @@ class RedisPackageIndexAdapterTest {
         // Entonces el índice se limpia solo al leer, sin tocar el vigente
         verify(hashOps).delete("packages:TELEGRAM", "old");
         verify(hashOps, never()).delete("packages:TELEGRAM", "b-1");
+    }
+
+    @Test
+    @DisplayName("Dado varios paquetes vencidos, cuando se leen los vigentes, entonces se borran todos con un solo HDEL")
+    void expiredEntriesAreDeletedInOneCall() {
+        // Dado dos vencidos y un vigente
+        Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("old-1", json(pkg("old-1", Source.DISCORD, NOW.minusSeconds(10))));
+        entries.put("b-1", json(pkg("b-1", Source.DISCORD, NOW.plusSeconds(100))));
+        entries.put("old-2", json(pkg("old-2", Source.DISCORD, NOW.minusSeconds(1))));
+        when(hashOps.entries("packages:DISCORD")).thenReturn(entries);
+
+        // Cuando se leen (cada reconexión SSE, spec 010 RF-05)
+        adapter.active(Source.DISCORD, NOW);
+
+        // Entonces un único viaje a Redis limpia ambos, sin tocar el vigente
+        verify(hashOps, times(1)).delete(eq("packages:DISCORD"), any(Object[].class));
+        verify(hashOps).delete("packages:DISCORD", "old-1", "old-2");
+    }
+
+    @Test
+    @DisplayName("Dado que falla el borrado de vencidos, cuando se leen los vigentes, entonces los vigentes ya leídos se devuelven igual")
+    void cleanupFailureKeepsTheActivePackages() {
+        // Dado un vigente y un vencido, y Redis fallando solo en el HDEL de limpieza
+        Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("b-1", json(pkg("b-1", Source.TELEGRAM, NOW.plusSeconds(100))));
+        entries.put("old", json(pkg("old", Source.TELEGRAM, NOW.minusSeconds(1))));
+        when(hashOps.entries("packages:TELEGRAM")).thenReturn(entries);
+        when(hashOps.delete(eq("packages:TELEGRAM"), any(Object[].class)))
+                .thenThrow(new org.springframework.dao.QueryTimeoutException("timeout"));
+
+        // Cuando se leen / Entonces el historial SSE sigue mostrando el paquete y su PAR
+        assertThat(adapter.active(Source.TELEGRAM, NOW)).extracting(PackageCompleted::batchId).containsExactly("b-1");
     }
 
     @Test
