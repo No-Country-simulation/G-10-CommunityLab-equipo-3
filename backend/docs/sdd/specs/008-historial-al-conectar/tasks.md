@@ -1,6 +1,6 @@
 # Tasks 008: Historial al conectar (snapshot por SSE)
 
-> Secuencia: `flush ok → package.completed + PackageIndex.record`; `GET SSE → :connected → replay (Last-Event-ID conocido) o snapshot (índice vigente → pendientes → lote abierto) → snapshot.completed → vivo`. Mismos eventos e `id` que el vivo; el frontend actualiza por `id`. Ventana 3 días (PAR vigentes). Sin endpoints nuevos. Logs solo `source` + contadores, nunca la PAR.
+> Secuencia: `flush ok → package.completed + PackageIndex.record`; `GET SSE → :connected → replay (Last-Event-ID conocido) o snapshot (índice vigente → pendientes → lote abierto) → snapshot.completed → vivo`. Mismos eventos e `id` que el vivo; el frontend actualiza por `id`. Ventana 7 días (PAR vigentes; 3 hasta 2026-10-20). Sin endpoints nuevos. Logs solo `source` + contadores, nunca la PAR.
 > Orden: TASK-008-00 → 01 → 02 → 03 → 04 → 05 → 06. Los tests de cada tarea se escriben después de implementarla.
 
 - [x] **TASK-008-00**: `sdd-audit` de 008 antes de codificar.

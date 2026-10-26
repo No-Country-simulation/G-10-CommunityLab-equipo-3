@@ -1,5 +1,11 @@
 package com.nocountry.simulation.communitylab.infrastructure.adapters.out.event;
 
+import org.springframework.web.servlet.mvc.method.annotation.StalledSseClient;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -385,6 +391,47 @@ class SseEventPublisherAdapterTest {
             assertThat(content).endsWith("\n\n:heartbeat\n\n");
             assertThat(occurrences(content, ":heartbeat\n\n")).isEqualTo(1);
         }
+    }
+
+    @Test
+    @DisplayName("Dado un dashboard que dejó de leer, cuando late otro heartbeat mientras el anterior sigue bloqueado, entonces se salta en vez de apilarse")
+    void overlappingHeartbeatIsSkipped() throws Exception {
+        // Dado un suscriptor cuyo socket ya no acepta escrituras (buffer TCP lleno)
+        SseEmitter emitter = adapter.subscribe(Source.TELEGRAM, null, History::empty);
+        StalledSseClient stalled = StalledSseClient.attachTo(emitter);
+        ExecutorService scheduler = Executors.newVirtualThreadPerTaskExecutor();
+        try {
+            // Y un heartbeat ya bloqueado escribiéndole (con virtual threads, fixedRate no espera al anterior)
+            Future<?> first = scheduler.submit(adapter::heartbeat);
+            assertThat(stalled.awaitBlockedWrite(2, TimeUnit.SECONDS)).isTrue();
+
+            // Cuando llega el siguiente tick
+            Future<?> second = scheduler.submit(adapter::heartbeat);
+
+            // Entonces termina enseguida sin volver a escribir: los hilos no se apilan sobre el socket bloqueado (spec 010)
+            assertThatCode(() -> second.get(1, TimeUnit.SECONDS)).doesNotThrowAnyException();
+            assertThat(stalled.heartbeatWrites()).isEqualTo(1);
+
+            stalled.release();
+            first.get(2, TimeUnit.SECONDS);
+        } finally {
+            stalled.release();
+            scheduler.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("Dado un heartbeat terminado, cuando late el siguiente, entonces vuelve a enviarse (el salto solo aplica mientras otro sigue en curso)")
+    void heartbeatRunsAgainAfterThePreviousFinished() throws Exception {
+        // Dado un dashboard
+        MvcResult telegram = subscribe("/api/v1/telegram/messages", null);
+
+        // Cuando laten dos heartbeats seguidos, sin solaparse
+        adapter.heartbeat();
+        adapter.heartbeat();
+
+        // Entonces llegan los dos
+        assertThat(occurrences(telegram.getResponse().getContentAsString(), ":heartbeat\n\n")).isEqualTo(2);
     }
 
     @Test

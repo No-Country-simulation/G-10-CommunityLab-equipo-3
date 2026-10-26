@@ -41,8 +41,15 @@ public class RevisePostService implements RevisePostUseCase {
         for(int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             StoredPackage stored = artifactStore.load(command.source(), command.batchId())
                     .orElseThrow(() -> new PostNotFoundException("package not found"));
+            EnrichedComment post = findPost(stored.pkg(), command.messageId());
+
+            // Why re-read: versions only go up, so a client ahead of what was read means a stale copy (spec 010 RF-09)
+            if(post.versionMessage() < command.expectedVersion()){
+                stored = artifactStore.loadFresh(command.source(), command.batchId())
+                        .orElseThrow(() -> new PostNotFoundException("package not found"));
+                post = findPost(stored.pkg(), command.messageId());
+            }
             AssetPackage pack = stored.pkg();
-            EnrichedComment post = findPost(pack, command.messageId());
 
             if(post.versionMessage() != command.expectedVersion()){
                 throw new PostVersionConflictException("post was revised meanwhile");

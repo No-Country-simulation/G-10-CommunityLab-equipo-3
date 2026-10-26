@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -25,16 +26,23 @@ public class AnalyzeMessageLlmAdapter implements RequestToLLMProcess {
     private static final double TEMPERATURE_MODEL = 0.6d;
     // Rate Limit
     private final RateLimitAiConfig bucket;
-    private final Semaphore semaphore = new Semaphore(3);
+    // Why the semaphore is the real bound: @Async runs on virtual threads (unbounded), so this caps calls in flight;
+    // a virtual thread parked on it costs nothing and never blocks the ingest thread (spec 010 RF-07).
+    private final Semaphore semaphore;
 
 
     public AnalyzeMessageLlmAdapter(ChatClient.Builder chatClientBuilder,
                                     SystemPrompt systemPrompt,
-                                    LlmOutputSanitizer sanitizer, RateLimitAiConfig bucket) {
+                                    LlmOutputSanitizer sanitizer, RateLimitAiConfig bucket,
+                                    @Value("${llm.max-concurrency:3}") int maxConcurrency) {
+        if (maxConcurrency <= 0) {
+            throw new IllegalStateException("LLM_MAX_CONCURRENCY must be at least 1");
+        }
         this.systemPrompt = systemPrompt;
         this.chatClient = chatClientBuilder.build();
         this.sanitizer = sanitizer;
         this.bucket = bucket;
+        this.semaphore = new Semaphore(maxConcurrency);
     }
 
 

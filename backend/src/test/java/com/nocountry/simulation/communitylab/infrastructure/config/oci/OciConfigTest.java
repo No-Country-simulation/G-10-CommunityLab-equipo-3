@@ -1,5 +1,14 @@
 package com.nocountry.simulation.communitylab.infrastructure.config.oci;
 
+import com.oracle.bmc.waiter.MaxAttemptsTerminationStrategy;
+import com.oracle.bmc.model.BmcException;
+import com.oracle.bmc.ClientConfiguration;
+import org.springframework.boot.convert.ApplicationConversionService;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
+import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -40,18 +49,25 @@ import com.sun.net.httpserver.HttpServer;
  * verificado en runtime al construir el cliente real) + TASK-006-06 (2026-10-12: sin default `dev` en
  * `oci.config-profile`; session-token sin perfil falla nombrando OCI_CONFIG_PROFILE y el modo).
  * Spec 009 plan §1.1 (TASK-009-01): cliente Monitoring con el mismo proveedor y región; exige OCI_COMPARTMENT_ID.
+ * Spec 010 RF-06: el cliente Object Storage lleva sus propios límites (conexión, lectura, intentos) y el SDK los cumple.
  */
 @DisplayName("OciConfig")
 class OciConfigTest {
 
     private static final String TEST_NAMESPACE = "test-namespace";
     private static final String TEST_COMPARTMENT = "ocid1.compartment.oc1..test";
+    // Same limits as application.yaml defaults (5s connect, 20s read, 2 attempts).
+    private static final ClientConfiguration STORAGE_CLIENT =
+            OciConfig.storageClientConfiguration(Duration.ofSeconds(5), Duration.ofSeconds(20), 2);
 
     @Nested
     @DisplayName("Activacion por OCI_AUTH_MODE")
     class Activation {
 
+        // Why Boot's conversion service: SpringApplication registers it, and it turns "5s" into the client's Duration
         private final ApplicationContextRunner runner = new ApplicationContextRunner()
+                .withInitializer(context -> context.getBeanFactory()
+                        .setConversionService(ApplicationConversionService.getSharedInstance()))
                 .withUserConfiguration(PropertiesOnly.class, OciConfig.class);
 
         @Test
@@ -133,7 +149,7 @@ class OciConfigTest {
             OciProperties properties = properties("MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/");
 
             // Cuando se construye el cliente real (Jersey 3.0.8 + conector Apache en runtime)
-            try (ObjectStorage client = config.objectStorage(fakeProvider(), properties)) {
+            try (ObjectStorage client = config.objectStorage(fakeProvider(), properties, STORAGE_CLIENT)) {
                 // Entonces es el cliente del SDK, no un stub
                 assertThat(client).isInstanceOf(ObjectStorageClient.class);
             }
@@ -158,7 +174,7 @@ class OciConfigTest {
 
             // Dado el cliente real apuntando al stub local en vez de a OCI
             OciProperties properties = properties("MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/");
-            try (ObjectStorage client = config.objectStorage(fakeProvider(), properties)) {
+            try (ObjectStorage client = config.objectStorage(fakeProvider(), properties, STORAGE_CLIENT)) {
                 client.setEndpoint("http://localhost:" + server.getAddress().getPort());
 
                 // Cuando hace GetNamespace
@@ -186,7 +202,7 @@ class OciConfigTest {
             };
 
             // Cuando se crea, entonces falla antes de hablar con OCI y dice que variable corregir y en qué modo
-            assertThatThrownBy(() -> config.objectStorage(fakeProvider(), properties))
+            assertThatThrownBy(() -> config.objectStorage(fakeProvider(), properties, STORAGE_CLIENT))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining(envName)
                     .hasMessageContaining("OCI_AUTH_MODE=SESSION_TOKEN");
@@ -270,6 +286,80 @@ class OciConfigTest {
 
     static Stream<String> missingProfileValues() {
         return Stream.of(null, "   ", "${OCI_CONFIG_PROFILE}");
+    }
+
+    @Nested
+    @DisplayName("Límites del cliente Object Storage (spec 010 RF-06)")
+    class StorageClientLimits {
+
+        private final OciConfig config = new OciConfig();
+
+        @Test
+        @DisplayName("Dado los valores por defecto, cuando se crea la configuración, entonces 5s de conexión, 20s de lectura y como mucho 2 intentos")
+        void defaultsBoundEveryCall() {
+            // Cuando se crea con los defaults del application.yaml
+            ClientConfiguration client = config.objectStorageClientConfiguration(
+                    Duration.ofSeconds(5), Duration.ofSeconds(20), 2);
+
+            // Entonces un hilo oci-storage queda libre en ~2 x (5 + 20) s + 2 s, no en minutos (SDK: 60 s x 8 intentos)
+            assertThat(client.getConnectionTimeoutMillis()).isEqualTo(5_000);
+            assertThat(client.getReadTimeoutMillis()).isEqualTo(20_000);
+            assertThat(client.getRetryConfiguration().getTerminationStrategy())
+                    .isInstanceOfSatisfying(MaxAttemptsTerminationStrategy.class,
+                            strategy -> assertThat(strategy.getMaxAttempts()).isEqualTo(2));
+        }
+
+        @Test
+        @DisplayName("Dado un límite cero, negativo o sin intentos, cuando se crea, entonces falla al arrancar nombrando la variable")
+        void invalidLimitsFailFast() {
+            assertThatThrownBy(() -> OciConfig.storageClientConfiguration(Duration.ZERO, Duration.ofSeconds(20), 2))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("OCI_CONNECT_TIMEOUT");
+            assertThatThrownBy(() -> OciConfig.storageClientConfiguration(Duration.ofSeconds(5), Duration.ofSeconds(-1), 2))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("OCI_READ_TIMEOUT");
+            assertThatThrownBy(() -> OciConfig.storageClientConfiguration(Duration.ofSeconds(5), Duration.ofSeconds(20), 0))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("OCI_MAX_ATTEMPTS");
+        }
+
+        @Test
+        @DisplayName("Dado OCI que no responde, cuando el cliente real hace una petición, entonces el propio SDK la corta por read-timeout y libera el hilo")
+        void realClientStopsAHungCallByItself() throws Exception {
+            // Why a real HTTP round trip: only it proves this SDK version (Jersey + Apache connector) honors the limit;
+            // a cancelled Future would leave the call running.
+            HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+            CountDownLatch release = new CountDownLatch(1);
+            AtomicInteger requests = new AtomicInteger();
+            server.createContext("/n", exchange -> {
+                requests.incrementAndGet();
+                try {
+                    release.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                exchange.close();
+            });
+            server.setExecutor(Executors.newCachedThreadPool());
+            server.start();
+
+            // Dado un cliente con 300 ms de lectura y 2 intentos
+            ClientConfiguration limits = OciConfig.storageClientConfiguration(Duration.ofSeconds(1), Duration.ofMillis(300), 2);
+            OciProperties properties = properties("MessagesUsers", "sa-saopaulo-1", TEST_NAMESPACE, "paquetes/");
+            try (ObjectStorage client = config.objectStorage(fakeProvider(), properties, limits)) {
+                client.setEndpoint("http://localhost:" + server.getAddress().getPort());
+
+                // Cuando OCI no contesta
+                long start = System.nanoTime();
+                assertThatThrownBy(() -> client.getNamespace(GetNamespaceRequest.builder().build()))
+                        .isInstanceOfSatisfying(BmcException.class, e -> assertThat(e.isTimeout()).isTrue());
+                Duration took = Duration.ofNanos(System.nanoTime() - start);
+
+                // Entonces el SDK corta cada intento y reintenta como mucho una vez: segundos, no minutos
+                assertThat(requests.get()).isEqualTo(2);
+                assertThat(took).isLessThan(Duration.ofSeconds(5));
+            } finally {
+                release.countDown();
+                server.stop(0);
+            }
+        }
     }
 
     private static OciProperties properties(String bucket, String region, String namespace, String prefix) {

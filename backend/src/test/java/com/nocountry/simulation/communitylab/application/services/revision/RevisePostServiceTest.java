@@ -54,7 +54,8 @@ import com.nocountry.simulation.communitylab.domain.exception.PostVersionConflic
  * (toda actualización guardada sube la versión; no-op = {@code 200} sin {@code PutObject}) + RF-06
  * ({@code expectedVersion} desfasada → {@code 409} sin escribir; {@code 412} → reintento de
  * lectura+revisión+escritura hasta 2 veces, luego {@code 409}) + RF-08 ({@code message.revised} solo si
- * se escribió) + RF-09 (sin OCI / fallo OCI sin evento) + plan 007 §1.2 (application), §3.
+ * se escribió) + RF-09 (sin OCI / fallo OCI sin evento) + plan 007 §1.2 (application), §3
+ * + spec 010 RF-09 (lectura desactualizada → una relectura fresca antes del 409).
  */
 @DisplayName("RevisePostService")
 class RevisePostServiceTest {
@@ -386,5 +387,51 @@ class RevisePostServiceTest {
                 .isInstanceOf(PostNotRevisableException.class);
         verify(store, never()).replace(any(), anyString());
         verify(events, never()).publishRevision(any());
+    }
+
+    // ---------- stale read (spec 010 RF-09) ----------
+
+    @Test
+    @DisplayName("Dado una copia desactualizada (v1) y un cliente que ya vio v2, cuando se revisa, entonces se relee fresco de OCI y se escribe sobre v2")
+    void staleReadIsRefreshedBeforeDecidingAConflict() {
+        // Dado el caché con v1 y el bucket ya en v2 (cambiado fuera de esta instancia)
+        when(store.load(Source.DISCORD, BATCH_ID)).thenReturn(stored(pkg(post("m-1", false, 1)), "etag-old"));
+        when(store.loadFresh(Source.DISCORD, BATCH_ID)).thenReturn(stored(pkg(post("m-1", false, 2)), "etag-fresh"));
+        when(store.replace(any(), anyString())).thenReturn(ReplaceResult.REPLACED);
+
+        // Cuando el cliente aprueba con expectedVersion=2
+        RevisionResult result = service.revise(command("m-1", 2, approve()));
+
+        // Entonces no hay 409 falso: se escribe la v3 con el etag de la lectura fresca
+        assertThat(result.versionMessage()).isEqualTo(3);
+        verify(store).replace(any(), eq("etag-fresh"));
+        verify(store, never()).replace(any(), eq("etag-old"));
+    }
+
+    @Test
+    @DisplayName("Dado un cliente con una versión vieja, cuando se revisa, entonces es 409 sin releer de OCI")
+    void clientBehindIsAConflictWithoutRefreshing() {
+        // Dado el paquete ya en v2
+        when(store.load(Source.DISCORD, BATCH_ID)).thenReturn(stored(pkg(post("m-1", false, 2)), "etag-1"));
+
+        // Cuando el cliente envía expectedVersion=1 / Entonces 409: la lectura no está atrasada, el cliente sí
+        assertThatThrownBy(() -> service.revise(command("m-1", 1, approve())))
+                .isInstanceOf(PostVersionConflictException.class);
+        verify(store, never()).loadFresh(any(), anyString());
+        verify(store, never()).replace(any(), anyString());
+    }
+
+    @Test
+    @DisplayName("Dado una versión que tampoco existe en OCI, cuando se revisa, entonces la lectura fresca confirma el 409 sin escribir")
+    void freshReadStillBehindIsAConflict() {
+        // Dado el bucket en v1 y un cliente que dice haber visto v5
+        when(store.load(Source.DISCORD, BATCH_ID)).thenReturn(stored(pkg(post("m-1", false, 1)), "etag-1"));
+        when(store.loadFresh(Source.DISCORD, BATCH_ID)).thenReturn(stored(pkg(post("m-1", false, 1)), "etag-1"));
+
+        // Cuando se revisa / Entonces una sola relectura y 409
+        assertThatThrownBy(() -> service.revise(command("m-1", 5, approve())))
+                .isInstanceOf(PostVersionConflictException.class);
+        verify(store, times(1)).loadFresh(Source.DISCORD, BATCH_ID);
+        verify(store, never()).replace(any(), anyString());
     }
 }

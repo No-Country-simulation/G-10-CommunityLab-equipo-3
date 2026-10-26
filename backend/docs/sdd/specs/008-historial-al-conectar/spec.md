@@ -8,7 +8,7 @@
 
 Hoy el dashboard solo ve lo que ocurre mientras está conectado. Una pestaña nueva, otro usuario o el mismo usuario tras recargar no ven nada: 004 RF-08 lo definió así ("solo recibe eventos nuevos desde la suscripción") y el replay por `Last-Event-ID` vive en memoria, está limitado a 100 eventos por fuente y se pierde en cada redeploy. Los datos sí persisten (Redis con AOF + objetos en OCI), pero ningún usuario que llegue tarde puede llegar a ellos: la PAR de cada paquete solo viajó en el `package.completed` en vivo y los mensajes del lote abierto solo salieron por SSE a quien estaba conectado.
 
-Objetivo 008: que **todo usuario que abra la web vea el mismo historial de los últimos 3 días** y siga recibiendo los eventos nuevos, demostrando la persistencia de extremo a extremo sin añadir endpoints ni cambiar el formato de los eventos que el frontend ya procesa.
+Objetivo 008: que **todo usuario que abra la web vea el mismo historial de los últimos 7 días** (3 hasta la enmienda 2026-10-20 de 006 RNF-03) y siga recibiendo los eventos nuevos, demostrando la persistencia de extremo a extremo sin añadir endpoints ni cambiar el formato de los eventos que el frontend ya procesa.
 
 ## 2. Requerimientos Funcionales
 
@@ -33,9 +33,9 @@ Objetivo 008: que **todo usuario que abra la web vea el mismo historial de los �
 
 ## 3. RNF
 
-- **RNF-01 — Ventana de 3 días:** el historial cubre los paquetes con PAR vigente (`PAR_TTL_DAYS=3`, 006 RNF-03) más lo que aún no llegó a OCI. Un paquete de más de 3 días no aparece: renovar PAR sigue fuera de Fase 1 (006 §5). Decidido 2026-10-14: suficiente para demostrar la persistencia.
-- **RNF-02 (Q3, riesgo aceptado 2026-10-14):** sin autenticación (constitución §5), **cualquiera que abra el stream** recibe todas las PAR vigentes de esa fuente, y los paquetes llevan `authorName/authorId` (006 RNF-06). La PAR es visible en las herramientas del navegador y puede compartirse fuera de la web hasta que vence. Ya ocurría con el `package.completed` en vivo; el snapshot lo extiende a quien llega después. CORS solo limita a navegadores en orígenes no permitidos, no a `curl`. Mitigación: PAR de solo lectura por objeto, sin listing, vencimiento a 3 días, nunca en logs. Ocultar la PAR exige que el backend sirva el contenido (descartado, §6).
-- **RNF-03 — Coste del snapshot:** montarlo solo lee Redis (sin llamadas a OCI ni al LLM): objetivo `p95 < 300ms` local, como la ingesta (R6). Tamaño acotado: lote abierto `< 900KB` + lotes pendientes + índice de como mucho `~72` entradas por fuente con el flush horario de producción (con el cron temporal de desarrollo cada 5 min, hasta `~864`). El frontend hace un `GET` a OCI por paquete del snapshot.
+- **RNF-01 — Ventana de 7 días:** el historial cubre los paquetes con PAR vigente (`PAR_TTL_DAYS=7`, 006 RNF-03) más lo que aún no llegó a OCI. Un paquete de más de 7 días no aparece: renovar PAR sigue fuera de Fase 1 (006 §5). Decidido 2026-10-14 con 3 días: suficiente para demostrar la persistencia. *Ampliada 2026-10-20 (MVP):* con 3 días el dashboard perdía los paquetes en mitad de la revisión y la demo; la ventana sigue al TTL de la PAR, sin cambios de código en 008.
+- **RNF-02 (Q3, riesgo aceptado 2026-10-14):** sin autenticación (constitución §5), **cualquiera que abra el stream** recibe todas las PAR vigentes de esa fuente, y los paquetes llevan `authorName/authorId` (006 RNF-06). La PAR es visible en las herramientas del navegador y puede compartirse fuera de la web hasta que vence. Ya ocurría con el `package.completed` en vivo; el snapshot lo extiende a quien llega después. CORS solo limita a navegadores en orígenes no permitidos, no a `curl`. Mitigación: PAR de solo lectura por objeto, sin listing, vencimiento a 7 días (desde 2026-10-20: la ventana de exposición crece con el TTL), nunca en logs. Ocultar la PAR exige que el backend sirva el contenido (descartado, §6).
+- **RNF-03 — Coste del snapshot:** montarlo solo lee Redis (sin llamadas a OCI ni al LLM): objetivo `p95 < 300ms` local, como la ingesta (R6). Tamaño acotado: lote abierto `< 900KB` + lotes pendientes + índice de como mucho `~168` entradas por fuente con el flush horario de producción (con el cron temporal de desarrollo cada 5 min, hasta `~2016`). *Recalculado 2026-10-20* para `PAR_TTL_DAYS=7` (eran `~72`/`~864` con 3 días): sigue siendo solo lectura de Redis, a medir contra `p95 < 300ms`. El frontend hace un `GET` a OCI por paquete del snapshot.
 - **RNF-04 (Q3/R5):** logs de la suscripción solo `source` y contadores (`packages`, `pending`); nunca `parUrlBase`, contenido ni `authorName`. La PAR guardada en Redis sigue el régimen de 006 RNF-06: Redis sin puertos publicados, nunca en logs.
 
 ## 4. Dominio y Glosario
@@ -48,7 +48,7 @@ Objetivo 008: que **todo usuario que abra la web vea el mismo historial de los �
 
 ## 5. Fuera de Alcance
 
-- Historial de más de 3 días o renovación de PAR (006 §5, Fase 2).
+- Historial de más de 7 días o renovación de PAR (006 §5, Fase 2).
 - Endpoints `GET /packages*` o de historial (constitución v1.6/v1.7): el historial viaja por el `GET` SSE existente.
 - Que el backend sirva el contenido de los paquetes en vez de la PAR.
 - Paginación o filtros del historial; estado por usuario (leído/no leído).
@@ -59,7 +59,7 @@ Objetivo 008: que **todo usuario que abra la web vea el mismo historial de los �
 - Deriva de: `004` RF-06/RF-08 (SSE + replay), `005` RF-07 (dual-get), `006` RF-03/RF-04/RF-05/RF-06/RNF-03 (paquete, PAR por objeto, re-flush, `package.completed`, TTL) y `007` RF-07 (la PAR sirve la última versión).
 - **Enmienda a `004` RF-08:** su criterio "solo recibe eventos nuevos desde la suscripción" queda sustituido por RF-01/RF-02 de esta spec. Sigue vigente el resto de RF-08: sin `GET /packages*`, solo el backend habla con OCI/Redis.
 - Sin enmienda constitucional: no hay endpoint nuevo, Redis y OCI siguen siendo internos (v1.6) y el dashboard sigue consumiendo solo SSE + PAR (§5).
-- *Decidido 2026-10-14 (dev):* ventana = PAR vigentes (3 días); todo usuario ve el mismo historial; la PAR puede llegar al navegador (riesgo RNF-02); el cron de 5 min es temporal de desarrollo, producción se queda en 1 h.
+- *Decidido 2026-10-14 (dev):* ventana = PAR vigentes (3 días); todo usuario ve el mismo historial; la PAR puede llegar al navegador (riesgo RNF-02); el cron de 5 min es temporal de desarrollo, producción se queda en 1 h. *Ampliado 2026-10-20:* ventana a 7 días (006 RNF-03, MVP).
 - *Alternativa descartada 2026-10-14:* que el backend lea cada paquete de OCI y lo envíe como `asset.created`, sin exponer la PAR. Cambiaba constitución v1.9 (`GetObject` solo para revisar), 006 RF-04/RF-06 y 007 RF-07/RF-08, y hasta 72 lecturas a OCI por pestaña nueva y fuente, para ocultar una URL que no da acceso a nada que el usuario no reciba ya.
 - *Alternativa descartada 2026-10-14:* caché en el frontend (`localStorage`) o guardar ahí las PAR: es por usuario y por navegador, no un historial común.
 - `sdd-audit` obligatorio antes de codificar.
