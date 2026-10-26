@@ -43,7 +43,8 @@ import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
  *
  * <p>Derivado de: spec 008 RF-01 (paquetes vigentes + pendientes + lote abierto, en orden cronológico),
  * RF-06 (por fuente), RF-07 (un fallo devuelve historial vacío, nunca rompe el stream) + plan 008 §1.1, §3
- * (orden de lectura abierto → pendientes → índice; envío pendientes antes que el abierto).
+ * (orden de lectura abierto → pendientes → índice; envío pendientes antes que el abierto)
+ * + spec 010 RF-04 (los pendientes se leen en una sola lectura).
  */
 @DisplayName("LoadHistoryService")
 @ExtendWith(OutputCaptureExtension.class)
@@ -69,7 +70,7 @@ class LoadHistoryServiceTest {
         PackageCompleted pkg = pkg("b-1");
         when(index.active(eq(Source.TELEGRAM), any())).thenReturn(List.of(pkg));
         when(buffer.pendingBatches(Source.TELEGRAM)).thenReturn(Set.of("sealed-1"));
-        when(buffer.readSealed(Source.TELEGRAM, "sealed-1")).thenReturn(List.of(post("m-1")));
+        when(buffer.readSealedAll(Source.TELEGRAM, Set.of("sealed-1"))).thenReturn(List.of(post("m-1")));
         when(buffer.readOpen(Source.TELEGRAM)).thenReturn(List.of(post("m-2"), post("m-3")));
 
         // Cuando se carga el historial
@@ -94,7 +95,7 @@ class LoadHistoryServiceTest {
         InOrder order = inOrder(buffer, index);
         order.verify(buffer).readOpen(Source.TELEGRAM);
         order.verify(buffer).pendingBatches(Source.TELEGRAM);
-        order.verify(buffer).readSealed(Source.TELEGRAM, "sealed-1");
+        order.verify(buffer).readSealedAll(Source.TELEGRAM, Set.of("sealed-1"));
         order.verify(index).active(eq(Source.TELEGRAM), any());
     }
 
@@ -102,14 +103,29 @@ class LoadHistoryServiceTest {
     @DisplayName("Dado varios lotes pendientes, cuando se carga, entonces entran los mensajes de todos")
     void everyPendingBatchIsIncluded() {
         // Dado dos lotes sellados sin subir
-        when(buffer.pendingBatches(Source.TELEGRAM)).thenReturn(new LinkedHashSet<>(List.of("s-1", "s-2")));
-        when(buffer.readSealed(Source.TELEGRAM, "s-1")).thenReturn(List.of(post("m-1")));
-        when(buffer.readSealed(Source.TELEGRAM, "s-2")).thenReturn(List.of(post("m-2")));
+        Set<String> pending = new LinkedHashSet<>(List.of("s-1", "s-2"));
+        when(buffer.pendingBatches(Source.TELEGRAM)).thenReturn(pending);
+        when(buffer.readSealedAll(Source.TELEGRAM, pending)).thenReturn(List.of(post("m-1"), post("m-2")));
 
         // Cuando se carga / Entonces ningún mensaje procesado se queda fuera del historial
         assertThat(service.load(Source.TELEGRAM).pending())
                 .extracting(ResponseClient::messageId)
                 .containsExactly("m-1", "m-2");
+    }
+
+    @Test
+    @DisplayName("Dado varios lotes pendientes, cuando se carga, entonces se leen en una sola lectura y nunca uno por uno")
+    void pendingBatchesAreReadInOneBulkRead() {
+        // Dado tres lotes sellados sin subir
+        Set<String> pending = new LinkedHashSet<>(List.of("s-1", "s-2", "s-3"));
+        when(buffer.pendingBatches(Source.DISCORD)).thenReturn(pending);
+
+        // Cuando se carga (cada reconexión SSE, spec 010 RF-04)
+        service.load(Source.DISCORD);
+
+        // Entonces el coste no crece con el número de lotes
+        verify(buffer).readSealedAll(Source.DISCORD, pending);
+        verify(buffer, never()).readSealed(any(), anyString());
     }
 
     @Test
