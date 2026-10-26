@@ -57,6 +57,17 @@ services:
       - BUFFER_FLUSH_CRON
       - BUFFER_FLUSH_MIN_MESSAGES
       - OCI_COMPARTMENT_ID
+      # Optional tuning (spec 010); unset keeps the defaults in application.yaml.
+      - REDIS_TIMEOUT
+      - LLM_MAX_CONCURRENCY
+      - PACKAGE_CACHE_TTL
+      - OCI_CONNECT_TIMEOUT
+      - OCI_READ_TIMEOUT
+      - OCI_MAX_ATTEMPTS
+      # JVM flags read by the JVM itself (no ENTRYPOINT change). First days on JDK 21 with virtual threads:
+      # JAVA_TOOL_OPTIONS=-Djdk.tracePinnedThreads=short prints a stack trace each time a virtual thread gets pinned
+      # (spec 010). Unset it once the logs show none; with it unset nothing reaches the JVM.
+      - JAVA_TOOL_OPTIONS
     # Why 30s: lets Spring finish in-flight requests and close Redis/OCI clients on redeploy.
     stop_grace_period: 30s
     restart: unless-stopped

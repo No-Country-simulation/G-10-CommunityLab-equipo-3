@@ -27,11 +27,10 @@ public class LoadHistoryService implements LoadHistoryUseCase {
     @Override
     public History load(Source source) {
         try{
-          List<EnrichedComment> open = bufferPort.readOpen(source);
-          List<EnrichedComment> sealed = new ArrayList<>();
-          for (String batchId : bufferPort.pendingBatches(source)){
-              sealed.addAll(bufferPort.readSealed(source, batchId));
-          }
+            List<EnrichedComment> open = bufferPort.readOpen(source);
+            // Why one bulk read: every reconnect (Cloudflare cut, 30 min emitter timeout) reloads this, and a loop paid
+            // one Redis round trip per pending batch (spec 010 RF-04).
+            List<EnrichedComment> sealed = bufferPort.readSealedAll(source, bufferPort.pendingBatches(source));
             List<PackageCompleted> packages = packageIndex.active(source, Instant.now());
 
             List<ResponseClient> pending = new ArrayList<>();

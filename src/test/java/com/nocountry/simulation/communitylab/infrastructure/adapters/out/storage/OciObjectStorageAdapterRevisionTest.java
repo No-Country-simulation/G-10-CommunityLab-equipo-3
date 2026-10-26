@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +37,7 @@ import com.nocountry.simulation.communitylab.domain.enums.MessageType;
 import com.nocountry.simulation.communitylab.domain.enums.Source;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Language;
 import com.nocountry.simulation.communitylab.domain.enums.ai.Sentiment;
+import com.nocountry.simulation.communitylab.infrastructure.adapters.out.cache.RedisPackageCache;
 import com.nocountry.simulation.communitylab.infrastructure.config.oci.OciAuthMode;
 import com.nocountry.simulation.communitylab.infrastructure.config.oci.OciProperties;
 import com.oracle.bmc.model.BmcException;
@@ -77,6 +79,10 @@ class OciObjectStorageAdapterRevisionTest {
     @Mock
     private ObjectStorage objectStorage;
 
+    // Default mock = always a cache miss, so these cases keep exercising the OCI calls themselves.
+    @Mock
+    private RedisPackageCache packageCache;
+
     private OciObjectStorageAdapter adapter;
 
     @BeforeEach
@@ -84,7 +90,7 @@ class OciObjectStorageAdapterRevisionTest {
         OciProperties properties = new OciProperties(OciAuthMode.SESSION_TOKEN, "dev",
                 "MessagesUsers", "sa-saopaulo-1", "test-namespace", "paquetes/", 1,
                 "ocid1.compartment.oc1..test");
-        adapter = new OciObjectStorageAdapter(objectStorage, properties, JSON);
+        adapter = new OciObjectStorageAdapter(objectStorage, properties, JSON, packageCache);
     }
 
     // ================= load: GetObject =================

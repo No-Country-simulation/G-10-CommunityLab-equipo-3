@@ -15,11 +15,17 @@ spring:
     ansi:
       enabled: always
 
-  # Config the size pool threads for task scheduling
-  task:
-    scheduling:
-      pool:
-        size: 2
+  # Why virtual threads: LLM calls, SSE and HTTP spend their time waiting on I/O; with 2 cores a platform pool either
+  # sits idle or queues. OCI SDK calls run on a private platform pool inside OciObjectStorageAdapter (pinning, spec 010).
+  threads:
+    virtual:
+      enabled: true
+
+  # Why here and not per profile: prod needs the same 2s ceiling instead of Lettuce's 60s default (spec 010 RF-01)
+  data:
+    redis:
+      connect-timeout: ${REDIS_TIMEOUT:2000ms}
+      timeout: ${REDIS_TIMEOUT:2000ms}
 
 # Value of buffer max batch size
 redis:
@@ -53,6 +59,10 @@ oci:
   namespace: ${OCI_NAMESPACE}
   prefix: ${OCI_PREFIX}
   par-ttl-days: ${PAR_TTL_DAYS:7}
+  # Object Storage client limits (spec 010 RF-06): worst case per call ~ max-attempts x (connect + read) + 2s backoff
+  connect-timeout: ${OCI_CONNECT_TIMEOUT:5s}
+  read-timeout: ${OCI_READ_TIMEOUT:20s}
+  max-attempts: ${OCI_MAX_ATTEMPTS:2}
   auth-mode: ${OCI_AUTH_MODE:none}
   config-profile: ${OCI_CONFIG_PROFILE}
   compartment-id: ${OCI_COMPARTMENT_ID}
@@ -62,3 +72,9 @@ storage:
     limit-bytes: ${STORAGE_LIMIT_BYTES:10737418240}
     monthly-requests-limit: ${STORAGE_REQUESTS_MONTHLY_LIMIT:50000}
     cache-ttl: ${STORAGE_STATS_CACHE_TTL:60s}
+  # How long a package OCI already confirmed stays cached in Redis for revisions (spec 010 RF-08)
+  package-cache-ttl: ${PACKAGE_CACHE_TTL:24h}
+
+# Calls to the LLM in flight at once (spec 010 RF-07)
+llm:
+  max-concurrency: ${LLM_MAX_CONCURRENCY:3}

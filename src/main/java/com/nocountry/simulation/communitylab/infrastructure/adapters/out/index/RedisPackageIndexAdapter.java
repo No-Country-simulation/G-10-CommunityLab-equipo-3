@@ -45,6 +45,7 @@ public class RedisPackageIndexAdapter implements PackageIndex {
         try{
             Map<String, String> entries = hash().entries(key(source));
             List<PackageCompleted> active = new ArrayList<>();
+            List<Object> expired = new ArrayList<>();
             for(Map.Entry<String, String> entry : entries.entrySet()){
                 PackageCompleted completed;
                 try{
@@ -53,11 +54,21 @@ public class RedisPackageIndexAdapter implements PackageIndex {
                     if(completed.expiresAt().isAfter(now)){
                         active.add(completed);
                     } else {
-                        hash().delete(key(source), entry.getKey());
+                        expired.add(entry.getKey());
                     }
                 }catch (JacksonException e){
                     log.warn("package index read failed: batchId={} source={} ",
                             entry.getKey(), source);
+                }
+            }
+            // Why one HDEL after the loop: one round trip per expired entry slowed every SSE reconnect (spec 010 RF-05)
+            if(!expired.isEmpty()){
+                // Why its own try: this is only cleanup; failing it must not throw away the active list already read
+                try{
+                    hash().delete(key(source), expired.toArray());
+                }catch (DataAccessException e){
+                    log.warn("package index cleanup failed: source={} expired={} cause={}",
+                            source, expired.size(), e.getClass().getSimpleName());
                 }
             }
             active.sort(Comparator.comparing(PackageCompleted::expiresAt));
