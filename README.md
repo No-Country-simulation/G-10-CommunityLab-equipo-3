@@ -66,8 +66,8 @@ CI/CD desde GitHub hacia Netlify y OCI.
 
 ```text
 G-10-CommunityLab-equipo-3/
-├── frontend/   # App Angular (por crear)
-├── backend/    # API Spring Boot (por crear)
+├── frontend/   # App Angular
+├── backend/    # API Spring Boot
 ├── docs/       # Documentación adicional
 └── README.md
 ```
@@ -83,12 +83,12 @@ Pendiente: diseño API REST, modelo de datos.
 Placeholder orientativo:
 
 ```bash
-# Frontend (pendiente de confirmar)
+# Frontend
 # cd frontend
 # npm install
 # ng serve
 
-# Backend (pendiente de confirmar)
+# Backend
 # cd backend
 # ./mvnw spring-boot:run
 ```
